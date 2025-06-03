@@ -5,23 +5,10 @@ import CompaniesTab from '../components/CompaniesTab';
 import UsersTab from '../components/UsersTab';
 import ModalForm from '../components/ModalForm';
 import HardwareTab from '../components/HardwareTab';
-import type { Company } from '../components/CompaniesTab';
-import type { HardwareItem } from '../components/HardwareTab';
+import type { User } from '../types/User';
+import type { Company } from '../types/Company';
+import type { HardwareItem } from '../types/HardwareItem';
 // import HardwareTab from '../components/HardwareTab'; // если понадобится
-
-interface User {
-  _id: string;
-  role: string;
-  username: string;
-  email: string;
-  companyId?: string;
-}
-
-interface AdminPanelProps {
-  user: User;
-  onLogout: () => void;
-  onCalculator: () => void;
-}
 
 const sections = [
   { key: 'companies', label: 'Компании' },
@@ -33,7 +20,7 @@ const sections = [
 
 const currencyOptions = ['GEL', 'USD', 'EUR', 'RR'];
 
-export default function AdminPanel({ user, onLogout, onCalculator }: AdminPanelProps) {
+export default function AdminPanel({ user, onLogout, onCalculator }: { user: User; onLogout: () => void; onCalculator: () => void }) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesError, setCompaniesError] = useState('');
@@ -63,6 +50,15 @@ export default function AdminPanel({ user, onLogout, onCalculator }: AdminPanelP
   });
   const [userFormErrors, setUserFormErrors] = useState<{ email?: string; username?: string }>({});
   const [hardwareByCompany, setHardwareByCompany] = useState<Record<string, HardwareItem[]>>({});
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [showEditUser, setShowEditUser] = useState(false);
+  const [editUserForm, setEditUserForm] = useState({
+    username: '',
+    email: '',
+    role: 'user',
+    companyId: '',
+  });
+  const [editUserFormErrors, setEditUserFormErrors] = useState<{ email?: string; username?: string }>({});
 
   // Универсальная функция fetch с авто-рефрешем токена
   async function fetchWithAuth(input: RequestInfo, init?: RequestInit, retry = true): Promise<Response> {
@@ -112,12 +108,16 @@ export default function AdminPanel({ user, onLogout, onCalculator }: AdminPanelP
     if (section !== 'users') return;
     setUsersLoading(true);
     setUsersError('');
-    fetchWithAuth('/api/users')
+    let url = '/api/users';
+    if (selectedCompanyId && selectedCompanyId !== 'all') {
+      url += `?companyId=${selectedCompanyId}`;
+    }
+    fetchWithAuth(url)
       .then(res => res.json())
       .then(data => setUsers(Array.isArray(data) ? data : []))
       .catch(() => setUsersError('Ошибка загрузки пользователей'))
       .finally(() => setUsersLoading(false));
-  }, [section]);
+  }, [section, selectedCompanyId]);
 
   useEffect(() => {
     if (!selectedCompanyId || selectedCompanyId === 'all') return;
@@ -128,10 +128,23 @@ export default function AdminPanel({ user, onLogout, onCalculator }: AdminPanelP
   }, [selectedCompanyId]);
 
   const handleEditUser = (u: User) => {
-    alert('Редактировать пользователя: ' + u.username);
+    setEditUser(u);
+    setEditUserForm({
+      username: u.username,
+      email: u.email,
+      role: u.role,
+      companyId: typeof u.companyId === 'object' ? u.companyId._id : (u.companyId || ''),
+    });
+    setEditUserFormErrors({});
+    setShowEditUser(true);
   };
-  const handleDeleteUser = (u: User) => {
-    alert('Удалить пользователя: ' + u.username);
+
+  const handleDeleteUser = async (u: User) => {
+    if (!window.confirm(`Удалить пользователя "${u.username}"?`)) return;
+    const res = await fetchWithAuth(`/api/users/${u._id}`, { method: 'DELETE' });
+    const data = await res.json();
+    handleApiError(data);
+    setUsers(users => users.filter(user => user._id !== u._id));
   };
 
   const handleEditCompany = (company: Company) => {
@@ -158,6 +171,39 @@ export default function AdminPanel({ user, onLogout, onCalculator }: AdminPanelP
     const data = await res.json();
     handleApiError(data);
     setCompanies(companies => companies.filter(c => c._id !== id));
+  };
+
+  const handleAddCompany = async () => {
+    // Проверка уникальности имени (без учёта регистра)
+    const exists = companies.some(c => c.name.trim().toLowerCase() === companyForm.name.trim().toLowerCase());
+    if (exists) {
+      setCompanyNameError('Компания с таким именем уже существует');
+      return;
+    }
+    const res = await fetchWithAuth('/api/companies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(companyForm),
+    });
+    const data = await res.json();
+    handleApiError(data);
+    setShowAddCompany(false);
+    setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
+    setCompanyNameError('');
+    setCompaniesLoading(true);
+    fetchWithAuth('/api/companies')
+      .then(res => res.json())
+      .then(data => {
+        handleApiError(data);
+        setCompanies(Array.isArray(data) ? data : []);
+        // Найти только что созданную компанию по имени и городу (или по id, если возвращается)
+        if (Array.isArray(data)) {
+          const newCompany = data.find(c => c.name.trim().toLowerCase() === companyForm.name.trim().toLowerCase() && c.city.trim().toLowerCase() === companyForm.city.trim().toLowerCase());
+          if (newCompany) setSelectedCompanyId(newCompany._id);
+        }
+      })
+      .catch(() => setCompaniesError('Ошибка загрузки компаний'))
+      .finally(() => setCompaniesLoading(false));
   };
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
@@ -277,30 +323,7 @@ export default function AdminPanel({ user, onLogout, onCalculator }: AdminPanelP
                       { name: 'ownerContact', label: 'Контакт владельца', type: 'text', value: companyForm.ownerContact, onChange: v => setCompanyForm(f => ({ ...f, ownerContact: String(v) })) },
                     ]}
                     companyNameError={companyNameError}
-                    onSubmit={async () => {
-                      // Проверка уникальности имени (без учёта регистра)
-                      const exists = companies.some(c => c.name.trim().toLowerCase() === companyForm.name.trim().toLowerCase());
-                      if (exists) {
-                        setCompanyNameError('Компания с таким именем уже существует');
-                        return;
-                      }
-                      const res = await fetchWithAuth('/api/companies', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(companyForm),
-                      });
-                      const data = await res.json();
-                      handleApiError(data);
-                      setShowAddCompany(false);
-                      setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-                      setCompanyNameError('');
-                      setCompaniesLoading(true);
-                      fetchWithAuth('/api/companies')
-                        .then(res => res.json())
-                        .then(data => { handleApiError(data); setCompanies(Array.isArray(data) ? data : []); })
-                        .catch(() => setCompaniesError('Ошибка загрузки компаний'))
-                        .finally(() => setCompaniesLoading(false));
-                    }}
+                    onSubmit={handleAddCompany}
                     onCancel={() => {
                       setShowAddCompany(false);
                       setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
@@ -392,8 +415,9 @@ export default function AdminPanel({ user, onLogout, onCalculator }: AdminPanelP
                           setUserFormErrors(e => ({ ...e, email: undefined }));
                         },
                         error: userFormErrors.email,
+                        autoComplete: 'off',
                       },
-                      { name: 'password', label: 'Пароль', type: 'password', required: true, value: userForm.password, onChange: v => setUserForm(f => ({ ...f, password: String(v) })) },
+                      { name: 'password', label: 'Пароль', type: 'password', required: true, value: userForm.password, onChange: v => setUserForm(f => ({ ...f, password: String(v) })), autoComplete: 'new-password' },
                       { name: 'role', label: 'Роль', type: 'select', required: true, value: userForm.role, onChange: v => setUserForm(f => ({ ...f, role: String(v) })), options: [ { value: 'user', label: 'Пользователь' }, { value: 'admin', label: 'Админ' } ] },
                       { name: 'companyId', label: 'Компания', type: 'select', required: true, value: userForm.companyId, onChange: v => setUserForm(f => ({ ...f, companyId: String(v) })), options: companies.map(c => ({ value: c._id, label: c.name })) },
                     ]}
@@ -436,6 +460,67 @@ export default function AdminPanel({ user, onLogout, onCalculator }: AdminPanelP
                       setUserFormErrors({});
                     }}
                     submitText="Добавить"
+                  />
+                  <ModalForm
+                    isOpen={showEditUser}
+                    title="Редактировать пользователя"
+                    fields={[
+                      {
+                        name: 'username',
+                        label: 'Имя пользователя',
+                        type: 'text',
+                        required: true,
+                        value: editUserForm.username,
+                        onChange: v => setEditUserForm(f => ({ ...f, username: String(v) })),
+                        error: editUserFormErrors.username,
+                      },
+                      {
+                        name: 'email',
+                        label: 'Email',
+                        type: 'email',
+                        required: true,
+                        value: editUserForm.email,
+                        onChange: v => setEditUserForm(f => ({ ...f, email: String(v) })),
+                        error: editUserFormErrors.email,
+                      },
+                      { name: 'role', label: 'Роль', type: 'select', required: true, value: editUserForm.role, onChange: v => setEditUserForm(f => ({ ...f, role: String(v) })), options: [ { value: 'user', label: 'Пользователь' }, { value: 'admin', label: 'Админ' } ] },
+                      { name: 'companyId', label: 'Компания', type: 'select', required: true, value: editUserForm.companyId, onChange: v => setEditUserForm(f => ({ ...f, companyId: String(v) })), options: companies.map(c => ({ value: c._id, label: c.name })) },
+                    ]}
+                    onSubmit={async () => {
+                      if (!editUser) return;
+                      setEditUserFormErrors({});
+                      const res = await fetchWithAuth(`/api/users/${editUser._id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(editUserForm),
+                      });
+                      const data = await res.json();
+                      handleApiError(data);
+                      if (!res.ok && data.error) {
+                        if (/email/i.test(data.error) && /duplicate/i.test(data.error)) {
+                          setEditUserFormErrors({ email: 'Пользователь с таким email уже существует' });
+                          return;
+                        }
+                        if (/username/i.test(data.error) && /duplicate/i.test(data.error)) {
+                          setEditUserFormErrors({ username: 'Пользователь с таким именем уже существует' });
+                          return;
+                        }
+                        return;
+                      }
+                      setShowEditUser(false);
+                      setEditUser(null);
+                      setUsersLoading(true);
+                      fetchWithAuth('/api/users')
+                        .then(res => res.json())
+                        .then(data => { handleApiError(data); setUsers(Array.isArray(data) ? data : []); })
+                        .catch(() => setUsersError('Ошибка загрузки пользователей'))
+                        .finally(() => setUsersLoading(false));
+                    }}
+                    onCancel={() => {
+                      setShowEditUser(false);
+                      setEditUser(null);
+                    }}
+                    submitText="Сохранить"
                   />
                 </>
               )}

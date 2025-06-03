@@ -10,6 +10,7 @@ export interface ModalFormField {
   options?: { value: string; label: string }[]; // для select
   placeholder?: string;
   error?: string;
+  autoComplete?: string;
 }
 
 interface ModalFormProps {
@@ -58,6 +59,7 @@ const ModalForm: React.FC<ModalFormProps> = ({ isOpen, title, fields, onSubmit, 
                   required={field.required}
                   placeholder={field.placeholder}
                   style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16 }}
+                  {...(field.autoComplete ? { autoComplete: field.autoComplete } : {})}
                 />
               )}
               {field.error && (

@@ -38,10 +38,7 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
 }) => {
   const [editList, setEditList] = useState<ServiceItem[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [addName, setAddName] = useState('');
   const [addPrice, setAddPrice] = useState<number | ''>('');
@@ -55,13 +52,11 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
   useEffect(() => {
     const companyId = selectedCompanyId || company?._id;
     if (!companyId) return setEditList([]);
-    setLoading(true);
     setError('');
     fetch(`${API_URL}/services?companyId=${companyId}`)
       .then(res => res.json())
       .then(data => setEditList(Array.isArray(data) ? data : []))
-      .catch(() => setEditList([]))
-      .finally(() => setLoading(false));
+      .catch(() => setEditList([]));
   }, [selectedCompanyId, company?._id]);
 
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
@@ -116,28 +111,6 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
     }
   };
 
-  // Сохранить услуги
-  const handleSave = async () => {
-    setLoading(true);
-    setError('');
-    setSuccess(false);
-    try {
-      const res = await fetch(`${API_URL}/services?companyId=${company._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-        body: JSON.stringify(editList),
-      });
-      if (!res.ok) throw new Error('Ошибка сохранения');
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
-      setEditMode(false);
-    } catch {
-      setError('Ошибка сохранения');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Поля для ModalForm
   const fields = [
     {
@@ -186,7 +159,6 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
         </button>
       </div>
       {error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
-      {success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
       <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
         <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, flex: 1, minWidth: 260 }}>
           {editList.length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет услуг</div>}
@@ -194,32 +166,30 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
             <div key={idx} style={{ marginBottom: 16, position: 'relative' }}>
               <div style={{ display: 'block', fontWeight: 500, marginBottom: 4, paddingRight: 36, position: 'relative' }}>
                 {item.name}
-                {editMode && (
-                  <button
-                    onClick={() => handleDeleteItem(item)}
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 0,
-                      color: '#e53e3e',
-                      background: 'none',
-                      border: 'none',
-                      fontWeight: 700,
-                      fontSize: 22,
-                      cursor: 'pointer',
-                      padding: 0,
-                      height: 24,
-                      width: 28,
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                    }}
-                    title="Удалить услугу"
-                    disabled={deleteLoading === item.name}
-                  >
-                    {deleteLoading === item.name ? '...' : '✕'}
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDeleteItem(item)}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 0,
+                    color: '#e53e3e',
+                    background: 'none',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: 22,
+                    cursor: 'pointer',
+                    padding: 0,
+                    height: 24,
+                    width: 28,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'center',
+                  }}
+                  title="Удалить услугу"
+                  disabled={deleteLoading === item.name}
+                >
+                  {deleteLoading === item.name ? '...' : '✕'}
+                </button>
               </div>
               <input
                 type="number"
@@ -230,7 +200,6 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
                 }}
                 style={{ width: '100%', padding: '8px 8px', borderRadius: 6, border: '1px solid #ccc', fontSize: 16, boxSizing: 'border-box' }}
                 placeholder="Цена"
-                disabled={!editMode}
               />
             </div>
           ))}

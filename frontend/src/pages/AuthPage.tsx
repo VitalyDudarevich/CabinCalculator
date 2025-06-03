@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import type { User } from './AdminPanel';
 
 const API_URL = 'http://localhost:5000/api/auth';
 
-// interface User {
-//   role: string;
-//   username: string;
-//   email: string;
-// }
+interface User {
+  _id: string;
+  role: string;
+  username: string;
+  email: string;
+  companyId?: string;
+}
 
 interface AuthPageProps {
   setUser: (user: User | null) => void;
@@ -15,7 +16,6 @@ interface AuthPageProps {
 }
 
 export default function AuthPage({ setUser, setToken }: AuthPageProps) {
-  const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [form, setForm] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [localToken, setLocalToken] = useState('');
@@ -46,18 +46,6 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
     }
   };
 
-  const handleForgot = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage('');
-    const res = await fetch(`${API_URL}/forgot-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: form.email }),
-    });
-    const data = await res.json();
-    setMessage(data.message || data.error);
-  };
-
   const handleMe = async () => {
     setMessage('');
     const res = await fetch(`${API_URL}/me`, {
@@ -81,37 +69,6 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
       <div style={{ maxWidth: 400, width: '100%', padding: 24, background: '#fff', borderRadius: 12, boxShadow: '0 2px 16px #0001' }}>
         <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Вход в систему</h2>
         {!localUser && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
-            <button
-              onClick={() => setMode('login')}
-              style={{
-                padding: '8px 24px',
-                borderRadius: 8,
-                border: mode === 'login' ? '2px solid #646cff' : '1px solid #ccc',
-                background: mode === 'login' ? '#f6f8ff' : '#fafafa',
-                marginRight: 8,
-                cursor: 'pointer',
-                fontWeight: 500,
-              }}
-            >
-              Вход
-            </button>
-            <button
-              onClick={() => setMode('forgot')}
-              style={{
-                padding: '8px 24px',
-                borderRadius: 8,
-                border: mode === 'forgot' ? '2px solid #646cff' : '1px solid #ccc',
-                background: mode === 'forgot' ? '#f6f8ff' : '#fafafa',
-                cursor: 'pointer',
-                fontWeight: 500,
-              }}
-            >
-              Восстановить пароль
-            </button>
-          </div>
-        )}
-        {!localUser && mode === 'login' && (
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <input
               name="emailOrUsername"
@@ -133,24 +90,6 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
               style={{ padding: 12, borderRadius: 8, background: '#646cff', color: '#fff', fontWeight: 600, fontSize: 16, border: 'none', cursor: 'pointer' }}
             >
               Войти
-            </button>
-          </form>
-        )}
-        {!localUser && mode === 'forgot' && (
-          <form onSubmit={handleForgot} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <input
-              name="email"
-              placeholder="Email"
-              type="email"
-              onChange={handleChange}
-              required
-              style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16 }}
-            />
-            <button
-              type="submit"
-              style={{ padding: 12, borderRadius: 8, background: '#646cff', color: '#fff', fontWeight: 600, fontSize: 16, border: 'none', cursor: 'pointer' }}
-            >
-              Восстановить
             </button>
           </form>
         )}
