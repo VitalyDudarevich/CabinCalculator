@@ -23,13 +23,14 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
     ? 'Все компании'
     : (companies.find(c => c._id === selectedCompanyId)?.name || '');
 
-  // Универсальная фильтрация пользователей по выбранной компании
-  const filteredUsers = selectedCompanyId && selectedCompanyId !== 'all'
+  // Универсальная фильтрация пользователей по выбранной компании и исключение суперадминов
+  const filteredUsers = (selectedCompanyId && selectedCompanyId !== 'all'
     ? users.filter(u =>
-        (typeof u.companyId === 'object' && u.companyId?._id?.toString() === selectedCompanyId?.toString()) ||
-        (typeof u.companyId === 'string' && u.companyId === selectedCompanyId)
+        ((typeof u.companyId === 'object' && u.companyId?._id?.toString() === selectedCompanyId?.toString()) ||
+        (typeof u.companyId === 'string' && u.companyId === selectedCompanyId))
       )
-    : users;
+    : users
+  ).filter(u => u.role !== 'superadmin');
 
   return (
     <div>

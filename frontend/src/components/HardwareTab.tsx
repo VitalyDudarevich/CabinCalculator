@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import ModalForm from './ModalForm';
+import ServicesTab from './ServicesTab';
 import type { ModalFormField } from './ModalForm';
+import type { User } from '../types/User';
+import BaseCostsTab from './BaseCostsTab';
 
 interface Company {
   _id: string;
@@ -18,13 +21,16 @@ interface HardwareTabProps {
   companies: Company[];
   selectedCompanyId: string;
   hardwareByCompany: Record<string, HardwareItem[]>;
+  user: User;
+  onLogout: () => void;
+  onCalculator: () => void;
 }
 
 const MAIN_SECTIONS = ['Стекло', 'Профили', 'Крепления'];
 const COLUMNS = 3;
 const API_URL = 'http://localhost:5000/api';
 
-const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, hardwareByCompany }) => {
+const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, hardwareByCompany, user, onLogout, onCalculator }) => {
   const company = companies.find(c => c._id === selectedCompanyId);
   const [editList, setEditList] = useState<HardwareItem[]>(hardwareByCompany[selectedCompanyId] || []);
   const [showAdd, setShowAdd] = useState(false);
@@ -33,6 +39,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'hardware' | 'services' | 'basecosts'>('hardware');
 
   // Для формы добавления
   const allSections = Array.from(new Set([
@@ -209,136 +216,227 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
 
   return (
     <div style={{ padding: '0 48px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>Фурнитура {company.name}</h2>
-        <button
-          onClick={editMode ? handleSave : () => setEditMode(true)}
-          style={{
-            padding: '8px 18px',
-            borderRadius: 8,
-            background: editMode ? '#1cbf73' : '#fff',
-            color: editMode ? '#fff' : '#646cff',
-            border: editMode ? 'none' : '2px solid #646cff',
-            fontWeight: 600,
-            fontSize: 16,
-            marginRight: 8,
-            cursor: 'pointer',
-            transition: 'background 0.15s',
-            lineHeight: 1.25,
-            height: '40px',
-            ...(editMode
-              ? {}
-              : {
-                  boxShadow: '0 1px 4px #646cff22',
-                }),
-          }}
-          disabled={loading}
-          onMouseOver={e => {
-            if (!editMode) (e.currentTarget as HTMLButtonElement).style.background = '#f6f8ff';
-          }}
-          onMouseOut={e => {
-            if (!editMode) (e.currentTarget as HTMLButtonElement).style.background = '#fff';
-          }}
-        >
-          {editMode ? (loading ? 'Сохранение...' : 'Сохранить') : 'Изменить'}
-        </button>
-        <button
-          onClick={() => setShowAdd(true)}
-          style={{
-            padding: '8px 18px',
-            borderRadius: 8,
-            background: '#646cff',
-            color: '#fff',
-            border: 'none',
-            fontWeight: 600,
-            fontSize: 16,
-            marginRight: 8,
-            cursor: 'pointer',
-            height: '40px',
-            lineHeight: 1.25,
-          }}
-        >
-          Добавить фурнитуру
-        </button>
+      {/* Табы и кнопки в одной строке */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 24, borderBottom: '2px solid #e0e7ef' }}>
+        <div style={{ display: 'flex', gap: 0 }}>
+          <button
+            onClick={() => setActiveTab('hardware')}
+            style={{
+              padding: '12px 36px',
+              border: 'none',
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              background: activeTab === 'hardware' ? '#646cff' : '#f6f8fa',
+              color: activeTab === 'hardware' ? '#fff' : '#646cff',
+              fontWeight: 600,
+              fontSize: 17,
+              cursor: 'pointer',
+              boxShadow: activeTab === 'hardware' ? '0 2px 8px #646cff22' : 'none',
+              borderBottom: activeTab === 'hardware' ? '2px solid #646cff' : '2px solid transparent',
+              transition: 'background 0.18s, color 0.18s',
+              marginRight: 2,
+            }}
+            onMouseOver={e => { if (activeTab !== 'hardware') e.currentTarget.style.background = '#e0e7ef'; }}
+            onMouseOut={e => { if (activeTab !== 'hardware') e.currentTarget.style.background = '#f6f8fa'; }}
+          >
+            Фурнитура
+          </button>
+          <button
+            onClick={() => setActiveTab('services')}
+            style={{
+              padding: '12px 36px',
+              border: 'none',
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              background: activeTab === 'services' ? '#646cff' : '#f6f8fa',
+              color: activeTab === 'services' ? '#fff' : '#646cff',
+              fontWeight: 600,
+              fontSize: 17,
+              cursor: 'pointer',
+              boxShadow: activeTab === 'services' ? '0 2px 8px #646cff22' : 'none',
+              borderBottom: activeTab === 'services' ? '2px solid #646cff' : '2px solid transparent',
+              transition: 'background 0.18s, color 0.18s',
+              marginRight: 2,
+            }}
+            onMouseOver={e => { if (activeTab !== 'services') e.currentTarget.style.background = '#e0e7ef'; }}
+            onMouseOut={e => { if (activeTab !== 'services') e.currentTarget.style.background = '#f6f8fa'; }}
+          >
+            Услуги
+          </button>
+          <button
+            onClick={() => setActiveTab('basecosts')}
+            style={{
+              padding: '12px 36px',
+              border: 'none',
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              background: activeTab === 'basecosts' ? '#646cff' : '#f6f8fa',
+              color: activeTab === 'basecosts' ? '#fff' : '#646cff',
+              fontWeight: 600,
+              fontSize: 17,
+              cursor: 'pointer',
+              boxShadow: activeTab === 'basecosts' ? '0 2px 8px #646cff22' : 'none',
+              borderBottom: activeTab === 'basecosts' ? '2px solid #646cff' : '2px solid transparent',
+              transition: 'background 0.18s, color 0.18s',
+            }}
+            onMouseOver={e => { if (activeTab !== 'basecosts') e.currentTarget.style.background = '#e0e7ef'; }}
+            onMouseOut={e => { if (activeTab !== 'basecosts') e.currentTarget.style.background = '#f6f8fa'; }}
+          >
+            Базовая стоимость
+          </button>
+        </div>
+        {/* Кнопки справа */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+          {activeTab === 'hardware' && (
+            <>
+              <button
+                onClick={editMode ? handleSave : () => setEditMode(true)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 8,
+                  background: editMode ? '#1cbf73' : '#fff',
+                  color: editMode ? '#fff' : '#646cff',
+                  border: editMode ? 'none' : '2px solid #646cff',
+                  fontWeight: 600,
+                  fontSize: 16,
+                  marginRight: 8,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s',
+                  lineHeight: 1.25,
+                  height: '40px',
+                  ...(editMode ? {} : { boxShadow: '0 1px 4px #646cff22' }),
+                }}
+                disabled={loading}
+                onMouseOver={e => { if (!editMode) (e.currentTarget as HTMLButtonElement).style.background = '#f6f8ff'; }}
+                onMouseOut={e => { if (!editMode) (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
+              >
+                {editMode ? (loading ? 'Сохранение...' : 'Сохранить') : 'Изменить'}
+              </button>
+              <button
+                onClick={() => setShowAdd(true)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 8,
+                  background: '#646cff',
+                  color: '#fff',
+                  border: 'none',
+                  fontWeight: 600,
+                  fontSize: 16,
+                  cursor: 'pointer',
+                  height: '40px',
+                  lineHeight: 1.25,
+                }}
+              >
+                Добавить фурнитуру
+              </button>
+            </>
+          )}
+          {/* Для basecosts не показываем никаких кнопок */}
+        </div>
       </div>
-      {error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
-      {success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
-      <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
-        {columns.map((sectionList, colIdx) => (
-          <div key={colIdx} style={{ background: 'none', minWidth: 260, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 24 }}>
-            {sectionList.map(section => (
-              <div key={section} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative' }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-                  <div style={{ fontWeight: 700, fontSize: 20, flex: 1 }}>{section}</div>
-                </div>
-                {grouped[section].length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет позиций</div>}
-                {grouped[section].map((item, idx) => (
-                  <div key={idx} style={{ marginBottom: 16, position: 'relative' }}>
-                    <div style={{ display: 'block', fontWeight: 500, marginBottom: 4, paddingRight: 36, position: 'relative' }}>
-                      {item.name}
-                      {editMode && (
-                        <button
-                          onClick={() => handleDeleteItem(item)}
-                          style={{
-                            position: 'absolute',
-                            right: 0,
-                            top: 0,
-                            color: '#e53e3e',
-                            background: 'none',
-                            border: 'none',
-                            fontWeight: 700,
-                            fontSize: 22,
-                            cursor: 'pointer',
-                            lineHeight: 1,
-                            padding: 0,
-                            height: 24,
-                            width: 28,
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            justifyContent: 'center',
-                          }}
-                          title="Удалить элемент"
-                          disabled={deleteLoading === item.section + '|' + item.name}
-                        >
-                          {deleteLoading === item.section + '|' + item.name ? '...' : '✕'}
-                        </button>
-                      )}
+      {/* Содержимое вкладок */}
+      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 32, minHeight: 320, marginTop: -2 }}>
+        {activeTab === 'hardware' && (
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>Фурнитура {company.name}</h2>
+          </div>
+        )}
+        {activeTab === 'hardware' && error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
+        {activeTab === 'hardware' && success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
+        {activeTab === 'hardware' && (
+          <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
+            {columns.map((sectionList, colIdx) => (
+              <div key={colIdx} style={{ background: 'none', minWidth: 260, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 24 }}>
+                {sectionList.map(section => (
+                  <div key={section} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+                      <div style={{ fontWeight: 700, fontSize: 20, flex: 1 }}>{section}</div>
                     </div>
-                    <input
-                      type="number"
-                      value={item.price === null || item.price === undefined ? '' : item.price}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setEditList(list => {
-                          let count = -1;
-                          return list.map(it => {
-                            if (it.section === section) count++;
-                            if (it.section === section && count === idx) {
-                              return { ...it, price: val === '' ? null : Number(val) };
-                            }
-                            return it;
-                          });
-                        });
-                      }}
-                      style={{ width: '100%', padding: '8px 8px', borderRadius: 6, border: '1px solid #ccc', fontSize: 16, boxSizing: 'border-box' }}
-                      placeholder="Цена"
-                      disabled={!editMode}
-                    />
+                    {grouped[section].length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет позиций</div>}
+                    {grouped[section].map((item, idx) => (
+                      <div key={idx} style={{ marginBottom: 16, position: 'relative' }}>
+                        <div style={{ display: 'block', fontWeight: 500, marginBottom: 4, paddingRight: 36, position: 'relative' }}>
+                          {item.name}
+                          {editMode && (
+                            <button
+                              onClick={() => handleDeleteItem(item)}
+                              style={{
+                                position: 'absolute',
+                                right: 0,
+                                top: 0,
+                                color: '#e53e3e',
+                                background: 'none',
+                                border: 'none',
+                                fontWeight: 700,
+                                fontSize: 22,
+                                cursor: 'pointer',
+                                lineHeight: 1,
+                                padding: 0,
+                                height: 24,
+                                width: 28,
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                justifyContent: 'center',
+                              }}
+                              title="Удалить элемент"
+                              disabled={deleteLoading === item.section + '|' + item.name}
+                            >
+                              {deleteLoading === item.section + '|' + item.name ? '...' : '✕'}
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          type="number"
+                          value={item.price === null || item.price === undefined ? '' : item.price}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEditList(list => {
+                              let count = -1;
+                              return list.map(it => {
+                                if (it.section === section) count++;
+                                if (it.section === section && count === idx) {
+                                  return { ...it, price: val === '' ? null : Number(val) };
+                                }
+                                return it;
+                              });
+                            });
+                          }}
+                          style={{ width: '100%', padding: '8px 8px', borderRadius: 6, border: '1px solid #ccc', fontSize: 16, boxSizing: 'border-box' }}
+                          placeholder="Цена"
+                          disabled={!editMode}
+                        />
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
             ))}
           </div>
-        ))}
+        )}
+        {activeTab === 'hardware' && (
+          <ModalForm
+            isOpen={showAdd}
+            title="Добавить фурнитуру"
+            fields={fields}
+            onSubmit={handleAdd}
+            onCancel={() => setShowAdd(false)}
+            submitText={loading ? 'Добавление...' : 'Добавить'}
+          />
+        )}
+        {activeTab === 'services' && (
+          <ServicesTab
+            user={user}
+            company={companies.find(c => c._id === selectedCompanyId) || null}
+            companies={companies}
+            selectedCompanyId={selectedCompanyId}
+            onLogout={onLogout}
+            onCalculator={onCalculator}
+          />
+        )}
+        {activeTab === 'basecosts' && (
+          <BaseCostsTab company={company} />
+        )}
       </div>
-      <ModalForm
-        isOpen={showAdd}
-        title="Добавить фурнитуру"
-        fields={fields}
-        onSubmit={handleAdd}
-        onCancel={() => setShowAdd(false)}
-        submitText={loading ? 'Добавление...' : 'Добавить'}
-      />
     </div>
   );
 };

@@ -61,8 +61,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [addBaseName, setAddBaseName] = useState('');
-  const [addBaseValue, setAddBaseValue] = useState<number | ''>('');
 
   const companyName = company ? company.name : 'Все компании';
 
@@ -102,32 +100,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         setSettingsLoading(false);
       });
   }, [company]);
-
-  // --- Базовые стоимости ---
-  const handleChangeBaseCost = (idx: number, value: number) => {
-    setSettings(prev => ({
-      ...prev,
-      baseCosts: prev.baseCosts.map((item, i) => i === idx ? { ...item, value } : item)
-    }));
-  };
-  const handleDeleteBaseCost = (idx: number) => {
-    setSettings(prev => ({
-      ...prev,
-      baseCosts: prev.baseCosts.filter((_, i) => i !== idx)
-    }));
-  };
-  const handleAddBaseCost = () => {
-    if (!addBaseName.trim()) return;
-    setSettings(prev => ({
-      ...prev,
-      baseCosts: [
-        ...prev.baseCosts,
-        { id: Date.now().toString(), name: addBaseName.trim(), value: addBaseValue === '' ? 0 : Number(addBaseValue) }
-      ]
-    }));
-    setAddBaseName('');
-    setAddBaseValue('');
-  };
 
   // --- Сохранение ---
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -191,7 +163,35 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>
           Настройки {companyName}
         </h2>
-        {onAdd && (
+        {!editMode && (
+          <button
+            onClick={() => setEditMode(true)}
+            style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}
+          >
+            Редактировать
+          </button>
+        )}
+        {editMode && (
+          <>
+            <button
+              form="settings-form"
+              type="submit"
+              style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25, marginRight: 8 }}
+              disabled={saveLoading}
+            >
+              Сохранить
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEditMode(false); setSaveSuccess(false); setSettingsError(''); }}
+              style={{ padding: '8px 18px', borderRadius: 8, background: '#eee', color: '#333', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}
+              disabled={saveLoading}
+            >
+              Отмена
+            </button>
+          </>
+        )}
+        {onAdd && !editMode && (
           <button onClick={onAdd} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
             Добавить
           </button>
@@ -209,7 +209,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               Валюта:
               <select
-                value={settings.currency}
+                value={settings.currency ?? ''}
                 onChange={e => setSettings(prev => ({ ...prev, currency: e.target.value }))}
                 style={{ width: 180, padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, marginTop: 4 }}
                 disabled={!editMode}
@@ -226,7 +226,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                   type="number"
                   step="0.01"
                   min="0"
-                  value={settings.usdRate}
+                  value={settings.usdRate ?? ''}
                   onChange={e => setSettings(prev => ({ ...prev, usdRate: e.target.value }))}
                   style={{ width: 180, padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, marginTop: 4 }}
                   required
@@ -251,7 +251,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                   type="number"
                   step="0.01"
                   min="0"
-                  value={settings.rrRate}
+                  value={settings.rrRate ?? ''}
                   onChange={e => setSettings(prev => ({ ...prev, rrRate: e.target.value }))}
                   style={{ width: 180, padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, marginTop: 4 }}
                   required
@@ -269,79 +269,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                 <span style={{ fontSize: 15 }}>Показывать RR</span>
               </label>
             </div>
-          </div>
-          {/* Секция 2: Базовая стоимость конструкций */}
-          <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, marginTop: 0, marginBottom: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 12 }}>Базовая стоимость конструкций</div>
-            {settings.baseCosts.length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет базовых стоимостей</div>}
-            {settings.baseCosts.map((item, idx) => (
-              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, position: 'relative' }}>
-                <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {item.name}:
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.value}
-                    onChange={e => handleChangeBaseCost(idx, Number(e.target.value))}
-                    disabled={!editMode}
-                    style={{ width: 140, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, marginTop: 2 }}
-                  />
-                </label>
-                {editMode && (
-                  <button type="button" onClick={() => handleDeleteBaseCost(idx)} style={{ color: '#e53e3e', background: 'none', border: 'none', fontWeight: 700, fontSize: 20, cursor: 'pointer', marginTop: 18 }} title="Удалить">
-                    ✕
-                  </button>
-                )}
-              </div>
-            ))}
-            {editMode && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                <input
-                  type="text"
-                  placeholder="Название базовой стоимости"
-                  value={addBaseName}
-                  onChange={e => setAddBaseName(e.target.value)}
-                  style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, flex: 2 }}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Значение"
-                  value={addBaseValue}
-                  onChange={e => setAddBaseValue(e.target.value === '' ? '' : Number(e.target.value))}
-                  style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, width: 120 }}
-                />
-                <button type="button" onClick={handleAddBaseCost} style={{ padding: '8px 16px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 500, fontSize: 15, cursor: 'pointer' }}>Добавить</button>
-              </div>
-            )}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-              <input
-                type="checkbox"
-                checked={!!settings.baseIsPercent}
-                onChange={e => setSettings(prev => ({ ...prev, baseIsPercent: e.target.checked }))}
-                disabled={!editMode}
-                style={{ width: 18, height: 18 }}
-              />
-              <span style={{ fontSize: 15 }}>Базовая стоимость в процентах от цены</span>
-            </label>
-            {settings.baseIsPercent && (
-              <div style={{ marginTop: 8, marginLeft: 28 }}>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={settings.basePercentValue ?? ''}
-                  onChange={e => setSettings(prev => ({ ...prev, basePercentValue: Number(e.target.value) }))}
-                  disabled={!editMode}
-                  style={{ width: 120, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
-                  placeholder="% от цены"
-                />
-                <span style={{ marginLeft: 8, color: '#888' }}>%</span>
-              </div>
-            )}
           </div>
           {settingsError && <div style={{ color: 'crimson', fontSize: 14 }}>{settingsError}</div>}
           {saveSuccess && <div style={{ color: 'green', marginTop: 16, textAlign: 'right' }}>Сохранено!</div>}

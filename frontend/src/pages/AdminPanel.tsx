@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import ServicesTab from '../components/ServicesTab';
 import SettingsTab from '../components/SettingsTab';
 import CompaniesTab from '../components/CompaniesTab';
 import UsersTab from '../components/UsersTab';
@@ -14,11 +13,11 @@ const sections = [
   { key: 'companies', label: 'Компании' },
   { key: 'users', label: 'Пользователи' },
   { key: 'hardware', label: 'Фурнитура' },
-  { key: 'services', label: 'Услуги' },
+  // { key: 'services', label: 'Услуги' }, // Удалено по просьбе пользователя
   { key: 'settings', label: 'Настройки' },
 ];
 
-const currencyOptions = ['GEL', 'USD', 'EUR', 'RR'];
+const currencyOptions = ['GEL', 'USD', 'RR'];
 
 export default function AdminPanel({ user, onLogout, onCalculator }: { user: User; onLogout: () => void; onCalculator: () => void }) {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -529,18 +528,11 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
                   companies={companies}
                   selectedCompanyId={selectedCompanyId}
                   hardwareByCompany={hardwareByCompany}
+                  user={user}
+                  onLogout={onLogout}
+                  onCalculator={onCalculator}
                 />
               )}
-              {section === 'services' && companies.length > 0 && (
-            <ServicesTab
-              user={user}
-              company={company}
-              companies={companies}
-                  selectedCompanyId={selectedCompanyId}
-              onLogout={onLogout}
-              onCalculator={onCalculator}
-            />
-          )}
               {section === 'settings' && companies.length > 0 && (
             <SettingsTab
               currencyOptions={currencyOptions}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ModalForm from './ModalForm';
+// import ModalForm from './ModalForm'; // больше не используется
 
 interface User {
   _id: string;
@@ -18,6 +18,7 @@ interface Company {
 interface ServiceItem {
   name: string;
   price: number | null;
+  type?: string;
 }
 
 export interface ServicesTabProps {
@@ -36,183 +37,184 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
   selectedCompanyId,
   companies,
 }) => {
-  const [editList, setEditList] = useState<ServiceItem[]>([]);
-  const [showAdd, setShowAdd] = useState(false);
-  const [error, setError] = useState('');
-  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
   const [addName, setAddName] = useState('');
   const [addPrice, setAddPrice] = useState<number | ''>('');
-  const [addLoading, setAddLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [editList, setEditList] = useState<ServiceItem[]>([]);
+  const [originalList, setOriginalList] = useState<ServiceItem[]>([]);
+  const [error, setError] = useState('');
+  const [addError, setAddError] = useState('');
 
   const companyName = selectedCompanyId === 'all'
     ? 'Все компании'
     : (companies.find(c => c._id === selectedCompanyId)?.name || '');
 
-  // Загрузка услуг для выбранной компании
   useEffect(() => {
     const companyId = selectedCompanyId || company?._id;
     if (!companyId) return setEditList([]);
     setError('');
+    setLoading(true);
     fetch(`${API_URL}/services?companyId=${companyId}`)
       .then(res => res.json())
-      .then(data => setEditList(Array.isArray(data) ? data : []))
-      .catch(() => setEditList([]));
+      .then(data => {
+        setEditList(Array.isArray(data) ? data : []);
+        setOriginalList(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setEditList([]);
+        setOriginalList([]);
+        setLoading(false);
+      });
   }, [selectedCompanyId, company?._id]);
 
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
-  // Добавить услугу
-  const handleAdd = async () => {
+  const handleAdd = () => {
     if (!addName.trim()) return;
-    setAddLoading(true);
+    const exists = editList.some(s => s.name.trim().toLowerCase() === addName.trim().toLowerCase());
+    if (exists) {
+      setAddError('Услуга с таким названием уже существует');
+      return;
+    }
+    setEditList(prev => ([
+      ...prev,
+      { name: addName.trim(), price: addPrice === '' || addPrice == null ? null : Number(addPrice) }
+    ]));
+    setAddName('');
+    setAddPrice('');
+    setAddError('');
+  };
+
+  const handleDeleteItem = (idx: number) => {
+    setEditList(list => list.filter((_, i) => i !== idx));
+  };
+
+  const handleSave = async () => {
     setError('');
+    setLoading(true);
+    setSuccess(false);
     try {
-      const newItem = { name: addName.trim(), price: addPrice === '' ? null : Number(addPrice) };
+      const toSave = editList.map(s => ({
+        name: s.name,
+        price: typeof s.price === 'number' ? s.price : (s.price === '' || s.price == null ? null : Number(s.price))
+      }));
       const res = await fetch(`${API_URL}/services?companyId=${company._id}`, {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-        body: JSON.stringify(newItem),
+        body: JSON.stringify(toSave),
       });
-      if (!res.ok) throw new Error('Ошибка добавления');
-      // После успешного добавления — обновить список
-      const updated = await fetch(`${API_URL}/services?companyId=${company._id}`);
-      const updatedList = await updated.json();
-      setEditList(Array.isArray(updatedList) ? updatedList : []);
-      setAddName('');
-      setAddPrice('');
-      setShowAdd(false);
+      if (!res.ok) throw new Error('Ошибка сохранения');
+      setOriginalList(editList);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2000);
+      setEditMode(false);
     } catch {
-      setError('Ошибка добавления');
+      setError('Ошибка сохранения');
     } finally {
-      setAddLoading(false);
+      setLoading(false);
     }
   };
 
-  // Удалить услугу
-  const handleDeleteItem = async (item: ServiceItem) => {
-    setDeleteLoading(item.name);
+  const handleCancel = () => {
+    setEditList(originalList);
+    setEditMode(false);
     setError('');
-    try {
-      const res = await fetch(`${API_URL}/services/item?companyId=${company._id}`,
-        {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-          body: JSON.stringify({ name: item.name })
-        });
-      if (!res.ok) throw new Error('Ошибка удаления');
-      // После успешного удаления — обновить список
-      const updated = await fetch(`${API_URL}/services?companyId=${company._id}`);
-      const updatedList = await updated.json();
-      setEditList(Array.isArray(updatedList) ? updatedList : []);
-    } catch {
-      setError('Ошибка удаления');
-    } finally {
-      setDeleteLoading(null);
-    }
   };
-
-  // Поля для ModalForm
-  const fields = [
-    {
-      name: 'name',
-      label: 'Название услуги',
-      type: 'text' as const,
-      value: addName,
-      onChange: (v: string | number) => setAddName(String(v)),
-      required: true,
-      placeholder: 'Введите название',
-    },
-    {
-      name: 'price',
-      label: 'Цена',
-      type: 'number' as const,
-      value: addPrice === '' ? '' : Number(addPrice),
-      onChange: (v: string | number) => setAddPrice(typeof v === 'number' ? v : Number(v)),
-      required: true,
-      placeholder: 'Введите цену',
-    },
-  ];
 
   return (
-    <div style={{ padding: '0 48px' }}>
+    <div style={{ maxWidth: 540, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>
-          Услуги {companyName}
-        </h2>
+        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, flex: 1 }}>Услуги {companyName}</h2>
         <button
-          onClick={() => setShowAdd(true)}
+          onClick={editMode ? handleSave : () => setEditMode(true)}
           style={{
             padding: '8px 18px',
             borderRadius: 8,
-            background: '#646cff',
-            color: '#fff',
-            border: 'none',
+            background: editMode ? '#1cbf73' : '#fff',
+            color: editMode ? '#fff' : '#646cff',
+            border: editMode ? 'none' : '2px solid #646cff',
             fontWeight: 600,
             fontSize: 16,
             marginRight: 8,
             cursor: 'pointer',
-            height: '40px',
+            transition: 'background 0.15s',
             lineHeight: 1.25,
+            height: '40px',
+            ...(editMode ? {} : { boxShadow: '0 1px 4px #646cff22' }),
           }}
+          disabled={loading}
         >
-          Добавить
+          {editMode ? (loading ? 'Сохранение...' : 'Сохранить') : 'Изменить'}
         </button>
+        {editMode && (
+          <button
+            onClick={handleCancel}
+            style={{ padding: '8px 18px', borderRadius: 8, background: '#eee', color: '#333', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}
+            disabled={loading}
+          >
+            Отмена
+          </button>
+        )}
       </div>
       {error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
-      <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
-        <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, flex: 1, minWidth: 260 }}>
-          {editList.length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет услуг</div>}
-          {editList.map((item, idx) => (
-            <div key={idx} style={{ marginBottom: 16, position: 'relative' }}>
-              <div style={{ display: 'block', fontWeight: 500, marginBottom: 4, paddingRight: 36, position: 'relative' }}>
-                {item.name}
-                <button
-                  onClick={() => handleDeleteItem(item)}
-                  style={{
-                    position: 'absolute',
-                    right: 0,
-                    top: 0,
-                    color: '#e53e3e',
-                    background: 'none',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: 22,
-                    cursor: 'pointer',
-                    padding: 0,
-                    height: 24,
-                    width: 28,
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'center',
-                  }}
-                  title="Удалить услугу"
-                  disabled={deleteLoading === item.name}
-                >
-                  {deleteLoading === item.name ? '...' : '✕'}
-                </button>
-              </div>
-              <input
-                type="number"
-                value={item.price === null ? '' : item.price}
-                onChange={e => {
-                  const val = e.target.value;
-                  setEditList(list => list.map((it, i) => i === idx ? { ...it, price: val === '' ? null : Number(val) } : it));
-                }}
-                style={{ width: '100%', padding: '8px 8px', borderRadius: 6, border: '1px solid #ccc', fontSize: 16, boxSizing: 'border-box' }}
-                placeholder="Цена"
-              />
-            </div>
-          ))}
+      {success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
+      {editList.length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет услуг</div>}
+      {editList.map((item, idx) => (
+        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, position: 'relative' }}>
+          <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {item.name}:
+            <input
+              type="number"
+              value={item.price === null ? '' : item.price}
+              disabled={!editMode}
+              readOnly={!editMode}
+              onChange={e => {
+                const val = e.target.value;
+                setEditList(list => list.map((it, i) => i === idx ? { ...it, price: val === '' ? null : Number(val) } : it));
+              }}
+              style={{ width: 140, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, marginTop: 2, background: '#fff', boxSizing: 'border-box', color: !editMode ? '#888' : undefined }}
+              placeholder="Цена"
+            />
+          </label>
+          {editMode && (
+            <button type="button" onClick={() => handleDeleteItem(idx)} style={{ color: '#e53e3e', background: 'none', border: 'none', fontWeight: 700, fontSize: 20, cursor: 'pointer', marginTop: 18 }} title="Удалить">✕</button>
+          )}
         </div>
-      </div>
-      <ModalForm
-        isOpen={showAdd}
-        title="Добавить услугу"
-        fields={fields}
-        onSubmit={handleAdd}
-        onCancel={() => setShowAdd(false)}
-        submitText={addLoading ? 'Добавление...' : 'Добавить'}
-      />
+      ))}
+      {editMode && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+            <input
+              type="text"
+              placeholder="Название услуги"
+              value={addName}
+              onChange={e => { setAddName(e.target.value); setAddError(''); }}
+              style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, flex: 2, background: '#fff', boxSizing: 'border-box' }}
+            />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Цена"
+              value={addPrice}
+              onChange={e => setAddPrice(e.target.value === '' ? '' : Number(e.target.value))}
+              style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, width: 140, marginTop: 2, background: '#fff', boxSizing: 'border-box' }}
+            />
+            <button
+              type="button"
+              onClick={handleAdd}
+              style={{ padding: '8px 16px', borderRadius: 8, background: addName.trim() ? '#646cff' : '#bbb', color: '#fff', border: 'none', fontWeight: 500, fontSize: 15, cursor: addName.trim() ? 'pointer' : 'not-allowed' }}
+              disabled={!addName.trim()}
+            >
+              Добавить
+            </button>
+          </div>
+          {addError && <div style={{ color: 'crimson', marginTop: 4 }}>{addError}</div>}
+        </>
+      )}
     </div>
   );
 };

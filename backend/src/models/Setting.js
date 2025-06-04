@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 
 const settingSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
-  currency: { type: String, enum: ['BYN', 'GEL'], default: 'GEL' },
+  currency: { type: String, enum: ['GEL', 'USD', 'RR'], default: 'GEL' },
   usdRate: { type: Number, default: 0 },
+  rrRate: { type: Number, default: 0 },
   showUSD: { type: Boolean, default: false },
   exchangeRate: { type: Number },
   basePrice: { type: Number },
