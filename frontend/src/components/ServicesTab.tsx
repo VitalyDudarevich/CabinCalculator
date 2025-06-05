@@ -175,7 +175,17 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
                 const val = e.target.value;
                 setEditList(list => list.map((it, i) => i === idx ? { ...it, price: val === '' ? null : Number(val) } : it));
               }}
-              style={{ width: 140, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, marginTop: 2, background: '#fff', boxSizing: 'border-box', color: !editMode ? '#888' : undefined }}
+              style={{
+                width: 140,
+                padding: 8,
+                borderRadius: 6,
+                border: '1px solid #ccc',
+                fontSize: 15,
+                marginTop: 2,
+                background: !editMode ? '#f5f5f5' : '#fff',
+                boxSizing: 'border-box',
+                color: !editMode ? '#888' : undefined
+              }}
               placeholder="Цена"
             />
           </label>

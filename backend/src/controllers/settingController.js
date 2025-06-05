@@ -2,8 +2,14 @@ const Setting = require('../models/Setting');
 
 exports.getAllSettings = async (req, res) => {
   try {
-    const settings = await Setting.find();
-    res.json(settings);
+    const { companyId } = req.query;
+    if (companyId) {
+      const setting = await Setting.findOne({ companyId });
+      res.json(setting ? [setting] : []);
+    } else {
+      const settings = await Setting.find();
+      res.json(settings);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -21,14 +27,29 @@ exports.getSettingById = async (req, res) => {
 
 exports.createSetting = async (req, res) => {
   try {
-    const setting = new Setting({
-      ...req.body,
-      baseCosts: req.body.baseCosts || [],
-      baseIsPercent: req.body.baseIsPercent ?? false,
-      basePercentValue: req.body.basePercentValue ?? 0,
-    });
-    await setting.save();
-    res.status(201).json(setting);
+    const { companyId } = req.body;
+    let setting = await Setting.findOne({ companyId });
+    if (setting) {
+      // Обновить существующую настройку
+      setting.set({
+        ...req.body,
+        baseCosts: req.body.baseCosts || [],
+        baseIsPercent: req.body.baseIsPercent ?? false,
+        basePercentValue: req.body.basePercentValue ?? 0,
+      });
+      await setting.save();
+      res.status(200).json(setting);
+    } else {
+      // Создать новую настройку
+      setting = new Setting({
+        ...req.body,
+        baseCosts: req.body.baseCosts || [],
+        baseIsPercent: req.body.baseIsPercent ?? false,
+        basePercentValue: req.body.basePercentValue ?? 0,
+      });
+      await setting.save();
+      res.status(201).json(setting);
+    }
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

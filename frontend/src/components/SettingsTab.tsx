@@ -226,7 +226,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                   type="number"
                   step="0.01"
                   min="0"
-                  value={settings.usdRate ?? ''}
+                  value={settings.usdRate == null ? '' : settings.usdRate}
                   onChange={e => setSettings(prev => ({ ...prev, usdRate: e.target.value }))}
                   style={{ width: 180, padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, marginTop: 4 }}
                   required
@@ -251,7 +251,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                   type="number"
                   step="0.01"
                   min="0"
-                  value={settings.rrRate ?? ''}
+                  value={settings.rrRate == null ? '' : settings.rrRate}
                   onChange={e => setSettings(prev => ({ ...prev, rrRate: e.target.value }))}
                   style={{ width: 180, padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, marginTop: 4 }}
                   required
