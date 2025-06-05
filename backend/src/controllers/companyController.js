@@ -1,6 +1,7 @@
 const Company = require('../models/Company');
 const Hardware = require('../models/Hardware');
 const Service = require('../models/Service');
+const Glass = require('../models/Glass');
 
 exports.getAllCompanies = async (req, res) => {
   try {
@@ -24,15 +25,6 @@ exports.getCompanyById = async (req, res) => {
 // Функция для генерации дефолтного набора фурнитуры
 function getDefaultHardwarePrices(currency = 'GEL') {
   return [
-    { section: 'Стекло', name: `Стекло Прозрачное 8 мм (${currency})`, price: null },
-    { section: 'Стекло', name: `Стекло Ултра Прозрачное 8 мм (${currency})`, price: null },
-    { section: 'Стекло', name: `Стекло Тонированное 8 мм (${currency})`, price: null },
-    { section: 'Стекло', name: `Стекло Матовое Пескоструй 8 мм (${currency})`, price: null },
-    { section: 'Стекло', name: `Стекло Прозрачное 10 мм (${currency})`, price: null },
-    { section: 'Стекло', name: `Стекло Ултра Прозрачное 10 мм (${currency})`, price: null },
-    { section: 'Стекло', name: `Стекло Тонированное 10 мм (${currency})`, price: null },
-    { section: 'Стекло', name: `Стекло Матовое Пескоструй 10 мм (${currency})`, price: null },
-    { section: 'Стекло', name: `Стекло Матовое Заводское 10 мм (${currency})`, price: null },
     { section: 'Профили', name: `Профиль 8 мм (${currency})`, price: null },
     { section: 'Профили', name: `Профиль 10 мм (${currency})`, price: null },
     { section: 'Крепления', name: `Стекло-стекло (${currency})`, price: null },
@@ -109,7 +101,74 @@ exports.createCompany = async (req, res) => {
     // 3. Добавляем дефолтные услуги
     const defaultServices = getDefaultServiceList(company._id);
     await Service.insertMany(defaultServices, { ordered: false });
-    // 4. Возвращаем только компанию
+    // 4. Добавляем дефолтные варианты стекла
+    const defaultGlass = [
+      {
+        name: 'Стекло прозрачное 8 мм',
+        thickness: '8 мм',
+        color: 'прозрачный',
+        price: 0,
+        companyId: company._id,
+      },
+      {
+        name: 'Стекло ультра прозрачное 8 мм',
+        thickness: '8 мм',
+        color: 'ультра прозрачный',
+        price: 0,
+        companyId: company._id,
+      },
+      {
+        name: 'Стекло матовое пескоструй 8 мм',
+        thickness: '8 мм',
+        color: 'матовый пескоструй',
+        price: 0,
+        companyId: company._id,
+      },
+      {
+        name: 'Стекло тонированное 8 мм',
+        thickness: '8 мм',
+        color: 'тонированный',
+        price: 0,
+        companyId: company._id,
+      },
+      {
+        name: 'Стекло прозрачное 10 мм',
+        thickness: '10 мм',
+        color: 'прозрачный',
+        price: 0,
+        companyId: company._id,
+      },
+      {
+        name: 'Стекло ультра прозрачное 10 мм',
+        thickness: '10 мм',
+        color: 'ультра прозрачный',
+        price: 0,
+        companyId: company._id,
+      },
+      {
+        name: 'Стекло матовое пескоструй 10 мм',
+        thickness: '10 мм',
+        color: 'матовый пескоструй',
+        price: 0,
+        companyId: company._id,
+      },
+      {
+        name: 'Стекло матовое заводское 10 мм',
+        thickness: '10 мм',
+        color: 'матовый заводской',
+        price: 0,
+        companyId: company._id,
+      },
+      {
+        name: 'Стекло тонированное 10 мм',
+        thickness: '10 мм',
+        color: 'тонированный',
+        price: 0,
+        companyId: company._id,
+      },
+    ];
+    await Glass.insertMany(defaultGlass, { ordered: false });
+    // 5. Возвращаем только компанию
     res.status(201).json(company);
   } catch (err) {
     res.status(500).json({ error: err.message });

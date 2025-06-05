@@ -4,6 +4,7 @@ import ServicesTab from './ServicesTab';
 import type { ModalFormField } from './ModalForm';
 import type { User } from '../types/User';
 import BaseCostsTab from './BaseCostsTab';
+import GlassTab from './GlassTab';
 
 interface Company {
   _id: string;
@@ -26,7 +27,7 @@ interface HardwareTabProps {
   onCalculator: () => void;
 }
 
-const MAIN_SECTIONS = ['Стекло', 'Профили', 'Крепления'];
+const MAIN_SECTIONS = ['Профили', 'Крепления'];
 const COLUMNS = 3;
 const API_URL = 'http://localhost:5000/api';
 
@@ -39,12 +40,12 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'hardware' | 'services' | 'basecosts'>('hardware');
+  const [activeTab, setActiveTab] = useState<'hardware' | 'services' | 'basecosts' | 'glass'>('hardware');
 
   // Для формы добавления
   const allSections = Array.from(new Set([
     ...MAIN_SECTIONS,
-    ...editList.map(i => i.section).filter(s => !MAIN_SECTIONS.includes(s)),
+    ...editList.map(i => i.section).filter(s => !MAIN_SECTIONS.includes(s) && s !== 'Стекло'),
   ]));
   const [addSection, setAddSection] = useState<string>(allSections[0] || '');
   const [addNewSection, setAddNewSection] = useState('');
@@ -58,7 +59,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   // Получаем секции для колонок
-  let allSectionsForColumns = Array.from(new Set(editList.map(i => i.section)));
+  let allSectionsForColumns = Array.from(new Set(editList.map(i => i.section).filter(s => s !== 'Стекло')));
   // 'Стекло' всегда первая
   allSectionsForColumns = allSectionsForColumns.sort((a, b) => {
     if (a === 'Стекло') return -1;
@@ -108,7 +109,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
       const data = await res.json();
       if (!res.ok) {
         if (data.error && /duplicate/i.test(data.error)) {
-          setError('Такая фурнитура уже существует в этой секции');
+          setError('Такая цена уже существует в этой секции');
         } else {
           setError(data.error || 'Ошибка добавления');
         }
@@ -242,6 +243,28 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
             Фурнитура
           </button>
           <button
+            onClick={() => setActiveTab('glass')}
+            style={{
+              padding: '12px 36px',
+              border: 'none',
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              background: activeTab === 'glass' ? '#646cff' : '#f6f8fa',
+              color: activeTab === 'glass' ? '#fff' : '#646cff',
+              fontWeight: 600,
+              fontSize: 17,
+              cursor: 'pointer',
+              boxShadow: activeTab === 'glass' ? '0 2px 8px #646cff22' : 'none',
+              borderBottom: activeTab === 'glass' ? '2px solid #646cff' : '2px solid transparent',
+              transition: 'background 0.18s, color 0.18s',
+              marginRight: 2,
+            }}
+            onMouseOver={e => { if (activeTab !== 'glass') e.currentTarget.style.background = '#e0e7ef'; }}
+            onMouseOut={e => { if (activeTab !== 'glass') e.currentTarget.style.background = '#f6f8fa'; }}
+          >
+            Стекло
+          </button>
+          <button
             onClick={() => setActiveTab('services')}
             style={{
               padding: '12px 36px',
@@ -338,7 +361,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
       <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 32, minHeight: 320, marginTop: -2 }}>
         {activeTab === 'hardware' && (
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
-            <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>Фурнитура {company.name}</h2>
+            <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>Цены {company.name}</h2>
           </div>
         )}
         {activeTab === 'hardware' && error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
@@ -422,6 +445,9 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
             onCancel={() => setShowAdd(false)}
             submitText={loading ? 'Добавление...' : 'Добавить'}
           />
+        )}
+        {activeTab === 'glass' && (
+          <GlassTab companies={companies} selectedCompanyId={selectedCompanyId} />
         )}
         {activeTab === 'services' && (
           <ServicesTab

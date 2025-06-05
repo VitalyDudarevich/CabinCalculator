@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AuthPage from './pages/AuthPage';
 import AdminPanel from './pages/AdminPanel';
+import CalculatorPage from './pages/CalculatorPage';
+import Header from './components/Header';
+import type { Company } from './types/Company';
 
 // interface Company {
 //   _id: string;
@@ -23,8 +27,8 @@ interface User {
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [companiesLoading, setCompaniesLoading] = useState(true);
-  const [companiesError, setCompaniesError] = useState('');
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
 
   // Восстановление пользователя при загрузке
   useEffect(() => {
@@ -41,15 +45,22 @@ export default function App() {
     }
   }, []);
 
-  // Загрузка компаний
+  // Загрузка компаний для суперадмина
   useEffect(() => {
-    setCompaniesLoading(true);
-    setCompaniesError('');
-    fetch('/api/companies')
-      .then(res => res.json())
-      .catch(() => setCompaniesError('Ошибка загрузки компаний'))
-      .finally(() => setCompaniesLoading(false));
-  }, []);
+    if (user && user.role === 'superadmin') {
+      fetch('http://localhost:5000/api/companies')
+        .then(res => res.json())
+        .then(data => {
+          setCompanies(Array.isArray(data) ? data : []);
+          if (Array.isArray(data) && data.length > 0) {
+            setSelectedCompanyId(data[0]._id);
+          }
+        })
+        .catch(() => setCompanies([]));
+    } else if (user && user.companyId) {
+      setSelectedCompanyId(typeof user.companyId === 'string' ? user.companyId : user.companyId._id);
+    }
+  }, [user]);
 
   // Логика выхода
   const handleLogout = () => {
@@ -57,22 +68,35 @@ export default function App() {
     localStorage.removeItem('token');
   };
 
-  // Кнопка-заглушка калькулятора
-  const handleCalculator = () => {
-    alert('Переход на страницу калькулятора (заглушка)');
-  };
-
-  // Если пользователь — админ или суперадмин, показываем админку с кнопками
-  if (user && (user.role === 'admin' || user.role === 'superadmin')) {
-    if (companiesLoading) return <div style={{ padding: 32, textAlign: 'center', color: '#888' }}>Загрузка компаний...</div>;
-    if (companiesError) return <div style={{ padding: 32, textAlign: 'center', color: 'crimson' }}>{companiesError}</div>;
-    return <AdminPanel user={user} onLogout={handleLogout} onCalculator={handleCalculator} />;
-  }
-
-  // Для всех остальных — форма логина по центру
+  // Для роутинга
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f6f8fa' }}>
-      <AuthPage setUser={setUser} setToken={() => {}} />
-    </div>
+    <Router>
+      <Header
+        user={user}
+        companies={companies}
+        selectedCompanyId={selectedCompanyId}
+        setSelectedCompanyId={setSelectedCompanyId}
+        onLogout={handleLogout}
+      />
+      <div style={{ marginTop: 56, minHeight: 'calc(100vh - 56px)' }}>
+        <Routes>
+          {(user && (user.role === 'admin' || user.role === 'superadmin')) && (
+            <Route path="/admin" element={<AdminPanel user={user} companies={companies} selectedCompanyId={selectedCompanyId} setSelectedCompanyId={setSelectedCompanyId} onLogout={handleLogout} onCalculator={() => window.location.href = '/calculator'} />} />
+          )}
+          {user && user.role === 'user' && (
+            <Route path="/calculator" element={<CalculatorPage companyId={selectedCompanyId} user={user} />} />
+          )}
+          <Route path="/calculator" element={<CalculatorPage companyId={selectedCompanyId} user={user} />} />
+          <Route path="/" element={
+            user
+              ? (user.role === 'admin' || user.role === 'superadmin'
+                  ? <Navigate to="/admin" replace />
+                  : <Navigate to="/calculator" replace />)
+              : <AuthPage setUser={setUser} setToken={() => {}} />
+          } />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }

@@ -50,7 +50,7 @@ exports.createUser = async (req, res) => {
     // Хэшируем пароль
     const passwordHash = await bcrypt.hash(req.body.password, 10);
     // Формируем объект для создания пользователя
-    const userData = { ...req.body, passwordHash };
+    const userData = { ...req.body, passwordHash, isEmailVerified: true };
     delete userData.password;
     const user = new User(userData);
     await user.save();
@@ -63,7 +63,17 @@ exports.createUser = async (req, res) => {
 // Обновить пользователя
 exports.updateUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+    const update = { ...req.body };
+    // Если передан новый пароль — захешировать и сохранить
+    if (update.password) {
+      update.passwordHash = await bcrypt.hash(update.password, 10);
+      delete update.password;
+    } else {
+      // Не обновлять passwordHash, если пароль не передан
+      delete update.password;
+      delete update.passwordHash;
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, update, {
       new: true,
       runValidators: true,
     });

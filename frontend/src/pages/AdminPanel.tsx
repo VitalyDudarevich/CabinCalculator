@@ -4,6 +4,7 @@ import CompaniesTab from '../components/CompaniesTab';
 import UsersTab from '../components/UsersTab';
 import ModalForm from '../components/ModalForm';
 import HardwareTab from '../components/HardwareTab';
+import GlassTab from '../components/GlassTab';
 import type { User } from '../types/User';
 import type { Company } from '../types/Company';
 import type { HardwareItem } from '../types/HardwareItem';
@@ -12,7 +13,7 @@ import type { HardwareItem } from '../types/HardwareItem';
 const sections = [
   { key: 'companies', label: 'Компании' },
   { key: 'users', label: 'Пользователи' },
-  { key: 'hardware', label: 'Фурнитура' },
+  { key: 'hardware', label: 'Цены' },
   // { key: 'services', label: 'Услуги' }, // Удалено по просьбе пользователя
   { key: 'settings', label: 'Настройки' },
 ];
@@ -205,6 +206,18 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
       .finally(() => setCompaniesLoading(false));
   };
 
+  // 1. companiesForDropdown: только своя компания для админа, все для суперадмина
+  const companiesForDropdown = user.role === 'superadmin'
+    ? companies
+    : companies.filter(c => c._id === user.companyId);
+
+  // 2. Если админ и выбранная компания не совпадает с его, сбрасываем
+  useEffect(() => {
+    if (user.role === 'admin' && selectedCompanyId !== user.companyId) {
+      setSelectedCompanyId(String(user.companyId || (companiesForDropdown[0]?._id ?? '')));
+    }
+  }, [user, selectedCompanyId]);
+
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return <div style={{ padding: 32, textAlign: 'center', color: 'crimson', fontSize: 20 }}>Нет доступа к админ-панели</div>;
   }
@@ -214,7 +227,7 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
       {/* Header */}
       <header style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 56, background: '#fff', boxShadow: '0 2px 8px #0001', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 32px', zIndex: 100 }}>
         {/* Дропдаун выбора компании */}
-        {companies.length > 0 && (
+        {companiesForDropdown.length > 0 && user.role === 'superadmin' && (
           <select
             value={selectedCompanyId}
             onChange={e => setSelectedCompanyId(e.target.value)}
@@ -231,14 +244,24 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
             }}
           >
             <option value="all">Все компании</option>
-            {companies.map(c => (
+            {companiesForDropdown.map(c => (
               <option key={c._id} value={c._id}>{c.name}</option>
             ))}
           </select>
         )}
         <button
           onClick={onCalculator}
-          style={{ padding: '8px 24px', borderRadius: 8, background: '#f1f1f1', color: '#888', border: 'none', fontWeight: 500, cursor: 'pointer', marginRight: 8 }}
+          style={{
+            padding: '8px 24px',
+            borderRadius: 8,
+            background: '#fff',
+            color: '#646cff',
+            border: '2px solid #646cff',
+            fontWeight: 600,
+            cursor: 'pointer',
+            marginRight: 8,
+            boxShadow: '0 1px 4px #646cff22'
+          }}
         >
           Калькулятор
         </button>
@@ -298,38 +321,48 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
                   <CompaniesTab
                     companies={companies}
                     selectedCompanyId={selectedCompanyId}
-                    onAdd={() => setShowAddCompany(true)}
+                    onAdd={user.role === 'superadmin' ? () => setShowAddCompany(true) : undefined}
                     onEdit={handleEditCompany}
                     onDelete={handleDeleteCompany}
                   />
-                  <ModalForm
-                    isOpen={showAddCompany}
-                    title="Добавить компанию"
-                    fields={[
-                      {
-                        name: 'name',
-                        label: 'Название компании',
-                        type: 'text',
-                        required: true,
-                        value: companyForm.name,
-                        onChange: v => {
-                          setCompanyForm(f => ({ ...f, name: String(v) }));
+                  {user.role === 'superadmin' && (
+                    <>
+                      <button
+                        onClick={() => setShowAddCompany(true)}
+                        style={{ margin: '16px 0', padding: '10px 24px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
+                      >
+                        Добавить компанию
+                      </button>
+                      <ModalForm
+                        isOpen={showAddCompany}
+                        title="Добавить компанию"
+                        fields={[
+                          {
+                            name: 'name',
+                            label: 'Название компании',
+                            type: 'text',
+                            required: true,
+                            value: companyForm.name,
+                            onChange: v => {
+                              setCompanyForm(f => ({ ...f, name: String(v) }));
+                              setCompanyNameError('');
+                            },
+                          },
+                          { name: 'city', label: 'Город', type: 'text', value: companyForm.city, onChange: v => setCompanyForm(f => ({ ...f, city: String(v) })) },
+                          { name: 'ownerName', label: 'Имя владельца', type: 'text', value: companyForm.ownerName, onChange: v => setCompanyForm(f => ({ ...f, ownerName: String(v) })) },
+                          { name: 'ownerContact', label: 'Контакт владельца', type: 'text', value: companyForm.ownerContact, onChange: v => setCompanyForm(f => ({ ...f, ownerContact: String(v) })) },
+                        ]}
+                        companyNameError={companyNameError}
+                        onSubmit={handleAddCompany}
+                        onCancel={() => {
+                          setShowAddCompany(false);
+                          setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
                           setCompanyNameError('');
-                        },
-                      },
-                      { name: 'city', label: 'Город', type: 'text', value: companyForm.city, onChange: v => setCompanyForm(f => ({ ...f, city: String(v) })) },
-                      { name: 'ownerName', label: 'Имя владельца', type: 'text', value: companyForm.ownerName, onChange: v => setCompanyForm(f => ({ ...f, ownerName: String(v) })) },
-                      { name: 'ownerContact', label: 'Контакт владельца', type: 'text', value: companyForm.ownerContact, onChange: v => setCompanyForm(f => ({ ...f, ownerContact: String(v) })) },
-                    ]}
-                    companyNameError={companyNameError}
-                    onSubmit={handleAddCompany}
-                    onCancel={() => {
-                      setShowAddCompany(false);
-                      setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-                      setCompanyNameError('');
-                    }}
-                    submitText="Добавить"
-                  />
+                        }}
+                        submitText="Добавить"
+                      />
+                    </>
+                  )}
                   <ModalForm
                     isOpen={showEditCompany}
                     title="Редактировать компанию"
@@ -418,14 +451,19 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
                       },
                       { name: 'password', label: 'Пароль', type: 'password', required: true, value: userForm.password, onChange: v => setUserForm(f => ({ ...f, password: String(v) })), autoComplete: 'new-password' },
                       { name: 'role', label: 'Роль', type: 'select', required: true, value: userForm.role, onChange: v => setUserForm(f => ({ ...f, role: String(v) })), options: [ { value: 'user', label: 'Пользователь' }, { value: 'admin', label: 'Админ' } ] },
-                      { name: 'companyId', label: 'Компания', type: 'select', required: true, value: userForm.companyId, onChange: v => setUserForm(f => ({ ...f, companyId: String(v) })), options: companies.map(c => ({ value: c._id, label: c.name })) },
+                      ...(user.role === 'superadmin' ? [
+                        { name: 'companyId', label: 'Компания', type: 'select' as const, required: true, value: userForm.companyId, onChange: (value: string | number) => setUserForm(f => ({ ...f, companyId: String(value) })), options: companies.map(c => ({ value: c._id, label: c.name })) },
+                      ] : []),
                     ]}
                     onSubmit={async () => {
                       setUserFormErrors({});
+                      const userToSend = user.role === 'superadmin'
+                        ? userForm
+                        : { ...userForm, companyId: user.companyId };
                       const res = await fetchWithAuth('/api/users', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(userForm),
+                        body: JSON.stringify(userToSend),
                       });
                       const data = await res.json();
                       handleApiError(data);
@@ -521,6 +559,11 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
                     }}
                     submitText="Сохранить"
                   />
+                  {user.role === 'admin' && (
+                    <div style={{ margin: '8px 0 16px 0', color: '#888', fontSize: 15 }}>
+                      Компания: {companies.find(c => c._id === user.companyId)?.name || ''}
+                    </div>
+                  )}
                 </>
               )}
               {section === 'hardware' && companies.length > 0 && (

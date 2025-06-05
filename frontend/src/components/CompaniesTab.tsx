@@ -13,7 +13,7 @@ export type Company = {
 interface CompaniesTabProps {
   companies: Company[];
   selectedCompanyId: string;
-  onAdd: () => void;
+  onAdd?: () => void;
   onEdit: (company: Company) => void;
   onDelete: (id: string) => void;
 }
@@ -30,9 +30,11 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
         <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>
           Компании
         </h2>
+        {onAdd && (
         <button onClick={onAdd} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
           Добавить
         </button>
+        )}
       </div>
       <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
         {displayCompanies.length === 0 ? (

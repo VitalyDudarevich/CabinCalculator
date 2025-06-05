@@ -9,6 +9,7 @@ const projectRoutes = require('./routes/projectRoutes');
 const settingRoutes = require('./routes/settingRoutes');
 const authRoutes = require('./routes/authRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
+const glassRoutes = require('./routes/glassRoutes');
 
 dotenv.config();
 
@@ -29,5 +30,6 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/glass', glassRoutes);
 
 module.exports = app;

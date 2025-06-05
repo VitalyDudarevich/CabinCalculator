@@ -1,14 +1,20 @@
 const Project = require('../models/Project');
 
-exports.getAllProjects = async (req, res) => {
+// Получить проекты (по companyId или userId)
+exports.getProjects = async (req, res) => {
   try {
-    const projects = await Project.find();
+    const { companyId, userId } = req.query;
+    let filter = {};
+    if (companyId) filter.companyId = companyId;
+    if (userId) filter.userId = userId;
+    const projects = await Project.find(filter).sort({ createdAt: -1 });
     res.json(projects);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
+// Получить проект по id
 exports.getProjectById = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
@@ -19,6 +25,7 @@ exports.getProjectById = async (req, res) => {
   }
 };
 
+// Создать проект
 exports.createProject = async (req, res) => {
   try {
     const project = new Project(req.body);
@@ -29,6 +36,7 @@ exports.createProject = async (req, res) => {
   }
 };
 
+// Обновить проект
 exports.updateProject = async (req, res) => {
   try {
     const project = await Project.findByIdAndUpdate(req.params.id, req.body, {
@@ -42,6 +50,7 @@ exports.updateProject = async (req, res) => {
   }
 };
 
+// Удалить проект
 exports.deleteProject = async (req, res) => {
   try {
     const project = await Project.findByIdAndDelete(req.params.id);
