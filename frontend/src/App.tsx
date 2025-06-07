@@ -5,6 +5,7 @@ import AdminPanel from './pages/AdminPanel';
 import CalculatorPage from './pages/CalculatorPage';
 import Header from './components/Header';
 import type { Company } from './types/Company';
+import { fetchWithAuth } from './utils/auth';
 
 // interface Company {
 //   _id: string;
@@ -17,12 +18,16 @@ import type { Company } from './types/Company';
 //   currency?: string;
 // }
 
+function isCompanyObj(val: unknown): val is { _id: string } {
+  return !!val && typeof val === 'object' && '_id' in val && typeof (val as { _id?: unknown })._id === 'string';
+}
+
 interface User {
   _id: string;
   role: string;
   username: string;
   email: string;
-  companyId?: string;
+  companyId?: string | { _id: string; name: string };
 }
 
 export default function App() {
@@ -34,7 +39,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      fetch('http://localhost:5000/api/auth/me', {
+      fetchWithAuth('http://localhost:5000/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(res => res.json())
@@ -48,7 +53,7 @@ export default function App() {
   // Загрузка компаний для суперадмина
   useEffect(() => {
     if (user && user.role === 'superadmin') {
-      fetch('http://localhost:5000/api/companies')
+      fetchWithAuth('http://localhost:5000/api/companies')
         .then(res => res.json())
         .then(data => {
           setCompanies(Array.isArray(data) ? data : []);
@@ -58,7 +63,13 @@ export default function App() {
         })
         .catch(() => setCompanies([]));
     } else if (user && user.companyId) {
-      setSelectedCompanyId(typeof user.companyId === 'string' ? user.companyId : user.companyId._id);
+      setSelectedCompanyId(
+        typeof user.companyId === 'string'
+          ? user.companyId
+          : isCompanyObj(user.companyId)
+            ? user.companyId._id
+            : ''
+      );
     }
   }, [user]);
 
@@ -83,10 +94,9 @@ export default function App() {
           {(user && (user.role === 'admin' || user.role === 'superadmin')) && (
             <Route path="/admin" element={<AdminPanel user={user} companies={companies} selectedCompanyId={selectedCompanyId} setSelectedCompanyId={setSelectedCompanyId} onLogout={handleLogout} onCalculator={() => window.location.href = '/calculator'} />} />
           )}
-          {user && user.role === 'user' && (
-            <Route path="/calculator" element={<CalculatorPage companyId={selectedCompanyId} user={user} />} />
+          {user && (
+            <Route path="/calculator" element={<CalculatorPage companyId={selectedCompanyId} user={user} selectedCompanyId={selectedCompanyId} />} />
           )}
-          <Route path="/calculator" element={<CalculatorPage companyId={selectedCompanyId} user={user} />} />
           <Route path="/" element={
             user
               ? (user.role === 'admin' || user.role === 'superadmin'

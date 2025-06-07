@@ -16,12 +16,13 @@ const Header: React.FC<HeaderProps> = ({ user, companies = [], selectedCompanyId
   return (
     <header style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 56, background: '#fff', boxShadow: '0 2px 8px #0001', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 32px', zIndex: 100 }}>
       {/* Дропдаун выбора компании для суперадмина */}
-      {user && user.role === 'superadmin' && companies.length > 1 && setSelectedCompanyId && (
+      {user && user.role === 'superadmin' && setSelectedCompanyId && (
         <select
           value={selectedCompanyId}
           onChange={e => setSelectedCompanyId(e.target.value)}
           style={{ marginRight: 16, padding: 8, borderRadius: 8, fontSize: 16 }}
         >
+          <option value="">Выберите компанию...</option>
           {companies.map(c => (
             <option key={c._id} value={c._id}>{c.name}</option>
           ))}

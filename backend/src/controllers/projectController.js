@@ -28,7 +28,16 @@ exports.getProjectById = async (req, res) => {
 // Создать проект
 exports.createProject = async (req, res) => {
   try {
-    const project = new Project(req.body);
+    const { price, status } = req.body;
+    const now = new Date();
+    const initialStatus = status || 'Рассчет';
+    const project = new Project({
+      ...req.body,
+      priceHistory: [{ price, date: now }],
+      statusHistory: [{ status: initialStatus, date: now }],
+      createdAt: now,
+      updatedAt: now,
+    });
     await project.save();
     res.status(201).json(project);
   } catch (err) {
@@ -39,11 +48,29 @@ exports.createProject = async (req, res) => {
 // Обновить проект
 exports.updateProject = async (req, res) => {
   try {
-    const project = await Project.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    // Если цена изменилась — добавляем в историю новую цену с датой изменения
+    if (typeof req.body.price === 'number' && req.body.price !== project.price) {
+      project.priceHistory = [
+        ...(Array.isArray(project.priceHistory) ? project.priceHistory : []),
+        { price: req.body.price, date: new Date() },
+      ];
+      project.price = req.body.price;
+    }
+    // Если статус изменился — добавляем в историю новый статус с датой
+    if (req.body.status && req.body.status !== project.status) {
+      project.statusHistory = [
+        ...(Array.isArray(project.statusHistory) ? project.statusHistory : []),
+        { status: req.body.status, date: new Date() },
+      ];
+      project.status = req.body.status;
+    }
+    // Обновляем остальные поля
+    Object.assign(project, req.body);
+    project.updatedAt = new Date();
+    await project.save();
     res.json(project);
   } catch (err) {
     res.status(400).json({ error: err.message });

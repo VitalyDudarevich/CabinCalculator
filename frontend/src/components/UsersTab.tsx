@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaUserEdit, FaRegTrashAlt } from 'react-icons/fa';
-import type { User } from '../pages/AdminPanel';
+import type { User } from '../types/User';
 
 interface Company {
   _id: string;
@@ -49,37 +49,35 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
           return (
             <div key={comp._id} style={{ marginBottom: 32 }}>
               <div style={{ fontWeight: 600, fontSize: 18, margin: '16px 0 12px 0' }}>{comp.name}</div>
-              <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#f6f8ff' }}>
-                      <th style={{ textAlign: 'left', padding: 8 }}>Имя</th>
-                      <th style={{ textAlign: 'left', padding: 8 }}>Email</th>
-                      <th style={{ textAlign: 'left', padding: 8 }}>Роль</th>
-                      <th style={{ textAlign: 'left', padding: 8 }}>Компания</th>
-                      <th style={{ textAlign: 'center', padding: 8 }}>Действия</th>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f6f8ff' }}>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Имя</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Email</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Роль</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Компания</th>
+                    <th style={{ textAlign: 'center', padding: 8 }}>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {companyUsers.map(u => (
+                    <tr key={u._id} style={{ borderBottom: '1px solid #eee' }}>
+                      <td style={{ padding: 8 }}>{u.username}</td>
+                      <td style={{ padding: 8 }}>{u.email}</td>
+                      <td style={{ padding: 8 }}>{u.role}</td>
+                      <td style={{ padding: 8 }}>{companies.find(c => c._id === u.companyId)?.name || '-'}</td>
+                      <td style={{ padding: 8, textAlign: 'center' }}>
+                        <span title="Редактировать" onClick={() => onEdit(u)} style={{ display: 'inline-block', marginRight: 10, width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
+                          <FaUserEdit color="#888" size={16} />
+                        </span>
+                        <span title="Удалить" onClick={() => onDelete(u)} style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
+                          <FaRegTrashAlt color="#888" size={16} />
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {companyUsers.map(u => (
-                      <tr key={u._id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: 8 }}>{u.username}</td>
-                        <td style={{ padding: 8 }}>{u.email}</td>
-                        <td style={{ padding: 8 }}>{u.role}</td>
-                        <td style={{ padding: 8 }}>{companies.find(c => c._id === u.companyId)?.name || '-'}</td>
-                        <td style={{ padding: 8, textAlign: 'center' }}>
-                          <span title="Редактировать" onClick={() => onEdit(u)} style={{ display: 'inline-block', marginRight: 10, width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
-                            <FaUserEdit color="#888" size={16} />
-                          </span>
-                          <span title="Удалить" onClick={() => onDelete(u)} style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
-                            <FaRegTrashAlt color="#888" size={16} />
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           );
         })

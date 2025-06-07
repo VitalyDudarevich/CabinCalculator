@@ -4,11 +4,10 @@ import CompaniesTab from '../components/CompaniesTab';
 import UsersTab from '../components/UsersTab';
 import ModalForm from '../components/ModalForm';
 import HardwareTab from '../components/HardwareTab';
-import GlassTab from '../components/GlassTab';
+// import HardwareTab from '../components/HardwareTab'; // если понадобится
 import type { User } from '../types/User';
 import type { Company } from '../types/Company';
 import type { HardwareItem } from '../types/HardwareItem';
-// import HardwareTab from '../components/HardwareTab'; // если понадобится
 
 const sections = [
   { key: 'companies', label: 'Компании' },
@@ -20,12 +19,26 @@ const sections = [
 
 const currencyOptions = ['GEL', 'USD', 'RR'];
 
-export default function AdminPanel({ user, onLogout, onCalculator }: { user: User; onLogout: () => void; onCalculator: () => void }) {
-  const [companies, setCompanies] = useState<Company[]>([]);
+interface AdminPanelProps {
+  user: User;
+  companies: Company[];
+  selectedCompanyId: string;
+  setSelectedCompanyId: (id: string) => void;
+  onLogout: () => void;
+  onCalculator: () => void;
+}
+
+const AdminPanel: React.FC<AdminPanelProps> = ({
+  user,
+  companies,
+  selectedCompanyId,
+  setSelectedCompanyId,
+  onLogout,
+  onCalculator,
+}) => {
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesError, setCompaniesError] = useState('');
   const [section, setSection] = useState('companies');
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all');
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState('');
@@ -85,24 +98,6 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
 
     return res;
   }
-
-  useEffect(() => {
-    setCompaniesLoading(true);
-    setCompaniesError('');
-    fetchWithAuth('/api/companies')
-      .then(res => res.json())
-      .then(data => setCompanies(Array.isArray(data) ? data : []))
-      .catch(() => setCompaniesError('Ошибка загрузки компаний'))
-      .finally(() => setCompaniesLoading(false));
-  }, []);
-
-  const company = companies.find(c => c._id === selectedCompanyId) || null;
-
-  useEffect(() => {
-    if (companies.length > 0 && !selectedCompanyId) {
-      setSelectedCompanyId('all');
-    }
-  }, [companies, selectedCompanyId]);
 
   useEffect(() => {
     if (section !== 'users') return;
@@ -170,7 +165,6 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
     const res = await fetchWithAuth(`/api/companies/${id}`, { method: 'DELETE' });
     const data = await res.json();
     handleApiError(data);
-    setCompanies(companies => companies.filter(c => c._id !== id));
   };
 
   const handleAddCompany = async () => {
@@ -195,12 +189,6 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
       .then(res => res.json())
       .then(data => {
         handleApiError(data);
-        setCompanies(Array.isArray(data) ? data : []);
-        // Найти только что созданную компанию по имени и городу (или по id, если возвращается)
-        if (Array.isArray(data)) {
-          const newCompany = data.find(c => c.name.trim().toLowerCase() === companyForm.name.trim().toLowerCase() && c.city.trim().toLowerCase() === companyForm.city.trim().toLowerCase());
-          if (newCompany) setSelectedCompanyId(newCompany._id);
-        }
       })
       .catch(() => setCompaniesError('Ошибка загрузки компаний'))
       .finally(() => setCompaniesLoading(false));
@@ -391,12 +379,6 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
                       setShowEditCompany(false);
                       setEditCompanyId(null);
                       setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-                      setCompaniesLoading(true);
-                      fetchWithAuth('/api/companies')
-                        .then(res => res.json())
-                        .then(data => { handleApiError(data); setCompanies(Array.isArray(data) ? data : []); })
-                        .catch(() => setCompaniesError('Ошибка загрузки компаний'))
-                        .finally(() => setCompaniesLoading(false));
                     }}
                     onCancel={() => {
                       setShowEditCompany(false);
@@ -579,7 +561,7 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
               {section === 'settings' && companies.length > 0 && (
             <SettingsTab
               currencyOptions={currencyOptions}
-              company={company}
+              company={companies.find(c => c._id === selectedCompanyId) || null}
             />
           )}
             </>
@@ -588,4 +570,6 @@ export default function AdminPanel({ user, onLogout, onCalculator }: { user: Use
       </div>
     </div>
   );
-} 
+}
+
+export default AdminPanel; 
