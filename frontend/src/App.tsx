@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AuthPage from './pages/AuthPage';
 import AdminPanel from './pages/AdminPanel';
-import CalculatorPage from './pages/CalculatorPage';
+import CalculatorPageWrapper from './pages/CalculatorPage';
 import Header from './components/Header';
 import type { Company } from './types/Company';
 import { fetchWithAuth } from './utils/auth';
@@ -34,10 +34,11 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const [token, setToken] = useState<string>(() => localStorage.getItem('token') || '');
+  const [userLoaded, setUserLoaded] = useState(false);
 
-  // Восстановление пользователя при загрузке
+  // Восстановление пользователя при изменении токена
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (token) {
       fetchWithAuth('http://localhost:5000/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
@@ -45,10 +46,15 @@ export default function App() {
         .then(res => res.json())
         .then(data => {
           if (data.user) setUser(data.user);
+          else setUser(null);
         })
-        .catch(() => setUser(null));
+        .catch(() => setUser(null))
+        .finally(() => setUserLoaded(true));
+    } else {
+      setUser(null);
+      setUserLoaded(true);
     }
-  }, []);
+  }, [token]);
 
   // Загрузка компаний для суперадмина
   useEffect(() => {
@@ -56,28 +62,32 @@ export default function App() {
       fetchWithAuth('http://localhost:5000/api/companies')
         .then(res => res.json())
         .then(data => {
-          setCompanies(Array.isArray(data) ? data : []);
-          if (Array.isArray(data) && data.length > 0) {
-            setSelectedCompanyId(data[0]._id);
+          const list = Array.isArray(data) ? data : [];
+          setCompanies(list);
+          if (list.length > 0 && selectedCompanyId !== list[0]._id) {
+            setSelectedCompanyId(list[0]._id);
           }
         })
         .catch(() => setCompanies([]));
     } else if (user && user.companyId) {
-      setSelectedCompanyId(
-        typeof user.companyId === 'string'
-          ? user.companyId
-          : isCompanyObj(user.companyId)
-            ? user.companyId._id
-            : ''
-      );
+      const adminCompanyId = typeof user.companyId === 'string'
+        ? user.companyId
+        : isCompanyObj(user.companyId) ? user.companyId._id : '';
+      if (adminCompanyId && selectedCompanyId !== adminCompanyId) {
+        setSelectedCompanyId(adminCompanyId);
+      }
     }
-  }, [user]);
+  }, [user, selectedCompanyId]);
 
   // Логика выхода
   const handleLogout = () => {
     setUser(null);
+    setToken('');
     localStorage.removeItem('token');
   };
+
+  // Временный лог для диагностики проблем с логином
+  console.log('user:', user, 'token:', token);
 
   // Для роутинга
   return (
@@ -90,22 +100,42 @@ export default function App() {
         onLogout={handleLogout}
       />
       <div style={{ marginTop: 56, minHeight: 'calc(100vh - 56px)' }}>
-        <Routes>
-          {(user && (user.role === 'admin' || user.role === 'superadmin')) && (
-            <Route path="/admin" element={<AdminPanel user={user} companies={companies} selectedCompanyId={selectedCompanyId} setSelectedCompanyId={setSelectedCompanyId} onLogout={handleLogout} onCalculator={() => window.location.href = '/calculator'} />} />
-          )}
-          {user && (
-            <Route path="/calculator" element={<CalculatorPage companyId={selectedCompanyId} user={user} selectedCompanyId={selectedCompanyId} />} />
-          )}
-          <Route path="/" element={
-            user
-              ? (user.role === 'admin' || user.role === 'superadmin'
-                  ? <Navigate to="/admin" replace />
-                  : <Navigate to="/calculator" replace />)
-              : <AuthPage setUser={setUser} setToken={() => {}} />
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        {!userLoaded ? (
+          <div>Загрузка...</div>
+        ) : (
+          <Routes>
+            {/* /admin доступен только если selectedCompanyId определён */}
+            {user && (user.role === 'admin' || user.role === 'superadmin') && (
+              <Route
+                path="/admin"
+                element={
+                  selectedCompanyId
+                    ? <AdminPanel
+                        user={user}
+                        companies={companies}
+                        selectedCompanyId={selectedCompanyId}
+                        setSelectedCompanyId={setSelectedCompanyId}
+                        onLogout={handleLogout}
+                        onCalculator={() => (window.location.href = '/calculator')}
+                      />
+                    : <div>Нет доступа: проверь companyId</div>
+                }
+              />
+            )}
+            {/* /calculator доступен для всех ролей */}
+            {user && ['superadmin', 'admin', 'user'].includes(user.role) && (
+              <Route path="/calculator" element={<CalculatorPageWrapper user={user} selectedCompanyId={selectedCompanyId} />} />
+            )}
+            <Route path="/" element={
+              user
+                ? ((user.role === 'admin' || user.role === 'superadmin') && selectedCompanyId
+                    ? <Navigate to="/admin" replace />
+                    : <Navigate to="/calculator" replace />)
+                : <AuthPage setUser={setUser} setToken={setToken} />
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        )}
       </div>
     </Router>
   );
