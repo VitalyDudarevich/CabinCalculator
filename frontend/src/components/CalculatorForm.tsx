@@ -28,10 +28,7 @@ interface CalculatorFormProps {
   selectedCompanyId?: string;
   onChangeDraft?: (draft: DraftProjectData) => void;
   selectedProject?: Project;
-  onProjectSaved?: () => void;
   onNewProject?: () => void;
-  exactHeight: boolean;
-  onExactHeightChange: (checked: boolean) => void;
 }
 
 const STATUS_OPTIONS = [
@@ -44,7 +41,7 @@ const STATUS_OPTIONS = [
   'Оплачено',
 ];
 
-const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, selectedCompanyId = '', onChangeDraft, selectedProject, onProjectSaved, onNewProject, exactHeight, onExactHeightChange }) => {
+const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, selectedCompanyId = '', onChangeDraft, selectedProject, onNewProject }) => {
   const [projectName, setProjectName] = useState('');
   const [config, setConfig] = useState('');
   const [draftConfig, setDraftConfig] = useState(config);
@@ -71,7 +68,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const [doorSize, setDoorSize] = useState('');
   const [stationaryWidth, setStationaryWidth] = useState('');
   const [doorWidth, setDoorWidth] = useState('');
-  const [total, setTotal] = useState(0);
+  const [exactHeight, setExactHeight] = useState(false);
   // resolvedCompanyId больше не нужен, используем selectedCompanyId
   const effectiveCompanyId = user?.role === 'superadmin' ? selectedCompanyId : (companyId || localStorage.getItem('companyId') || '');
 
@@ -143,14 +140,15 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         delivery,
         installation,
         projectHardware,
-        exactHeight,
+        showGlassSizes,
         stationarySize,
         doorSize,
         stationaryWidth,
         doorWidth,
+        exactHeight,
       });
     }
-  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, projectHardware, exactHeight, stationarySize, doorSize, stationaryWidth, doorWidth]);
+  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, projectHardware, showGlassSizes, stationarySize, doorSize, stationaryWidth, doorWidth, exactHeight]);
 
   // useEffect для синхронизации draft
   React.useEffect(() => {
@@ -181,10 +179,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setChangedFields(changed);
   }, [projectName, config, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, status, manualPrice, selectedProject]);
 
-  const resetForm = () => {
+  // 1. Универсальный сброс всех полей к дефолтным значениям
+  const resetAllFields = () => {
     setProjectName('');
     setConfig('');
-    setGlassColor('');
+    setDraftConfig('');
+    setGlassColor(glassColors[0] || '');
     setGlassThickness('8');
     setHardwareColor('');
     setWidth('');
@@ -197,87 +197,25 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setStatus('Рассчет');
     setErrors({});
     setSaveStatus('idle');
+    setShowGlassSizes(false);
+    setStationarySize('');
+    setDoorSize('');
+    setStationaryWidth('');
+    setDoorWidth('');
+    setManualPrice(undefined);
+    setChangedFields(new Set());
+    setExactHeight(false);
   };
 
-  const handleSaveProject = async () => {
-    if (selectedProject && changedFields.size > 0) {
-      const confirmed = window.confirm('Вы уверены, что хотите обновить проект?');
-      if (!confirmed) return;
-    }
-    const newErrors: { [key: string]: string } = {};
-    if (!projectName.trim()) newErrors.projectName = 'Заполните название проекта';
-    if (!config) newErrors.config = 'Выберите конфигурацию';
-    if (!glassColor) newErrors.glassColor = 'Выберите цвет стекла';
-    if (!glassThickness) newErrors.glassThickness = 'Выберите толщину стекла';
-    if (!hardwareColor) newErrors.hardwareColor = 'Выберите цвет фурнитуры';
-    if (!width || isNaN(Number(width)) || Number(width) <= 0) newErrors.width = 'Укажите ширину';
-    if (!height || isNaN(Number(height)) || Number(height) <= 0) newErrors.height = 'Укажите высоту';
-    if (user?.role === 'superadmin' && !selectedCompanyId) {
-      newErrors.company = 'Выберите компанию';
-    }
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
-    setErrors({});
-    setSaveStatus('idle');
-    const data = {
-      config,
-      glassColor,
-      glassThickness,
-      hardwareColor,
-      width,
-      height,
-      length,
-      comment,
-      delivery,
-      installation,
-      projectHardware,
-    };
-    try {
-      let res;
-      if (selectedProject && selectedProject._id) {
-        res = await fetch(`${API_URL}/projects/${selectedProject._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            companyId: effectiveCompanyId,
-            name: projectName,
-            data,
-            status,
-            price: changedFields.has('manualPrice')
-              ? (manualPrice !== undefined ? manualPrice : (selectedProject.price ?? 0))
-              : (selectedProject.price ?? 0),
-          }),
-        });
-      } else {
-        res = await fetch(`${API_URL}/projects`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            companyId: effectiveCompanyId,
-            name: projectName,
-            data,
-            status: 'Рассчет',
-            price: manualPrice !== undefined ? manualPrice : total,
-          }),
-        });
-      }
-      if (res.ok) {
-        setSaveStatus('success');
-        if (onProjectSaved) onProjectSaved();
-        resetForm();
-      } else {
-        setSaveStatus('error');
-      }
-    } catch {
-      setSaveStatus('error');
-    }
-  };
-
+  // 2. При смене конфигурации — сброс всех полей и установка projectHardware по логике
   const handleConfigChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setExactHeight(false);
     const value = event.target.value;
+    resetAllFields();
     setConfig(value);
+    setDraftConfig(value);
+    // projectHardware по логике конфигурации
     if (value === 'glass') {
-      // Найти точное название профиля в hardwareList
       let profileName = '';
       if (Array.isArray(hardwareList)) {
         const found = hardwareList.find(h => h.name.toLowerCase().includes('профиль') && h.name.includes(glassThickness + ' мм'));
@@ -290,7 +228,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         { hardwareId: `${Date.now()}_${Math.random()}`, name: 'Палка стена-стекло прямоугольная', quantity: 1 },
       ]);
     } else if (value === 'straight') {
-      // Добавляем нужную фурнитуру для прямой раздвижной
       const color = hardwareColor || '';
       const thickness = glassThickness || '';
       setProjectHardware([
@@ -300,18 +237,19 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         { hardwareId: `${Date.now()}_${Math.random()}`, name: `Уплотнитель F`, quantity: 2 },
       ]);
     }
-    // Если выбрана "прямая раздвижная" — сбрасываем размеры стекла при смене опции размеров
-    if (value === 'straight') {
-      setWidth('');
-      setHeight('');
-      setLength('');
-    }
   };
 
-  // Сброс размеров при смене опции "размеры проёма/размеры стекла" для "прямая раздвижная"
+  // 3. При смене опции 'размеры проёма/размеры стекла' — сброс всех размеров
   useEffect(() => {
     if (config === 'straight') {
       setDraftConfig(showGlassSizes ? 'straight-glass' : 'straight-opening');
+      setWidth('');
+      setHeight('');
+      setLength('');
+      setStationaryWidth('');
+      setDoorWidth('');
+      setStationarySize('');
+      setDoorSize('');
     } else {
       setDraftConfig(config);
     }
@@ -347,22 +285,13 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     // height не сбрасываем
   }, [showGlassSizes]);
 
+  // 4. При нажатии 'Новый проект' — сброс всех полей
   const handleNewProject = () => {
-    setConfig('');
-    setProjectName('');
+    resetAllFields();
     setGlassColor(glassColors[0] || '');
-    setGlassThickness('8');
-    setHardwareColor('');
-    setWidth('');
-    setHeight('');
-    setLength('');
-    setComment('');
-    setDelivery(true);
-    setInstallation(true);
-    setProjectHardware([]);
-    setErrors({});
     if (onChangeDraft) onChangeDraft({});
     if (onNewProject) onNewProject();
+    setExactHeight(false);
   };
 
   return (
@@ -385,7 +314,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             cursor: !selectedProject || changedFields.size > 0 ? 'pointer' : 'not-allowed',
             opacity: !selectedProject || changedFields.size > 0 ? 1 : 0.7,
           }}
-          onClick={handleSaveProject}
           disabled={!!selectedProject && changedFields.size === 0}
         >
           СОХРАНИТЬ

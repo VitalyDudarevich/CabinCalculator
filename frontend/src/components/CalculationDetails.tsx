@@ -131,7 +131,8 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   }
 
   // --- Расчёт стоимости ---
-  const positions: { label: string; qty: string; price: number; total: number }[] = [];
+  type Position = { label: string; price: number; total: number; qty?: string };
+  const positions: Position[] = [];
   let total = 0;
   let deliveryPrice = 0;
   let installPrice = 0;
@@ -154,14 +155,22 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         heightM = Number(draft.height) / 1000;
         area = +(widthM * heightM).toFixed(2);
         label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
-      } else if (draft.config === 'straight') {
-        if (draft.showGlassSizes && draft.stationaryWidth && draft.doorWidth && draft.height) {
-          // Прямая раздвижная, размеры стекла — новая формула: ((stationaryWidth + 30) + doorWidth) * height
-          const widthSum = Number(draft.stationaryWidth) + 30 + Number(draft.doorWidth);
-          widthM = widthSum / 1000;
-          heightM = Number(draft.height) / 1000;
-          area = +(widthM * heightM).toFixed(2);
-          label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
+      } else if (["straight", "straight-glass", "straight-opening"].includes(String(draft.config))) {
+        if (draft.showGlassSizes && draft.stationaryWidth != null && draft.doorWidth != null && draft.height != null) {
+          const sw = Number(draft.stationaryWidth);
+          const dw = Number(draft.doorWidth);
+          const h = Number(draft.height);
+          if (!isNaN(sw) && !isNaN(dw) && !isNaN(h)) {
+            const widthSum = sw + 30 + dw;
+            widthM = widthSum / 1000;
+            heightM = h / 1000;
+            area = +(widthM * heightM).toFixed(2);
+            label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
+            console.log('draft.showGlassSizes:', draft.showGlassSizes);
+            console.log('stationaryWidth:', sw, 'doorWidth:', dw, 'height:', h);
+            console.log('Итоговый label стекла:', label);
+            console.log('Рассчитанная площадь (area):', area);
+          }
         } else if (!draft.showGlassSizes && draft.width && draft.height) {
           // Прямая раздвижная, размеры проёма
           widthM = (Number(draft.width) + 30) / 1000;
@@ -181,9 +190,11 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         let glassFound = false;
         if (settings.glassList) {
           const normalizeThickness = (val: string) => val.replace(/[^\d]/g, '');
+          console.log('glass search input:', draft.glassColor, draft.glassThickness);
+          console.log('available glasses:', settings.glassList);
           const glassItem = settings.glassList.find((g) => {
             const colorMatch = g.color.trim().toLowerCase() === draft.glassColor!.trim().toLowerCase();
-            const thicknessMatch = g.thickness && normalizeThickness(g.thickness) === normalizeThickness(String(draft.glassThickness));
+            const thicknessMatch = !g.thickness || normalizeThickness(g.thickness) === normalizeThickness(String(draft.glassThickness));
             const companyMatch = String(g.companyId) === String(companyId);
             return colorMatch && thicknessMatch && companyMatch;
           });
@@ -196,7 +207,6 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           const glassTotal = +(glassPrice * area).toFixed(2);
           positions.push({
             label,
-            qty: '',
             price: 0,
             total: glassTotal,
           });
@@ -204,7 +214,6 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         } else {
           positions.push({
             label: `Нет цены для выбранного стекла`,
-            qty: '',
             price: 0,
             total: 0,
           });
@@ -236,7 +245,6 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         const totalHw = +(price * hw.quantity).toFixed(2);
         positions.push({
           label,
-          qty: '',
           price,
           total: totalHw,
         });
@@ -260,7 +268,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
       total += deliveryPrice;
     }
     // 4. Монтаж
-    const installService = services.find(s => s.name.toLowerCase().includes('монтаж') || s.name.includes('установка'));
+    const installService = services.find(s => s.name.toLowerCase().includes('монтаж') || s.name.toLowerCase().includes('установка'));
     if (installService) installPrice = installService.price;
     else if (settings?.baseCosts) {
       const installCost = settings.baseCosts.find(b => b.id === 'installation' || b.name.toLowerCase().includes('монтаж'));
@@ -360,9 +368,16 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           {/* Блок расчёта стоимости */}
           {/* Стекло, базовая стоимость, монтаж, доставка — до фурнитуры */}
           <div style={{ marginBottom: 16 }}>
-            {positions.filter(pos => !pos.qty).map((pos, idx) => {
-              // Для стекла — особый формат
-              if (pos.label.startsWith('Стекло')) {
+            {positions.filter(pos => {
+              // Скрываем блок стекла, если площадь 0 или размеры не заданы
+              if (pos.label.toLowerCase().includes('стекло')) {
+                const match = pos.label.match(/\((\d+(?:\.\d+)?) м²\)/);
+                const area = match ? parseFloat(match[1]) : undefined;
+                return area && area > 0;
+              }
+              return true;
+            }).map((pos, idx) => {
+              if (pos.label.toLowerCase().includes('стекло')) {
                 return (
                   <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{pos.label}:</span>
@@ -397,46 +412,6 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
               );
             })}
           </div>
-          {/* Визуальный разделитель и заголовок для фурнитуры */}
-          {positions.some(pos => pos.qty) && (
-            <>
-              <hr style={{ margin: '18px 0 8px 0', border: 0, borderTop: '1px solid #e0e0e0' }} />
-              <div style={{ fontWeight: 600, fontSize: 17, marginBottom: 8 }}>Фурнитура</div>
-            </>
-          )}
-          {/* Фурнитура — отдельный блок */}
-          {positions.filter(pos => pos.qty).map((pos, idx) => (
-            <div key={idx} style={{
-              marginBottom: 4,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-              flexWrap: 'wrap',
-              minHeight: 28,
-            }}>
-              <span style={{
-                flex: '1 1 0',
-                minWidth: 0,
-                wordBreak: 'break-word',
-                whiteSpace: 'pre-line',
-                fontSize: 16,
-                lineHeight: 1.25,
-                marginRight: 12,
-                overflowWrap: 'break-word',
-                display: 'block',
-                textAlign: 'left',
-              }}>{`${pos.label} (${pos.qty}):`}</span>
-              <span style={{
-                flex: '0 0 auto',
-                fontWeight: 700,
-                fontSize: 16,
-                minWidth: 80,
-                textAlign: 'right',
-                whiteSpace: 'nowrap',
-                marginLeft: 'auto',
-              }}>{pos.total.toFixed(2)} {settings ? settings.currency : 'GEL'}</span>
-            </div>
-          ))}
         </div>
       ) : (
       <div style={{ color: '#888', fontSize: 16 }}>

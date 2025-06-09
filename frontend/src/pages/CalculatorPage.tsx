@@ -16,7 +16,6 @@ const CalculatorPage: React.FC<{
   const [draftProjectData, setDraftProjectData] = useState<DraftProjectData>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [exactHeight, setExactHeight] = useState(false);
 
   useEffect(() => {
     if (!selectedCompanyId) {
@@ -53,8 +52,10 @@ const CalculatorPage: React.FC<{
       <CalculationDetails
         draft={selectedProject ? { ...selectedProject.data, projectName: selectedProject.name, price: selectedProject.price, priceHistory: selectedProject.priceHistory } : draftProjectData}
         companyId={selectedCompanyId}
-        exactHeight={exactHeight}
-        onExactHeightChange={setExactHeight}
+        exactHeight={draftProjectData.exactHeight ?? false}
+        onExactHeightChange={checked => {
+          setDraftProjectData(draft => ({ ...draft, exactHeight: checked }));
+        }}
       />
       <CalculatorForm
         companyId={companyId}
@@ -62,22 +63,10 @@ const CalculatorPage: React.FC<{
         selectedCompanyId={selectedCompanyId}
         onChangeDraft={setDraftProjectData}
         selectedProject={selectedProject ?? undefined}
-        onProjectSaved={() => {
-          fetchWithAuth(`http://localhost:5000/api/projects?companyId=${selectedCompanyId}`)
-            .then(res => res.json())
-            .then(data => setProjects(Array.isArray(data) ? data : []))
-            .catch(() => setProjects([]));
-          setSelectedProject(null);
-          setDraftProjectData({});
-          setExactHeight(false);
-        }}
         onNewProject={() => {
           setSelectedProject(null);
           setDraftProjectData({});
-          setExactHeight(false);
         }}
-        exactHeight={exactHeight}
-        onExactHeightChange={setExactHeight}
       />
       <ProjectHistory user={user} projects={projects} onEdit={handleEditProject} onDelete={handleDeleteProject} />
     </div>
