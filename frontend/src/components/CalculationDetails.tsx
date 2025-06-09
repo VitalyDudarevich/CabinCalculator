@@ -315,24 +315,30 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           {draft.glassThickness && (
             <div><b>Толщина стекла:</b> {draft.glassThickness} мм</div>
           )}
-          {/* Размеры и формулы для обоих режимов */}
-          {draft.showGlassSizes ? (
-            draft.stationaryWidth && draft.doorWidth && draft.height ? (
-              <div>
-                <b>Размеры стекла:</b> {Number(draft.stationaryWidth) + Number(draft.doorWidth)} × {draft.height} мм<br />
-                <b>Стационар:</b> {Number(draft.stationaryWidth) + 30} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм<br />
-                <b>Дверь:</b> {Number(draft.doorWidth)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм
-              </div>
-            ) : null
-          ) : (
-            draft.width && draft.height ? (
-              <div>
-                <b>Размеры проёма:</b> {draft.width} × {draft.height} мм<br />
-                <b>Стационар:</b> {Math.round((Number(draft.width) + 30) / 2)} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм<br />
-                <b>Дверь:</b> {Math.round((Number(draft.width) + 30) / 2)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм
-              </div>
-            ) : null
+          {/* Для стекляшки — общий размер стекла */}
+          {draft.config === 'glass' && draft.width && draft.height && (
+            <div><b>Размер стекла:</b> {draft.width} × {draft.height} мм</div>
           )}
+          {/* Размеры и формулы для обоих режимов */}
+          {['straight', 'straight-glass', 'straight-opening'].includes(String(draft.config)) ? (
+            draft.showGlassSizes ? (
+              draft.stationaryWidth && draft.doorWidth && draft.height ? (
+                <div>
+                  <b>Размеры стекла:</b> {Number(draft.stationaryWidth) + Number(draft.doorWidth)} × {draft.height} мм<br />
+                  <b>Стационар:</b> {Number(draft.stationaryWidth) + 30} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм<br />
+                  <b>Дверь:</b> {Number(draft.doorWidth)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм
+                </div>
+              ) : null
+            ) : (
+              draft.width && draft.height ? (
+                <div>
+                  <b>Размеры проёма:</b> {draft.width} × {draft.height} мм<br />
+                  <b>Стационар:</b> {Math.round((Number(draft.width) + 30) / 2)} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм<br />
+                  <b>Дверь:</b> {Math.round((Number(draft.width) + 30) / 2)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм
+                </div>
+              ) : null
+            )
+          ) : null}
           {draft.hardwareColor && <div><b>Цвет фурнитуры:</b> {hardwareColorLabels[draft.hardwareColor] || draft.hardwareColor}</div>}
           {draft.length && <div><b>Длина:</b> {draft.length} мм</div>}
           {draft.comment && <div><b>Комментарий:</b> {draft.comment}</div>}
