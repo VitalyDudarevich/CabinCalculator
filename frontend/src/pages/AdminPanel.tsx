@@ -8,6 +8,7 @@ import HardwareTab from '../components/HardwareTab';
 import type { User } from '../types/User';
 import type { Company } from '../types/Company';
 import type { HardwareItem } from '../types/HardwareItem';
+import Header from '../components/Header';
 
 const sections = [
   { key: 'companies', label: 'Компании' },
@@ -42,7 +43,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState('');
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [companyForm, setCompanyForm] = useState({
     name: '',
@@ -194,86 +194,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       .finally(() => setCompaniesLoading(false));
   };
 
-  // 1. companiesForDropdown: только своя компания для админа, все для суперадмина
-  const companiesForDropdown = user.role === 'superadmin'
-    ? companies
-    : companies.filter(c => c._id === user.companyId);
-
-  // 2. Если админ и выбранная компания не совпадает с его, сбрасываем
-  useEffect(() => {
-    if (user.role === 'admin' && selectedCompanyId !== user.companyId) {
-      setSelectedCompanyId(String(user.companyId || (companiesForDropdown[0]?._id ?? '')));
-    }
-  }, [user, selectedCompanyId]);
-
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return <div style={{ padding: 32, textAlign: 'center', color: 'crimson', fontSize: 20 }}>Нет доступа к админ-панели</div>;
   }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f6f8fa' }}>
-      {/* Header */}
-      <header style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 56, background: '#fff', boxShadow: '0 2px 8px #0001', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 32px', zIndex: 100 }}>
-        {/* Дропдаун выбора компании */}
-        {companiesForDropdown.length > 0 && user.role === 'superadmin' && (
-          <select
-            value={selectedCompanyId}
-            onChange={e => setSelectedCompanyId(e.target.value)}
-            style={{
-              marginRight: 16,
-              padding: '8px 16px',
-              borderRadius: 8,
-              border: '1px solid #ccc',
-              fontSize: 16,
-              background: '#f6f8fa',
-              color: '#333',
-              minWidth: 160,
-              cursor: 'pointer',
-            }}
-          >
-            <option value="all">Все компании</option>
-            {companiesForDropdown.map(c => (
-              <option key={c._id} value={c._id}>{c.name}</option>
-            ))}
-          </select>
-        )}
-        <button
-          onClick={onCalculator}
-          style={{
-            padding: '8px 24px',
-            borderRadius: 8,
-            background: '#fff',
-            color: '#646cff',
-            border: '2px solid #646cff',
-            fontWeight: 600,
-            cursor: 'pointer',
-            marginRight: 8,
-            boxShadow: '0 1px 4px #646cff22'
-          }}
-        >
-          Калькулятор
-        </button>
-        <button
-          style={{ padding: '8px 24px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, marginRight: 16, cursor: 'default', boxShadow: '0 1px 4px #646cff22' }}
-          disabled
-        >
-          Админ-панель
-        </button>
-        <div style={{ position: 'relative' }}>
-          <div
-            style={{ width: 40, height: 40, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 20, color: '#333', cursor: 'pointer', userSelect: 'none' }}
-            title={user.username}
-            onClick={() => setShowUserMenu(v => !v)}
-          >
-            {user.username ? user.username[0].toUpperCase() : '?'}
-          </div>
-          {showUserMenu && (
-            <div style={{ position: 'absolute', right: 0, top: 48, background: '#fff', boxShadow: '0 2px 8px #0002', borderRadius: 8, minWidth: 140, zIndex: 10 }}>
-              <button onClick={onLogout} style={{ width: '100%', padding: '12px 0', border: 'none', background: 'none', color: '#d00', fontWeight: 500, borderRadius: 8, cursor: 'pointer' }}>Выйти</button>
-            </div>
-          )}
-        </div>
-      </header>
+      <Header 
+        user={user} 
+        companies={companies} 
+        selectedCompanyId={selectedCompanyId} 
+        setSelectedCompanyId={setSelectedCompanyId} 
+        onLogout={onLogout} 
+      />
       {/* Main content */}
       <div style={{ display: 'flex', marginTop: 56, minHeight: 'calc(100vh - 56px)' }}>
         {/* Sidebar */}

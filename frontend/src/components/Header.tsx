@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface HeaderProps {
@@ -9,9 +9,34 @@ interface HeaderProps {
   onLogout?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, companies = [], selectedCompanyId = '', setSelectedCompanyId, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({
+  user,
+  companies = [],
+  selectedCompanyId = '',
+  setSelectedCompanyId,
+  onLogout,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Для админки: если не выбрано, выставить 'all' по умолчанию
+  useEffect(() => {
+    if (
+      user && user.role === 'superadmin' &&
+      location.pathname === '/admin' &&
+      companies.length > 0 &&
+      !selectedCompanyId &&
+      setSelectedCompanyId
+    ) {
+      setSelectedCompanyId('all');
+    }
+  }, [user, companies, selectedCompanyId, setSelectedCompanyId, location.pathname]);
+
+  const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (setSelectedCompanyId) {
+      setSelectedCompanyId(e.target.value);
+    }
+  };
 
   return (
     <header style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 56, background: '#fff', boxShadow: '0 2px 8px #0001', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 32px', zIndex: 100 }}>
@@ -19,15 +44,21 @@ const Header: React.FC<HeaderProps> = ({ user, companies = [], selectedCompanyId
       {user && user.role === 'superadmin' && setSelectedCompanyId && (
         <select
           value={selectedCompanyId}
-          onChange={e => setSelectedCompanyId(e.target.value)}
+          onChange={handleCompanyChange}
           style={{ marginRight: 16, padding: 8, borderRadius: 8, fontSize: 16 }}
         >
-          <option value="">Выберите компанию...</option>
+          {location.pathname === '/admin' && (
+            <option value="all">Все компании</option>
+          )}
+          {location.pathname === '/calculator' && (
+            <option value="">Выберите компанию...</option>
+          )}
           {companies.map(c => (
             <option key={c._id} value={c._id}>{c.name}</option>
           ))}
         </select>
       )}
+
       {/* Для админа/суперадмина */}
       {user && (user.role === 'admin' || user.role === 'superadmin') && (
         <>

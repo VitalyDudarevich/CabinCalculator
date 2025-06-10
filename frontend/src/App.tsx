@@ -64,9 +64,8 @@ export default function App() {
         .then(data => {
           const list = Array.isArray(data) ? data : [];
           setCompanies(list);
-          if (list.length > 0 && selectedCompanyId !== list[0]._id) {
-            setSelectedCompanyId(list[0]._id);
-          }
+          // Не выставлять selectedCompanyId здесь!
+          // Header сам выставит 'all' для /admin, '' для /calculator
         })
         .catch(() => setCompanies([]));
     } else if (user && user.companyId) {
@@ -77,7 +76,7 @@ export default function App() {
         setSelectedCompanyId(adminCompanyId);
       }
     }
-  }, [user, selectedCompanyId]);
+  }, [user]);
 
   // Логика выхода
   const handleLogout = () => {
