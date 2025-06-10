@@ -374,7 +374,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             draft.showGlassSizes ? (
               draft.stationaryWidth && draft.doorWidth && draft.height ? (
                 <div>
-                  <b>Размеры стекла:</b> {Number(draft.stationaryWidth) + Number(draft.doorWidth)} × {draft.height} мм
+                  <b>Размеры проёма:</b> {Number(draft.stationaryWidth) + Number(draft.doorWidth)} × {draft.height} мм
                   <ul style={{ margin: '6px 0 0 0', paddingLeft: 24, listStyle: 'disc' }}>
                     <li>Стационар: {Number(draft.stationaryWidth) + 30} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм</li>
                     <li>Дверь: {Number(draft.doorWidth)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм</li>

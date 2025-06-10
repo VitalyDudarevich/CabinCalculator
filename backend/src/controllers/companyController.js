@@ -25,8 +25,7 @@ exports.getCompanyById = async (req, res) => {
 // Функция для генерации дефолтного набора фурнитуры
 function getDefaultHardwarePrices() {
   return [
-    { section: 'Профили', name: 'Профиль 8 мм', price: null },
-    { section: 'Профили', name: 'Профиль 10 мм', price: null },
+    { section: 'Профили', name: 'Профиль', price: null },
     { section: 'Крепления', name: 'Стекло-стекло', price: null },
     { section: 'Крепления', name: 'Стена-стекло', price: null },
     { section: 'Крепления', name: 'Палка стена-стекло курглая', price: null },

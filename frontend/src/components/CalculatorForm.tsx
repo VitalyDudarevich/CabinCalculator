@@ -217,12 +217,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
 
     if (value === 'glass') {
       setProjectHardware([
-        { hardwareId: '', name: 'Профиль 8 мм', quantity: 1 },
+        { hardwareId: '', name: 'Профиль', quantity: 1 },
         { hardwareId: '', name: 'Палка стена-стекло прямоугольная', quantity: 1 }
       ]);
     } else if (["straight", "straight-glass", "straight-opening"].includes(value)) {
       setProjectHardware([
-        { hardwareId: '', name: 'Профиль 8 мм', quantity: 1 },
+        { hardwareId: '', name: 'Профиль', quantity: 1 },
         { hardwareId: '', name: 'Раздвижная система', quantity: 1 },
         { hardwareId: '', name: 'Профильная труба (рельса)', quantity: 1 },
         { hardwareId: '', name: 'Уплотнитель F', quantity: 2 },
@@ -230,7 +230,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       ]);
     } else if (value === 'corner') {
       setProjectHardware([
-        { hardwareId: '', name: 'Профиль 8 мм', quantity: 2 },
+        { hardwareId: '', name: 'Профиль', quantity: 2 },
         { hardwareId: '', name: 'Раздвижная система', quantity: 2 },
         { hardwareId: '', name: 'Профильная труба (рельса)', quantity: 1 },
         { hardwareId: '', name: 'уголок турба-труба прямоугольное', quantity: 1 },
@@ -756,7 +756,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 <input type="radio" name="sizeType" value="opening" checked={!showGlassSizes} onChange={() => setShowGlassSizes(false)} style={{ marginRight: 6 }} /> Размеры проёма
               </label>
               <label style={{ fontWeight: 500, fontSize: 15 }}>
-                <input type="radio" name="sizeType" value="glass" checked={showGlassSizes} onChange={() => setShowGlassSizes(true)} style={{ marginRight: 6 }} /> Размеры стекла
+                <input type="radio" name="sizeType" value="glass" checked={showGlassSizes} onChange={() => setShowGlassSizes(true)} style={{ marginRight: 6 }} /> Нестандартная дверь
               </label>
             </div>
             {/* Если выбран 'Размеры стекла' — показываем поля для размеров стекла */}
