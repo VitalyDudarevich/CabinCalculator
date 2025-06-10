@@ -291,7 +291,19 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
       total += installPrice;
     }
     // 5. Базовая стоимость
-    const baseCost = settings.baseCosts.find(b => b.id === draft.config);
+    let baseCost = settings.baseCosts.find(b => b.id === draft.config);
+    if (!baseCost) {
+      // Попробовать найти по name, если id не совпадает
+      baseCost = settings.baseCosts.find(b =>
+        normalizeName(b.name).includes('базовая стоимость') &&
+        (
+          (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
+          (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
+          (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
+          (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
+        )
+      );
+    }
     if (baseCost) {
       positions.push({
         label: 'Базовая стоимость',
@@ -302,6 +314,24 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
       total += baseCost.value;
     }
   }
+
+  // --- Группировка позиций ---
+  const hardwareNames = draft.projectHardware?.map(hw => hw.name) || [];
+  const additionalPositions = positions.filter(
+    pos =>
+      pos.label.startsWith('Доставка') ||
+      pos.label.startsWith('Монтаж') ||
+      pos.label === 'Базовая стоимость'
+  );
+  // Основные позиции (стекло и прочее, кроме фурнитуры и "Дополнительно")
+  const mainPositions = positions.filter(pos =>
+    !hardwareNames.some(name => pos.label.includes(name)) &&
+    !(
+      pos.label.startsWith('Доставка') ||
+      pos.label.startsWith('Монтаж') ||
+      pos.label === 'Базовая стоимость'
+    )
+  );
 
   // --- Новый useEffect для передачи total наружу ---
   useEffect(() => {
@@ -379,53 +409,14 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           <hr style={{ margin: '18px 0 18px 0', border: 0, borderTop: '1px solid #e0e0e0' }} />
           {/* Блок расчёта стоимости */}
           <div style={{ marginBottom: 16 }}>
-            {/* Стекло, базовая стоимость, монтаж, доставка */}
-            {positions.filter(pos => {
-              // Скрываем только блок стекла с площадью 0
-              if (pos.label.toLowerCase().includes('стекло')) {
-                const match = pos.label.match(/\((\d+(?:\.\d+)?) м²\)/);
-                const area = match ? parseFloat(match[1]) : undefined;
-                return area && area > 0;
-              }
-              // Не рендерим фурнитуру здесь, она будет отдельным списком ниже
-              if (draft.projectHardware && draft.projectHardware.length > 0 && pos.label && draft.projectHardware.some(hw => pos.label.includes(hw.name))) {
-                return false;
-              }
-              return true;
-            }).map((pos, idx) => {
-              if (pos.label.toLowerCase().includes('стекло')) {
-                return (
-                  <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{pos.label}:</span>
-                    <span><b>{pos.total} ₾</b></span>
-                  </div>
-                );
-              }
-              if (pos.label.startsWith('Доставка') || pos.label.startsWith('Монтаж')) {
-                return (
-                  <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{pos.label}</span>
-                    <span><b>{pos.total.toFixed(2)} {settings ? settings.currency : 'GEL'}</b></span>
-                  </div>
-                );
-              }
-              if (pos.label === 'Базовая стоимость') {
-                return (
-                  <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Базовая стоимость:</span>
-                    <span><b>{Math.round(pos.total)} {settings ? settings.currency : 'GEL'}</b></span>
-                  </div>
-                );
-              }
-              // Остальные позиции (например, услуги) — как раньше
-              return (
-                <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{pos.label}{pos.qty ? ` (${pos.qty})` : ''}:</span>
-                  <span><b>{pos.total.toFixed(2)} {settings ? settings.currency : 'GEL'}</b></span>
-                </div>
-              );
-            })}
-            {/* Фурнитура — отдельным списком, всегда вся из projectHardware */}
+            {/* Основные позиции (например, стекло) */}
+            {mainPositions.map((pos, idx) => (
+              <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>{pos.label}:</span>
+                <span><b>{pos.total} ₾</b></span>
+              </div>
+            ))}
+            {/* Фурнитура */}
             {draft.projectHardware && draft.projectHardware.length > 0 && (
               <div style={{ marginTop: 12 }}>
                 <b>Фурнитура:</b>
@@ -471,6 +462,20 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                       </li>
                     );
                   })}
+                </ul>
+              </div>
+            )}
+            {/* Дополнительно */}
+            {additionalPositions.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <b>Дополнительно:</b>
+                <ul style={{ margin: '6px 0 0 0', padding: 0, listStyle: 'none' }}>
+                  {additionalPositions.map((pos, idx) => (
+                    <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
+                      <span>{pos.label}</span>
+                      <b style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>{pos.total.toFixed(2)} {settings ? settings.currency : 'GEL'}</b>
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}

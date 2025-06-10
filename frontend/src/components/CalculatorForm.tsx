@@ -28,7 +28,8 @@ interface CalculatorFormProps {
   selectedCompanyId?: string;
   onChangeDraft?: (draft: DraftProjectData) => void;
   selectedProject?: Project;
-  onNewProject?: () => void;
+  onNewProject?: (project?: Project) => void;
+  totalPrice?: number;
 }
 
 const STATUS_OPTIONS = [
@@ -41,7 +42,7 @@ const STATUS_OPTIONS = [
   'Оплачено',
 ];
 
-const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, selectedCompanyId = '', onChangeDraft, selectedProject, onNewProject }) => {
+const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, selectedCompanyId = '', onChangeDraft, selectedProject, onNewProject, totalPrice }) => {
   const [projectName, setProjectName] = useState('');
   const [config, setConfig] = useState('');
   const [draftConfig, setDraftConfig] = useState(config);
@@ -209,32 +210,31 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
 
   // 2. При смене конфигурации — сброс всех полей и установка projectHardware по логике
   const handleConfigChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setExactHeight(false);
     const value = event.target.value;
     resetAllFields();
     setConfig(value);
     setDraftConfig(value);
-    // projectHardware по логике конфигурации
+
     if (value === 'glass') {
-      let profileName = '';
-      if (Array.isArray(hardwareList)) {
-        const found = hardwareList.find(h => h.name.toLowerCase().includes('профиль') && h.name.includes(glassThickness + ' мм'));
-        profileName = found ? found.name : (glassThickness === '10' ? 'Профиль 10 мм' : 'Профиль 8 мм');
-      } else {
-        profileName = glassThickness === '10' ? 'Профиль 10 мм' : 'Профиль 8 мм';
-      }
       setProjectHardware([
-        { hardwareId: `${Date.now()}_${Math.random()}`, name: profileName, quantity: 1 },
-        { hardwareId: `${Date.now()}_${Math.random()}`, name: 'Палка стена-стекло прямоугольная', quantity: 1 },
+        { hardwareId: '', name: 'Профиль 8 мм', quantity: 1 },
+        { hardwareId: '', name: 'Палка стена-стекло прямоугольная', quantity: 1 }
       ]);
-    } else if (value === 'straight') {
-      const color = hardwareColor || '';
-      const thickness = glassThickness || '';
+    } else if (["straight", "straight-glass", "straight-opening"].includes(value)) {
       setProjectHardware([
-        { hardwareId: `${Date.now()}_${Math.random()}`, name: `Профиль ${color} ${thickness === '8' ? '8 мм' : thickness}`, quantity: 1 },
-        { hardwareId: `${Date.now()}_${Math.random()}`, name: `Раздвижная система ${color}`, quantity: 1 },
-        { hardwareId: `${Date.now()}_${Math.random()}`, name: `Профильная труба (рельса) ${color}`, quantity: 1 },
-        { hardwareId: `${Date.now()}_${Math.random()}`, name: `Уплотнитель F`, quantity: 2 },
+        { hardwareId: '', name: 'Профиль 8 мм', quantity: 1 },
+        { hardwareId: '', name: 'Раздвижная система', quantity: 1 },
+        { hardwareId: '', name: 'Профильная труба (рельса)', quantity: 1 },
+        { hardwareId: '', name: 'Уплотнитель F', quantity: 2 },
+        { hardwareId: '', name: 'Уплотнитель A', quantity: 1 }
+      ]);
+    } else if (value === 'corner') {
+      setProjectHardware([
+        { hardwareId: '', name: 'Профиль 8 мм', quantity: 2 },
+        { hardwareId: '', name: 'Раздвижная система', quantity: 2 },
+        { hardwareId: '', name: 'Профильная труба (рельса)', quantity: 1 },
+        { hardwareId: '', name: 'уголок турба-труба прямоугольное', quantity: 1 },
+        { hardwareId: '', name: 'Уплотнитель F', quantity: 4 }
       ]);
     }
   };
@@ -294,6 +294,63 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setExactHeight(false);
   };
 
+  const handleSaveProject = async () => {
+    setSaveStatus('idle');
+    setErrors({});
+    const now = new Date().toISOString();
+    const finalPrice = totalPrice ?? 0;
+    // Собираем данные проекта
+    const projectData = {
+      name: projectName,
+      data: {
+        config,
+        glassColor,
+        glassThickness,
+        hardwareColor,
+        width,
+        height,
+        length,
+        comment,
+        delivery,
+        installation,
+        projectHardware,
+        showGlassSizes,
+        stationarySize,
+        doorSize,
+        stationaryWidth,
+        doorWidth,
+        exactHeight,
+      },
+      companyId: effectiveCompanyId,
+      status,
+      price: finalPrice,
+      priceHistory: [
+        { price: finalPrice, date: now }
+      ],
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectData),
+      });
+      if (!res.ok) throw new Error('Ошибка при сохранении проекта');
+      const savedProject = await res.json();
+
+      // Добавить проект в историю (через props.onNewProject)
+      if (typeof onNewProject === 'function') onNewProject(savedProject);
+
+      // Сбросить все поля
+      resetAllFields();
+      setSaveStatus('success');
+    } catch (e) {
+      setSaveStatus('error');
+      const errMsg = e instanceof Error ? e.message : 'Ошибка сохранения';
+      setErrors({ global: errMsg });
+    }
+  };
+
   return (
     <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: 480, margin: '0 32px' }}>
       <h2 style={{ fontWeight: 700, fontSize: 24, marginBottom: 20 }}>
@@ -315,6 +372,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             opacity: !selectedProject || changedFields.size > 0 ? 1 : 0.7,
           }}
           disabled={!!selectedProject && changedFields.size === 0}
+          onClick={handleSaveProject}
         >
           СОХРАНИТЬ
         </button>

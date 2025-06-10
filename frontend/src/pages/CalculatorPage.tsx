@@ -16,6 +16,7 @@ const CalculatorPage: React.FC<{
   const [draftProjectData, setDraftProjectData] = useState<DraftProjectData>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [totalPrice, setTotalPrice] = useState<number>(0);
 
   useEffect(() => {
     if (!selectedCompanyId) {
@@ -56,6 +57,7 @@ const CalculatorPage: React.FC<{
         onExactHeightChange={checked => {
           setDraftProjectData(draft => ({ ...draft, exactHeight: checked }));
         }}
+        onTotalChange={setTotalPrice}
       />
       <CalculatorForm
         companyId={companyId}
@@ -63,10 +65,12 @@ const CalculatorPage: React.FC<{
         selectedCompanyId={selectedCompanyId}
         onChangeDraft={setDraftProjectData}
         selectedProject={selectedProject ?? undefined}
-        onNewProject={() => {
+        onNewProject={project => {
+          if (project) setProjects(prev => [project, ...prev]);
           setSelectedProject(null);
           setDraftProjectData({});
         }}
+        totalPrice={totalPrice}
       />
       <ProjectHistory user={user} projects={projects} onEdit={handleEditProject} onDelete={handleDeleteProject} />
     </div>
