@@ -70,6 +70,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const [stationaryWidth, setStationaryWidth] = useState('');
   const [doorWidth, setDoorWidth] = useState('');
   const [exactHeight, setExactHeight] = useState(false);
+  const [uniqueGlasses, setUniqueGlasses] = useState([
+    { name: 'Стекло 1', color: glassColors[0] || '', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
+  ]);
+  const [uniqueGlassErrors, setUniqueGlassErrors] = useState<{ [idx: number]: { [field: string]: string } }>({});
   // resolvedCompanyId больше не нужен, используем selectedCompanyId
   const effectiveCompanyId = user?.role === 'superadmin' ? selectedCompanyId : (companyId || localStorage.getItem('companyId') || '');
 
@@ -206,6 +210,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setManualPrice(undefined);
     setChangedFields(new Set());
     setExactHeight(false);
+    setUniqueGlasses([
+      { name: 'Стекло 1', color: glassColors[0] || '', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
+    ]);
+    setUniqueGlassErrors({});
   };
 
   // 2. При смене конфигурации — сброс всех полей и установка projectHardware по логике
@@ -237,6 +245,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         { hardwareId: '', name: 'Уплотнитель F', quantity: 4 }
       ]);
     }
+    setUniqueGlassErrors({});
   };
 
   // 3. При смене опции 'размеры проёма/размеры стекла' — сброс всех размеров
@@ -317,6 +326,30 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       }
     }
     if (!hardwareColor) newErrors.hardwareColor = 'Выберите цвет фурнитуры';
+    if (config === 'unique') {
+      const glassErrs: { [idx: number]: { [field: string]: string } } = {};
+      uniqueGlasses.forEach((glass, idx) => {
+        const errs: { [field: string]: string } = {};
+        if (!glass.name.trim()) errs.name = 'Укажите название стекла';
+        if (!glass.color) errs.color = 'Выберите цвет стекла';
+        if (!glass.thickness) errs.thickness = 'Выберите толщину стекла';
+        // Ширина
+        if (!glass.width) {
+          errs.width = 'Укажите ширину';
+        } else if (isNaN(Number(glass.width)) || Number(glass.width) < 1 || Number(glass.width) > 10000) {
+          errs.width = 'Введите число от 1 до 10000';
+        }
+        // Высота
+        if (!glass.height) {
+          errs.height = 'Укажите высоту';
+        } else if (isNaN(Number(glass.height)) || Number(glass.height) < 1 || Number(glass.height) > 10000) {
+          errs.height = 'Введите число от 1 до 10000';
+        }
+        if (Object.keys(errs).length > 0) glassErrs[idx] = errs;
+      });
+      setUniqueGlassErrors(glassErrs);
+      if (Object.keys(glassErrs).length > 0) return false;
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -377,6 +410,38 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       const errMsg = e instanceof Error ? e.message : 'Ошибка сохранения';
       setErrors({ global: errMsg });
     }
+  };
+
+  const handleAddGlass = () => {
+    if (uniqueGlasses.length < 10) {
+      setUniqueGlasses(list => [...list, {
+        name: `Стекло ${list.length + 1}`,
+        color: glassColors[0] || '',
+        thickness: GLASS_THICKNESS[0]?.value || '',
+        width: '',
+        height: ''
+      }]);
+    }
+  };
+
+  const handleRemoveGlass = (idx: number) => {
+    if (uniqueGlasses.length > 1) setUniqueGlasses(list => list.filter((_, i) => i !== idx));
+  };
+
+  const handleGlassChange = (idx: number, field: string, value: string) => {
+    setUniqueGlasses(list => list.map((g, i) => i === idx ? { ...g, [field]: value } : g));
+    setUniqueGlassErrors(prev => {
+      if (!prev[idx] || !prev[idx][field]) return prev;
+      const newErrs = { ...prev };
+      const fieldErrs = { ...newErrs[idx] };
+      delete fieldErrs[field];
+      if (Object.keys(fieldErrs).length === 0) {
+        delete newErrs[idx];
+      } else {
+        newErrs[idx] = fieldErrs;
+      }
+      return newErrs;
+    });
   };
 
   return (
@@ -502,6 +567,15 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           color: #888;
           transform: none;
         }
+        /* Скрыть стрелки у размеров стекла */
+        .glass-size-input::-webkit-outer-spin-button,
+        .glass-size-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .glass-size-input {
+          -moz-appearance: textfield;
+        }
       `}</style>
       {saveStatus === 'success' && <div style={{ color: 'green', marginBottom: 8 }}>Проект успешно сохранён!</div>}
       {saveStatus === 'error' && <div style={{ color: 'red', marginBottom: 8 }}>Ошибка при сохранении проекта</div>}
@@ -600,7 +674,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 <input
                   type="number"
                   id="width"
-                  className={width ? 'filled' : ''}
+                  className={`glass-size-input ${width ? 'filled' : ''}`}
                   placeholder=" "
                   value={width}
                   onChange={e => {
@@ -619,7 +693,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 <input
                   type="number"
                   id="height"
-                  className={height ? 'filled' : ''}
+                  className={`glass-size-input ${height ? 'filled' : ''}`}
                   placeholder=" "
                   value={height}
                   onChange={e => {
@@ -1096,174 +1170,130 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         )}
         {config === 'unique' && (
           <>
-            {/* Секция название стекла */}
-            <div className="form-group" style={{ width: '100%' }}>
-              <input
-                type="text"
-                id="glass-name"
-                placeholder=" "
-                value={projectName}
-                onChange={e => {
-                  setProjectName(e.target.value);
-                  const rest = { ...errors };
-                  delete rest.name;
-                  setErrors(rest);
-                }}
-                required
-                style={{ width: '100%', background: changedFields.has('name') ? '#fffbe6' : undefined }}
-              />
-              <label htmlFor="glass-name">Название стекла</label>
-            </div>
-            {/* Цвет стекла и толщина в одну строку */}
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <select
-                  id="glass-color"
-                  className={glassColor ? 'filled' : ''}
-                  value={glassColor}
-                  onChange={e => {
-                    setGlassColor(e.target.value);
-                    const rest = { ...errors };
-                    delete rest.glassColor;
-                    setErrors(rest);
-                  }}
-                  required
-                  style={{ width: '100%', background: changedFields.has('glassColor') ? '#fffbe6' : undefined }}
-                >
-                  {glassColors.length > 0 && glassColors.map(color => (
-                    <option key={color} value={color}>{color}</option>
-                  ))}
-                </select>
-                <label htmlFor="glass-color">Цвет стекла *</label>
-                {errors.glassColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.glassColor}</div>}
-              </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <select
-                  id="glass-thickness"
-                  className={glassThickness ? 'filled' : ''}
-                  value={glassThickness}
-                  onChange={e => {
-                    setGlassThickness(e.target.value);
-                    const rest = { ...errors };
-                    delete rest.glassThickness;
-                    setErrors(rest);
-                  }}
-                  required
-                  style={{ width: '100%', background: changedFields.has('glassThickness') ? '#fffbe6' : undefined }}
-                >
-                  {GLASS_THICKNESS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-                <label htmlFor="glass-thickness">Толщина стекла *</label>
-                {errors.glassThickness && <div style={{ color: 'red', fontSize: 13 }}>{errors.glassThickness}</div>}
-              </div>
-            </div>
-            {/* Ширина и высота */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 0, width: '100%' }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <input
-                  type="number"
-                  id="width"
-                  placeholder=" "
-                  value={width}
-                  onChange={e => {
-                    setWidth(e.target.value);
-                    const rest = { ...errors };
-                    delete rest.width;
-                    setErrors(rest);
-                  }}
-                  required
-                  style={{ width: '100%', background: changedFields.has('width') ? '#fffbe6' : undefined }}
-                />
-                <label htmlFor="width">Ширина (мм) *</label>
-                {errors.width && <div style={{ color: 'red', fontSize: 13 }}>{errors.width}</div>}
-              </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <input
-                  type="number"
-                  id="height"
-                  placeholder=" "
-                  value={height}
-                  onChange={e => {
-                    setHeight(e.target.value);
-                    const rest = { ...errors };
-                    delete rest.height;
-                    setErrors(rest);
-                  }}
-                  required
-                  style={{ width: '100%', background: changedFields.has('height') ? '#fffbe6' : undefined }}
-                />
-                <label htmlFor="height">Высота (мм) *</label>
-                {errors.height && <div style={{ color: 'red', fontSize: 13 }}>{errors.height}</div>}
-              </div>
-            </div>
-            {/* Кнопка добавить стекло */}
-            <button style={{ padding: '10px 12px', borderRadius: 8, background: '#fff', color: '#646cff', border: '2px solid #646cff', fontWeight: 600, fontSize: 16, cursor: 'pointer', marginTop: 12, width: '100%' }}>ДОБАВИТЬ СТЕКЛО</button>
-            {/* Цвет фурнитуры */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <div className="form-group" style={{ width: '100%', marginBottom: 0 }}>
-                <select
-                  id="hardware-color"
-                  className={hardwareColor ? 'filled' : ''}
-                  value={hardwareColor}
-                  onChange={e => {
-                    setHardwareColor(e.target.value);
-                    const rest = { ...errors };
-                    delete rest.hardwareColor;
-                    setErrors(rest);
-                  }}
-                  required
-                  style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
-                >
-                  {HARDWARE_COLORS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-                <label htmlFor="hardware-color">Цвет фурнитуры *</label>
-                {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
-              </div>
-              <div style={{ marginTop: 0, marginBottom: 0 }}>
-                <AddHardwareButton onClick={() => setShowAddHardwareDialog(true)} />
-              </div>
-              {projectHardware.length > 0 && (
-                <div style={{ marginTop: 12, marginBottom: 8 }}>
-                  {projectHardware.map(hw => (
-                    <div key={hw.hardwareId} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
-                      <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-                        <QuantityControl
-                          value={hw.quantity}
-                          onChange={v => setProjectHardware(list => list.map(item => item.hardwareId === hw.hardwareId ? { ...item, quantity: v } : item))}
-                        />
-                        <button
-                          onClick={() => setProjectHardware(list => list.filter(item => item.hardwareId !== hw.hardwareId))}
-                          style={{
-                            width: 32,
-                            height: 32,
-                            border: 'none',
-                            borderRadius: '50%',
-                            background: 'none',
-                            color: '#e53935',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 22,
-                            transition: 'color 0.15s',
-                            margin: 0,
-                          }}
-                          title="Удалить"
-                          onMouseOver={e => (e.currentTarget.style.color = '#b71c1c')}
-                          onMouseOut={e => (e.currentTarget.style.color = '#e53935')}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+            {uniqueGlasses.map((glass, idx) => (
+              <div key={idx} style={{ marginBottom: 20, position: 'relative', background: '#fff', borderRadius: 10, padding: 16, border: '1px solid #e0e0e0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <input
+                      type="text"
+                      id={`glass-name-${idx}`}
+                      className={glass.name ? 'filled' : ''}
+                      value={glass.name}
+                      placeholder=" "
+                      onChange={e => handleGlassChange(idx, 'name', e.target.value)}
+                      style={{ width: '100%' }}
+                    />
+                    <label htmlFor={`glass-name-${idx}`}>Название стекла</label>
+                  </div>
+                  {uniqueGlasses.length > 1 && (
+                    <button type="button" onClick={() => handleRemoveGlass(idx)} style={{ color: '#e53935', background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', marginLeft: 4, marginTop: 8 }} title="Удалить стекло">×</button>
+                  )}
                 </div>
-              )}
+                <div style={{ display: 'flex', gap: 12, marginTop: 0 }}>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <select
+                      id={`glass-color-${idx}`}
+                      className={glass.color ? 'filled' : ''}
+                      value={glass.color}
+                      onChange={e => handleGlassChange(idx, 'color', e.target.value)}
+                      style={{ width: '100%' }}>
+                      <option value="" disabled hidden></option>
+                      {glassColors.map(color => <option key={color} value={color}>{color}</option>)}
+                    </select>
+                    <label htmlFor={`glass-color-${idx}`}>Цвет стекла</label>
+                  </div>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <select
+                      id={`glass-thickness-${idx}`}
+                      className={glass.thickness ? 'filled' : ''}
+                      value={glass.thickness}
+                      onChange={e => handleGlassChange(idx, 'thickness', e.target.value)}
+                      style={{ width: '100%' }}>
+                      <option value="" disabled hidden></option>
+                      {GLASS_THICKNESS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                    <label htmlFor={`glass-thickness-${idx}`}>Толщина стекла</label>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 12, marginTop: 0 }}>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <input
+                      type="number"
+                      id={`glass-width-${idx}`}
+                      className={`glass-size-input ${glass.width ? 'filled' : ''}`}
+                      value={glass.width}
+                      placeholder=" "
+                      onChange={e => handleGlassChange(idx, 'width', e.target.value)}
+                      style={{ width: '100%' }}
+                    />
+                    <label htmlFor={`glass-width-${idx}`}>Ширина (мм)</label>
+                  </div>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <input
+                      type="number"
+                      id={`glass-height-${idx}`}
+                      className={`glass-size-input ${glass.height ? 'filled' : ''}`}
+                      value={glass.height}
+                      placeholder=" "
+                      onChange={e => handleGlassChange(idx, 'height', e.target.value)}
+                      style={{ width: '100%' }}
+                    />
+                    <label htmlFor={`glass-height-${idx}`}>Высота (мм)</label>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  style={{
+                    background: '#fff',
+                    color: '#646cff',
+                    border: '2px solid #646cff',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    fontWeight: 600,
+                    fontSize: 16,
+                    marginTop: 12,
+                    width: '100%',
+                    cursor: 'pointer',
+                    transition: 'background 0.15s, color 0.15s',
+                    display: 'block'
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.background = '#f5f6ff')}
+                  onMouseOut={e => (e.currentTarget.style.background = '#fff')}
+                  onClick={() => {}}
+                >Кастомизировать</button>
+                {uniqueGlassErrors[idx]?.name && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].name}</div>}
+                {uniqueGlassErrors[idx]?.color && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].color}</div>}
+                {uniqueGlassErrors[idx]?.thickness && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].thickness}</div>}
+                {uniqueGlassErrors[idx]?.width && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].width}</div>}
+                {uniqueGlassErrors[idx]?.height && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].height}</div>}
+              </div>
+            ))}
+            <button
+              type="button"
+              style={{
+                background: '#fff',
+                color: '#646cff',
+                border: '2px solid #646cff',
+                borderRadius: 8,
+                padding: '10px 12px',
+                fontWeight: 600,
+                fontSize: 16,
+                marginTop: 4,
+                width: '100%',
+                cursor: 'pointer',
+                transition: 'background 0.15s, color 0.15s',
+                display: 'block'
+              }}
+              onMouseOver={e => (e.currentTarget.style.background = '#f5f6ff')}
+              onMouseOut={e => (e.currentTarget.style.background = '#fff')}
+              onClick={handleAddGlass}
+              disabled={uniqueGlasses.length >= 10}
+            >ДОБАВИТЬ СТЕКЛО</button>
+            <div style={{ marginTop: 20 }}>
+              <AddHardwareButton
+                onClick={() => setShowAddHardwareDialog(true)}
+                disabled={false}
+              />
             </div>
           </>
         )}
@@ -1310,8 +1340,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         {showAddHardwareDialog && (
           <AddHardwareDialog
             hardwareList={hardwareList}
-            onSave={(selected) => {
-              setProjectHardware(prev => [...prev, ...selected]);
+            onSave={selected => {
+              setProjectHardware(list => [...list, ...selected]);
               setShowAddHardwareDialog(false);
             }}
             onClose={() => setShowAddHardwareDialog(false)}
