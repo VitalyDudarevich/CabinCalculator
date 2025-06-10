@@ -226,29 +226,36 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
     } else if (Array.isArray(draft.projectHardware)) {
       draft.projectHardware.forEach(hw => {
         let price = 0;
-        const label = `${hw.name} (${hw.quantity} шт.)`;
+        let foundPrice = false;
+        const labelBase = `${hw.name} (${hw.quantity} шт.)`;
         if (settings.hardwareList) {
           const found = settings.hardwareList.find(
             (h) =>
               h.name && normalizeName(h.name) === normalizeName(hw.name) &&
               String(h.companyId) === String(companyId)
           );
-          price = found?.price || 0;
+          if (found !== undefined) {
+            price = found.price ?? 0;
+            foundPrice = true;
+          }
         }
-        if (!price && settings.baseCosts) {
+        if (!foundPrice && settings.baseCosts) {
           const base = settings.baseCosts.find(
             (b) =>
               b.name && normalizeName(b.name) === normalizeName(hw.name)
           );
-          price = base?.value || 0;
+          if (base !== undefined) {
+            price = base.value ?? 0;
+            foundPrice = true;
+          }
         }
         const totalHw = +(price * hw.quantity).toFixed(2);
         positions.push({
-          label,
+          label: foundPrice ? labelBase : `${labelBase} (нет цены)` ,
           price,
-          total: totalHw,
+          total: foundPrice ? totalHw : 0,
         });
-        total += totalHw;
+        if (foundPrice) total += totalHw;
       });
     }
     // 3. Доставка
@@ -304,6 +311,11 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   }, [total, deliveryPrice, installPrice, onTotalChange]);
 
   const configLabel = configLabels[String(draft.config ?? '')] || '';
+
+  // ВРЕМЕННАЯ ДИАГНОСТИКА
+  console.log('projectHardware:', draft.projectHardware);
+  console.log('hardwareList:', settings?.hardwareList);
+  console.log('positions:', positions);
 
   return (
     <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, minWidth: 320, flex: 1 }}>
@@ -366,14 +378,18 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           {/* Визуальный разделитель */}
           <hr style={{ margin: '18px 0 18px 0', border: 0, borderTop: '1px solid #e0e0e0' }} />
           {/* Блок расчёта стоимости */}
-          {/* Стекло, базовая стоимость, монтаж, доставка — до фурнитуры */}
           <div style={{ marginBottom: 16 }}>
+            {/* Стекло, базовая стоимость, монтаж, доставка */}
             {positions.filter(pos => {
-              // Скрываем блок стекла, если площадь 0 или размеры не заданы
+              // Скрываем только блок стекла с площадью 0
               if (pos.label.toLowerCase().includes('стекло')) {
                 const match = pos.label.match(/\((\d+(?:\.\d+)?) м²\)/);
                 const area = match ? parseFloat(match[1]) : undefined;
                 return area && area > 0;
+              }
+              // Не рендерим фурнитуру здесь, она будет отдельным списком ниже
+              if (draft.projectHardware && draft.projectHardware.length > 0 && pos.label && draft.projectHardware.some(hw => pos.label.includes(hw.name))) {
+                return false;
               }
               return true;
             }).map((pos, idx) => {
@@ -385,7 +401,6 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                   </div>
                 );
               }
-              // Для доставки и монтажа — только сумма
               if (pos.label.startsWith('Доставка') || pos.label.startsWith('Монтаж')) {
                 return (
                   <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -394,7 +409,6 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                   </div>
                 );
               }
-              // Для базовой стоимости — отдельный рендер
               if (pos.label === 'Базовая стоимость') {
                 return (
                   <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -403,7 +417,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                   </div>
                 );
               }
-              // Остальные позиции — как раньше
+              // Остальные позиции (например, услуги) — как раньше
               return (
                 <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>{pos.label}{pos.qty ? ` (${pos.qty})` : ''}:</span>
@@ -411,6 +425,55 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                 </div>
               );
             })}
+            {/* Фурнитура — отдельным списком, всегда вся из projectHardware */}
+            {draft.projectHardware && draft.projectHardware.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <b>Фурнитура:</b>
+                <ul style={{ margin: '6px 0 0 0', padding: 0, listStyle: 'none' }}>
+                  {draft.projectHardware.map(hw => {
+                    let price = 0;
+                    let foundPrice = false;
+                    if (settings && settings.hardwareList) {
+                      const found = settings.hardwareList.find(
+                        (h) =>
+                          h.name && normalizeName(h.name) === normalizeName(hw.name) &&
+                          String(h.companyId) === String(companyId)
+                      );
+                      if (found !== undefined) {
+                        price = found.price ?? 0;
+                        foundPrice = true;
+                      }
+                    }
+                    if (!foundPrice && settings && settings.baseCosts) {
+                      const base = settings.baseCosts.find(
+                        (b) =>
+                          b.name && normalizeName(b.name) === normalizeName(hw.name)
+                      );
+                      if (base !== undefined) {
+                        price = base.value ?? 0;
+                        foundPrice = true;
+                      }
+                    }
+                    const totalHw = +(price * hw.quantity).toFixed(2);
+                    return (
+                      <li key={hw.hardwareId} style={{ padding: '2px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span
+                          style={{ maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}
+                          title={`${hw.name} (${hw.quantity} шт)`}
+                        >
+                          {hw.name} ({hw.quantity} шт)
+                        </span>
+                        {foundPrice ? (
+                          <b style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>{totalHw} {settings ? settings.currency : 'GEL'}</b>
+                        ) : (
+                          <span style={{ color: '#b71c1c', fontSize: 14, marginLeft: 8, whiteSpace: 'nowrap' }}>нет цены</span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       ) : (

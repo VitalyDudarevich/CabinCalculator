@@ -51,7 +51,7 @@ const Header: React.FC<HeaderProps> = ({
             <option value="all">Все компании</option>
           )}
           {location.pathname === '/calculator' && (
-            <option value="">Выберите компанию...</option>
+          <option value="">Выберите компанию...</option>
           )}
           {companies.map(c => (
             <option key={c._id} value={c._id}>{c.name}</option>

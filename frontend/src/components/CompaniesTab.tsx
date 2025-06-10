@@ -93,45 +93,45 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
         </h2>
         {user.role === 'superadmin' && (
           <button onClick={() => setShowAddCompany(true)} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
-            Добавить
-          </button>
+          Добавить
+        </button>
         )}
       </div>
       <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
         <>
-          {displayCompanies.length === 0 ? (
-            <div style={{ color: '#888' }}>Нет компаний</div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f6f8ff' }}>
-                  <th style={{ textAlign: 'left', padding: 8 }}>Название</th>
-                  <th style={{ textAlign: 'left', padding: 8 }}>Город</th>
-                  <th style={{ textAlign: 'left', padding: 8 }}>Имя владельца</th>
-                  <th style={{ textAlign: 'left', padding: 8 }}>Контакт владельца</th>
-                  <th style={{ textAlign: 'center', padding: 8 }}>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayCompanies.map(c => (
-                  <tr key={c._id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: 8 }}>{c.name}</td>
-                    <td style={{ padding: 8 }}>{c.city || '-'}</td>
-                    <td style={{ padding: 8 }}>{c.ownerName || '-'}</td>
-                    <td style={{ padding: 8 }}>{c.ownerContact || '-'}</td>
-                    <td style={{ padding: 8, textAlign: 'center' }}>
+        {displayCompanies.length === 0 ? (
+          <div style={{ color: '#888' }}>Нет компаний</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f6f8ff' }}>
+                <th style={{ textAlign: 'left', padding: 8 }}>Название</th>
+                <th style={{ textAlign: 'left', padding: 8 }}>Город</th>
+                <th style={{ textAlign: 'left', padding: 8 }}>Имя владельца</th>
+                <th style={{ textAlign: 'left', padding: 8 }}>Контакт владельца</th>
+                <th style={{ textAlign: 'center', padding: 8 }}>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayCompanies.map(c => (
+                <tr key={c._id} style={{ borderBottom: '1px solid #eee' }}>
+                  <td style={{ padding: 8 }}>{c.name}</td>
+                  <td style={{ padding: 8 }}>{c.city || '-'}</td>
+                  <td style={{ padding: 8 }}>{c.ownerName || '-'}</td>
+                  <td style={{ padding: 8 }}>{c.ownerContact || '-'}</td>
+                  <td style={{ padding: 8, textAlign: 'center' }}>
                       <span title="Изменить" onClick={() => handleEditCompany(c)} style={{ marginRight: 10, cursor: 'pointer' }}>
-                        <FaUserEdit color="#888" size={16} />
-                      </span>
+                      <FaUserEdit color="#888" size={16} />
+                    </span>
                       <span title="Удалить" onClick={() => handleDeleteCompany(c._id)} style={{ cursor: 'pointer' }}>
-                        <FaRegTrashAlt color="#e53e3e" size={16} />
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                      <FaRegTrashAlt color="#e53e3e" size={16} />
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
           <ModalForm
             isOpen={showAddCompany}
             title="Добавить компанию"

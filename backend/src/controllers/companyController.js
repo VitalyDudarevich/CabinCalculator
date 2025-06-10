@@ -23,53 +23,41 @@ exports.getCompanyById = async (req, res) => {
 };
 
 // Функция для генерации дефолтного набора фурнитуры
-function getDefaultHardwarePrices(currency = 'GEL') {
+function getDefaultHardwarePrices() {
   return [
-    { section: 'Профили', name: `Профиль 8 мм (${currency})`, price: null },
-    { section: 'Профили', name: `Профиль 10 мм (${currency})`, price: null },
-    { section: 'Крепления', name: `Стекло-стекло (${currency})`, price: null },
-    { section: 'Крепления', name: `Стена-стекло (${currency})`, price: null },
-    { section: 'Крепления', name: `Палка стена-стекло курглая (${currency})`, price: null },
-    { section: 'Крепления', name: `Палка стена-стекло прямоугольная (${currency})`, price: null },
-    { section: 'Крепления', name: `уголок турба-труба прямоугольное (${currency})`, price: null },
-    { section: 'Крепления', name: `уголок труба-труба круглый (${currency})`, price: null },
-    {
-      section: 'Крепления',
-      name: `Крепление труба-стекло прямоугольное (боковое) (${currency})`,
-      price: null,
-    },
-    {
-      section: 'Крепления',
-      name: `Крепление труба-стекло прямоугольное (торцевое) (${currency})`,
-      price: null,
-    },
-    { section: 'Крепления', name: `Крепление труба-стекло круглое (${currency})`, price: null },
-    { section: 'Крепления', name: `Крепление стена-труба круглое (${currency})`, price: null },
-    { section: 'Петли', name: `Петля 90 градусов (${currency})`, price: null },
-    { section: 'Петли', name: `Петля 135 градусов (${currency})`, price: null },
-    { section: 'Петли', name: `Петля 180 градусов (${currency})`, price: null },
-    { section: 'Ручки', name: `Ручка кноб (${currency})`, price: null },
-    { section: 'Ручки', name: `Ручка скоба маленькая (${currency})`, price: null },
-    { section: 'Ручки', name: `Ручка скоба большая (${currency})`, price: null },
+    { section: 'Профили', name: 'Профиль 8 мм', price: null },
+    { section: 'Профили', name: 'Профиль 10 мм', price: null },
+    { section: 'Крепления', name: 'Стекло-стекло', price: null },
+    { section: 'Крепления', name: 'Стена-стекло', price: null },
+    { section: 'Крепления', name: 'Палка стена-стекло курглая', price: null },
+    { section: 'Крепления', name: 'Палка стена-стекло прямоугольная', price: null },
+    { section: 'Крепления', name: 'уголок турба-труба прямоугольное', price: null },
+    { section: 'Крепления', name: 'уголок труба-труба круглый', price: null },
+    { section: 'Крепления', name: 'Крепление труба-стекло прямоугольное (боковое)', price: null },
+    { section: 'Крепления', name: 'Крепление труба-стекло прямоугольное (торцевое)', price: null },
+    { section: 'Крепления', name: 'Крепление труба-стекло круглое', price: null },
+    { section: 'Крепления', name: 'Крепление стена-труба круглое', price: null },
+    { section: 'Петли', name: 'Петля 90 градусов', price: null },
+    { section: 'Петли', name: 'Петля 135 градусов', price: null },
+    { section: 'Петли', name: 'Петля 180 градусов', price: null },
+    { section: 'Ручки', name: 'Ручка кноб', price: null },
+    { section: 'Ручки', name: 'Ручка скоба маленькая', price: null },
+    { section: 'Ручки', name: 'Ручка скоба большая', price: null },
+    { section: 'Раздвижная система и направляющие', name: 'Раздвижная система', price: null },
     {
       section: 'Раздвижная система и направляющие',
-      name: `Раздвижная система (${currency})`,
+      name: 'Профильная труба (рельса)',
       price: null,
     },
-    {
-      section: 'Раздвижная система и направляющие',
-      name: `Профильная труба (рельса) (${currency})`,
-      price: null,
-    },
-    { section: 'Уплотнительные резинки', name: `Магнит 90 (${currency})`, price: null },
-    { section: 'Уплотнительные резинки', name: `Магнит 135 (${currency})`, price: null },
-    { section: 'Уплотнительные резинки', name: `Магнит 180 (${currency})`, price: null },
-    { section: 'Уплотнительные резинки', name: `Магнит к стене (${currency})`, price: null },
-    { section: 'Уплотнительные резинки', name: `Уплотнитель F (${currency})`, price: null },
-    { section: 'Уплотнительные резинки', name: `Уплотнитель Y (${currency})`, price: null },
-    { section: 'Уплотнительные резинки', name: `Уплотнитель П (${currency})`, price: null },
-    { section: 'Уплотнительные резинки', name: `Уплотнитель A (${currency})`, price: null },
-    { section: 'Дополнительно', name: `Порожек (${currency})`, price: null },
+    { section: 'Уплотнительные резинки', name: 'Магнит 90', price: null },
+    { section: 'Уплотнительные резинки', name: 'Магнит 135', price: null },
+    { section: 'Уплотнительные резинки', name: 'Магнит 180', price: null },
+    { section: 'Уплотнительные резинки', name: 'Магнит к стене', price: null },
+    { section: 'Уплотнительные резинки', name: 'Уплотнитель F', price: null },
+    { section: 'Уплотнительные резинки', name: 'Уплотнитель Y', price: null },
+    { section: 'Уплотнительные резинки', name: 'Уплотнитель П', price: null },
+    { section: 'Уплотнительные резинки', name: 'Уплотнитель A', price: null },
+    { section: 'Дополнительно', name: 'Порожек', price: null },
   ];
 }
 
@@ -93,7 +81,7 @@ exports.createCompany = async (req, res) => {
     const company = new Company({ ...req.body, name });
     await company.save();
     // 2. Добавляем дефолтную фурнитуру
-    const defaultHardware = getDefaultHardwarePrices(company.currency || 'GEL').map((hw) => ({
+    const defaultHardware = getDefaultHardwarePrices().map((hw) => ({
       ...hw,
       companyId: company._id,
     }));
