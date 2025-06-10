@@ -30,6 +30,7 @@ const ModalForm: React.FC<ModalFormProps> = ({ isOpen, title, fields, onSubmit, 
       <div style={{ background: '#fff', borderRadius: 12, padding: 32, minWidth: 320, boxShadow: '0 2px 16px #0002', position: 'relative' }}>
         <h3 style={{ marginTop: 0, marginBottom: 24 }}>{title}</h3>
         <form
+          autoComplete="off"
           onSubmit={e => {
             e.preventDefault();
             onSubmit();
@@ -41,6 +42,8 @@ const ModalForm: React.FC<ModalFormProps> = ({ isOpen, title, fields, onSubmit, 
               <label style={{ fontWeight: 500 }}>{field.label}{field.required && <span style={{ color: 'crimson' }}> *</span>}</label>
               {field.type === 'select' ? (
                 <select
+                  name={field.name}
+                  autoComplete="off"
                   value={field.value}
                   onChange={e => field.onChange(e.target.value)}
                   required={field.required}
@@ -53,13 +56,14 @@ const ModalForm: React.FC<ModalFormProps> = ({ isOpen, title, fields, onSubmit, 
                 </select>
               ) : (
                 <input
+                  name={field.name}
+                  autoComplete="off"
                   type={field.type}
                   value={field.value}
                   onChange={e => field.onChange(field.type === 'number' ? Number(e.target.value) : e.target.value)}
                   required={field.required}
                   placeholder={field.placeholder}
                   style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16 }}
-                  {...(field.autoComplete ? { autoComplete: field.autoComplete } : {})}
                 />
               )}
               {field.error && (

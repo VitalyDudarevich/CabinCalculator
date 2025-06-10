@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaUserEdit, FaRegTrashAlt } from 'react-icons/fa';
+import ModalForm from './ModalForm';
 import type { User } from '../types/User';
 
 interface Company {
@@ -8,15 +8,19 @@ interface Company {
 }
 interface UsersTabProps {
   users: User[];
+  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   companies: Company[];
   selectedCompanyId: string | null;
-  onEdit: (u: User) => void;
-  onDelete: (u: User) => void;
-  onAdd: () => void;
   userRole: string;
+  fetchWithAuth: (input: RequestInfo, init?: RequestInit, retry?: boolean) => Promise<Response>;
 }
 
-const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId, onEdit, onDelete, onAdd, userRole }) => {
+const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selectedCompanyId, userRole, fetchWithAuth }) => {
+  const [showAddUser, setShowAddUser] = React.useState(false);
+  const [userForm, setUserForm] = React.useState({ username: '', email: '', password: '', role: 'user', phone: '' });
+  const [userFormError, setUserFormError] = React.useState('');
+  const [userFormFieldNames, setUserFormFieldNames] = React.useState({ username: 'username', password: 'password' });
+
   const companyName = selectedCompanyId === 'all'
     ? 'Все компании'
     : (companies.find(c => c._id === selectedCompanyId)?.name || '');
@@ -30,16 +34,80 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
     : users
   ).filter(u => u.role !== 'superadmin');
 
+  const handleAddUser = () => {
+    setShowAddUser(true);
+    setUserForm({ username: '', email: '', password: '', role: 'user', phone: '' });
+    setUserFormError('');
+    setUserFormFieldNames({
+      username: 'username_' + Date.now(),
+      password: 'password_' + Date.now(),
+    });
+  };
+
+  const handleSubmitAddUser = async () => {
+    if (!userForm.username || !userForm.email || !userForm.password) {
+      setUserFormError('Все обязательные поля должны быть заполнены');
+      return;
+    }
+    const body: Record<string, string> = { ...userForm };
+    if (selectedCompanyId && selectedCompanyId !== 'all') {
+      body.companyId = selectedCompanyId;
+    }
+    try {
+      const res = await fetchWithAuth('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setUserFormError(data?.error || 'Ошибка при добавлении пользователя');
+        return;
+      }
+      setShowAddUser(false);
+      setUserForm({ username: '', email: '', password: '', role: 'user', phone: '' });
+      setUserFormError('');
+      // Обновляем список пользователей
+      let url = '/api/users';
+      if (selectedCompanyId && selectedCompanyId !== 'all') {
+        url += `?companyId=${selectedCompanyId}`;
+      }
+      fetchWithAuth(url)
+        .then(res => res.json())
+        .then(data => setUsers(Array.isArray(data) ? data : []));
+    } catch {
+      setUserFormError('Ошибка сети');
+    }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>
           Пользователи {companyName}
         </h2>
-        <button onClick={onAdd} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
+        <button onClick={handleAddUser} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
           Добавить
         </button>
       </div>
+      <ModalForm
+        isOpen={showAddUser}
+        title="Добавить пользователя"
+        fields={[
+          { name: userFormFieldNames.username, label: 'Имя пользователя', type: 'text', required: true, value: userForm.username, onChange: v => setUserForm(f => ({ ...f, username: String(v) })), autoComplete: 'off' },
+          { name: 'email', label: 'Email', type: 'email', required: true, value: userForm.email, onChange: v => setUserForm(f => ({ ...f, email: String(v) })), autoComplete: 'off' },
+          { name: userFormFieldNames.password, label: 'Пароль', type: 'password', required: true, value: userForm.password, onChange: v => setUserForm(f => ({ ...f, password: String(v) })), autoComplete: 'off' },
+          { name: 'role', label: 'Роль', type: 'select', required: true, value: userForm.role, onChange: v => setUserForm(f => ({ ...f, role: String(v) })), options: [
+            { value: 'user', label: 'Пользователь' },
+            { value: 'admin', label: 'Админ' },
+          ], autoComplete: 'off' },
+          { name: 'phone', label: 'Телефон', type: 'text', value: userForm.phone, onChange: v => setUserForm(f => ({ ...f, phone: String(v) })), autoComplete: 'off' },
+        ]}
+        onSubmit={handleSubmitAddUser}
+        onCancel={() => { setShowAddUser(false); setUserFormError(''); }}
+        submitText="Добавить"
+        companyNameError={userFormError}
+      />
       {userRole === 'superadmin' && !selectedCompanyId ? (
         companies.map(comp => {
           const companyUsers = users.filter(u => u.companyId === comp._id);
@@ -65,12 +133,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
                       <td style={{ padding: 8 }}>{u.role}</td>
                       <td style={{ padding: 8 }}>{companies.find(c => c._id === u.companyId)?.name || '-'}</td>
                       <td style={{ padding: 8, textAlign: 'center' }}>
-                        <span title="Редактировать" onClick={() => onEdit(u)} style={{ display: 'inline-block', marginRight: 10, width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
-                          <FaUserEdit color="#888" size={16} />
-                        </span>
-                        <span title="Удалить" onClick={() => onDelete(u)} style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
-                          <FaRegTrashAlt color="#888" size={16} />
-                        </span>
+                        {/* TODO: реализовать редактирование/удаление */}
                       </td>
                     </tr>
                   ))}
@@ -106,12 +169,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
                         : (companies.find(c => c._id === u.companyId)?.name || '-')}
                     </td>
                     <td style={{ padding: 8, textAlign: 'center' }}>
-                      <span title="Редактировать" onClick={() => onEdit(u)} style={{ display: 'inline-block', marginRight: 10, width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
-                        <FaUserEdit color="#888" size={16} />
-                      </span>
-                      <span title="Удалить" onClick={() => onDelete(u)} style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
-                        <FaRegTrashAlt color="#888" size={16} />
-                      </span>
+                      {/* TODO: реализовать редактирование/удаление */}
                     </td>
                   </tr>
                 ))}

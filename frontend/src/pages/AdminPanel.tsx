@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import SettingsTab from '../components/SettingsTab';
 import CompaniesTab from '../components/CompaniesTab';
 import UsersTab from '../components/UsersTab';
-// import ModalForm from '../components/ModalForm'; // удалено
 import HardwareTab from '../components/HardwareTab';
 // import HardwareTab from '../components/HardwareTab'; // если понадобится
 import type { User } from '../types/User';
@@ -30,6 +29,35 @@ interface AdminPanelProps {
   onCalculator: () => void;
 }
 
+// Универсальная функция fetch с авто-рефрешем токена
+async function fetchWithAuth(input: RequestInfo, init?: RequestInit, retry = true, onLogoutCb?: () => void): Promise<Response> {
+  const url = typeof input === 'string' && input.startsWith('/api')
+    ? `http://localhost:5000${input}`
+    : input;
+  const token = localStorage.getItem('token');
+  const headers = { ...(init?.headers || {}), Authorization: `Bearer ${token || ''}` };
+  const res = await fetch(url, { ...init, headers });
+
+  if ((res.status === 401 || res.status === 400) && retry) {
+    // Попытка обновить токен
+    const refreshRes = await fetch('http://localhost:5000/api/auth/refresh', { method: 'POST', credentials: 'include' });
+    if (refreshRes.ok) {
+      const { token: newToken } = await refreshRes.json();
+      if (newToken) {
+        localStorage.setItem('token', newToken);
+        // Повторяем исходный запрос с новым токеном
+        return fetchWithAuth(input, init, false, onLogoutCb);
+      }
+    }
+    // Не удалось обновить — разлогин
+    localStorage.removeItem('token');
+    if (onLogoutCb) onLogoutCb();
+    throw new Error('Не удалось обновить токен');
+  }
+
+  return res;
+}
+
 const AdminPanel: React.FC<AdminPanelProps> = ({
   user,
   companies,
@@ -43,61 +71,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [hardwareByCompany, setHardwareByCompany] = useState<Record<string, HardwareItem[]>>({});
 
-  // Оставляем обработчики для UsersTab
-  const handleEditUser = () => {
-    // Реализуйте открытие модалки или редактирование пользователя
-    // ...
-  };
-  const handleDeleteUser = async (u: User) => {
-    if (!window.confirm(`Удалить пользователя "${u.username}"?`)) return;
-    // ...
-  };
-  const handleAddUser = () => {};
-
-  // Универсальная функция fetch с авто-рефрешем токена
-  async function fetchWithAuth(input: RequestInfo, init?: RequestInit, retry = true): Promise<Response> {
-    const token = localStorage.getItem('token');
-    const headers = { ...(init?.headers || {}), Authorization: `Bearer ${token || ''}` };
-    const res = await fetch(input, { ...init, headers });
-
-    if ((res.status === 401 || res.status === 400) && retry) {
-      // Попытка обновить токен
-      const refreshRes = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
-      if (refreshRes.ok) {
-        const { token: newToken } = await refreshRes.json();
-        if (newToken) {
-          localStorage.setItem('token', newToken);
-          // Повторяем исходный запрос с новым токеном
-          return fetchWithAuth(input, init, false);
-        }
-      }
-      // Не удалось обновить — разлогин
-      localStorage.removeItem('token');
-      onLogout();
-      throw new Error('Не удалось обновить токен');
-    }
-
-    return res;
-  }
-
   useEffect(() => {
     if (section !== 'users') return;
     let url = '/api/users';
     if (selectedCompanyId && selectedCompanyId !== 'all') {
       url += `?companyId=${selectedCompanyId}`;
     }
-    fetchWithAuth(url)
-      .then(res => res.json())
-      .then(data => setUsers(Array.isArray(data) ? data : []));
-  }, [section, selectedCompanyId]);
+    fetchWithAuth(url, undefined, true, onLogout)
+      .then((res: unknown) => (res as Response).json())
+      .then((data: unknown) => setUsers(Array.isArray(data) ? data : []));
+  }, [section, selectedCompanyId, onLogout]);
 
   useEffect(() => {
     if (!selectedCompanyId || selectedCompanyId === 'all') return;
-    fetchWithAuth(`/api/hardware?companyId=${selectedCompanyId}`)
-      .then(res => res.json())
-      .then(data => setHardwareByCompany(prev => ({ ...prev, [selectedCompanyId]: Array.isArray(data) ? data : [] })))
+    fetchWithAuth(`/api/hardware?companyId=${selectedCompanyId}`, undefined, true, onLogout)
+      .then((res: unknown) => (res as Response).json())
+      .then((data: unknown) => setHardwareByCompany(prev => ({ ...prev, [selectedCompanyId]: Array.isArray(data) ? data : [] })))
       .catch(() => setHardwareByCompany(prev => ({ ...prev, [selectedCompanyId]: [] })));
-  }, [selectedCompanyId]);
+  }, [selectedCompanyId, onLogout]);
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return <div style={{ padding: 32, textAlign: 'center', color: 'crimson', fontSize: 20 }}>Нет доступа к админ-панели</div>;
@@ -146,19 +137,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               setSelectedCompanyId={setSelectedCompanyId}
               setCompanies={setCompanies}
               user={user}
-              fetchWithAuth={fetchWithAuth}
+              fetchWithAuth={(input, init, retry) => fetchWithAuth(input, init, retry, onLogout)}
               onLogout={onLogout}
             />
           )}
           {section === 'users' && companies.length > 0 && (
             <UsersTab
               users={users}
+              setUsers={setUsers}
               companies={companies}
               selectedCompanyId={selectedCompanyId}
-              onEdit={handleEditUser}
-              onDelete={handleDeleteUser}
-              onAdd={handleAddUser}
               userRole={user.role}
+              fetchWithAuth={(input, init, retry) => fetchWithAuth(input, init, retry, onLogout)}
             />
           )}
           {section === 'hardware' && companies.length > 0 && (
