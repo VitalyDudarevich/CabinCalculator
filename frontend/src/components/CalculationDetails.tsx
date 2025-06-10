@@ -374,23 +374,51 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             draft.showGlassSizes ? (
               draft.stationaryWidth && draft.doorWidth && draft.height ? (
                 <div>
-                  <b>Размеры стекла:</b> {Number(draft.stationaryWidth) + Number(draft.doorWidth)} × {draft.height} мм<br />
-                  <b>Стационар:</b> {Number(draft.stationaryWidth) + 30} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм<br />
-                  <b>Дверь:</b> {Number(draft.doorWidth)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм
+                  <b>Размеры стекла:</b> {Number(draft.stationaryWidth) + Number(draft.doorWidth)} × {draft.height} мм
+                  <ul style={{ margin: '6px 0 0 0', paddingLeft: 24, listStyle: 'disc' }}>
+                    <li>Стационар: {Number(draft.stationaryWidth) + 30} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм</li>
+                    <li>Дверь: {Number(draft.doorWidth)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм</li>
+                  </ul>
                 </div>
               ) : null
             ) : (
               draft.width && draft.height ? (
                 <div>
-                  <b>Размеры проёма:</b> {draft.width} × {draft.height} мм<br />
-                  <b>Стационар:</b> {Math.round((Number(draft.width) + 30) / 2)} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм<br />
-                  <b>Дверь:</b> {Math.round((Number(draft.width) + 30) / 2)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм
+                  <b>Размеры проёма:</b> {draft.width} × {draft.height} мм
+                  <ul style={{ margin: '6px 0 0 0', paddingLeft: 24, listStyle: 'disc' }}>
+                    <li>Стационар: {Math.round((Number(draft.width) + 30) / 2)} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм</li>
+                    <li>Дверь: {Math.round((Number(draft.width) + 30) / 2)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм</li>
+                  </ul>
                 </div>
               ) : null
             )
           ) : null}
+          {/* Для угловой раздвижной */}
+          {draft.config === 'corner' && draft.width && draft.length && draft.height && (
+            <div>
+              <b>Размеры:</b> {draft.width} × {draft.length} × {draft.height} мм
+              <ul style={{ margin: '6px 0 0 0', paddingLeft: 24, listStyle: 'disc' }}>
+                <li>Стационар 1: {Math.round(Number(draft.width) / 2)} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм</li>
+                <li>Дверь 1: {Math.round(Number(draft.width) / 2)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм</li>
+                <li>Стационар 2: {Math.round(Number(draft.length) / 2)} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм</li>
+                <li>Дверь 2: {Math.round(Number(draft.length) / 2)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм</li>
+              </ul>
+            </div>
+          )}
+          {/* Чекбокс 'Точная высота' для угловой раздвижной */}
+          {draft.config === 'corner' && (
+            <div style={{ margin: '8px 0' }}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!exactHeight}
+                  onChange={e => onExactHeightChange?.(e.target.checked)}
+                />{' '}
+                Точная высота
+              </label>
+            </div>
+          )}
           {draft.hardwareColor && <div><b>Цвет фурнитуры:</b> {hardwareColorLabels[draft.hardwareColor] || draft.hardwareColor}</div>}
-          {draft.length && <div><b>Длина:</b> {draft.length} мм</div>}
           {draft.comment && <div><b>Комментарий:</b> {draft.comment}</div>}
           {/* Чекбокс "Точная высота" для всех прямых раздвижных */}
           {['straight', 'straight-glass', 'straight-opening'].includes(String(draft.config)) && (
