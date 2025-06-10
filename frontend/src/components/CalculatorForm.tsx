@@ -294,7 +294,35 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setExactHeight(false);
   };
 
+  // Валидация формы
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    if (!projectName.trim()) newErrors.projectName = 'Укажите имя проекта';
+    if (!config) newErrors.config = 'Выберите конфигурацию';
+    if (!glassColor) newErrors.glassColor = 'Выберите цвет стекла';
+    if (!glassThickness) newErrors.glassThickness = 'Выберите толщину стекла';
+    // Размеры
+    if (config === 'glass' || config === 'unique' || config === 'corner') {
+      if (!width) newErrors.width = 'Укажите ширину';
+      if (!height) newErrors.height = 'Укажите высоту';
+    }
+    if (["straight", "straight-glass", "straight-opening"].includes(config)) {
+      if (showGlassSizes) {
+        if (!stationaryWidth) newErrors.stationaryWidth = 'Укажите ширину стационара';
+        if (!doorWidth) newErrors.doorWidth = 'Укажите ширину двери';
+        if (!height) newErrors.height = 'Укажите высоту';
+      } else {
+        if (!width) newErrors.width = 'Укажите ширину';
+        if (!height) newErrors.height = 'Укажите высоту';
+      }
+    }
+    if (!hardwareColor) newErrors.hardwareColor = 'Выберите цвет фурнитуры';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSaveProject = async () => {
+    if (!validateForm()) return;
     setSaveStatus('idle');
     setErrors({});
     const now = new Date().toISOString();
@@ -487,7 +515,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             autoComplete="off"
             placeholder=" "
             value={projectName}
-            onChange={e => setProjectName(e.target.value)}
+            onChange={e => {
+              setProjectName(e.target.value);
+              const rest = { ...errors };
+              delete rest.projectName;
+              setErrors(rest);
+            }}
             required
             style={{ width: '100%', paddingRight: 12, background: changedFields.has('name') ? '#fffbe6' : undefined }}
           />
@@ -523,7 +556,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="glass-color"
                   className={glassColor ? 'filled' : ''}
                   value={glassColor}
-                  onChange={e => setGlassColor(e.target.value)}
+                  onChange={e => {
+                    setGlassColor(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.glassColor;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('glassColor') ? '#fffbe6' : undefined }}
                 >
@@ -539,7 +577,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="glass-thickness"
                   className={glassThickness ? 'filled' : ''}
                   value={glassThickness}
-                  onChange={e => setGlassThickness(e.target.value)}
+                  onChange={e => {
+                    setGlassThickness(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.glassThickness;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('glassThickness') ? '#fffbe6' : undefined }}
                 >
@@ -560,7 +603,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   className={width ? 'filled' : ''}
                   placeholder=" "
                   value={width}
-                  onChange={e => setWidth(e.target.value)}
+                  onChange={e => {
+                    setWidth(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.width;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('width') ? '#fffbe6' : undefined }}
                 />
@@ -574,7 +622,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   className={height ? 'filled' : ''}
                   placeholder=" "
                   value={height}
-                  onChange={e => setHeight(e.target.value)}
+                  onChange={e => {
+                    setHeight(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.height;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('height') ? '#fffbe6' : undefined }}
                 />
@@ -589,7 +642,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="hardware-color"
                   className={hardwareColor ? 'filled' : ''}
                   value={hardwareColor}
-                  onChange={e => setHardwareColor(e.target.value)}
+                  onChange={e => {
+                    setHardwareColor(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.hardwareColor;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
                 >
@@ -654,7 +712,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="glass-color"
                   className={glassColor ? 'filled' : ''}
                   value={glassColor}
-                  onChange={e => setGlassColor(e.target.value)}
+                  onChange={e => {
+                    setGlassColor(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.glassColor;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('glassColor') ? '#fffbe6' : undefined }}
                 >
@@ -670,7 +733,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="glass-thickness"
                   className={glassThickness ? 'filled' : ''}
                   value={glassThickness}
-                  onChange={e => setGlassThickness(e.target.value)}
+                  onChange={e => {
+                    setGlassThickness(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.glassThickness;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('glassThickness') ? '#fffbe6' : undefined }}
                 >
@@ -700,7 +768,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                     id="stat-width"
                     placeholder=" "
                     value={stationaryWidth}
-                    onChange={e => setStationaryWidth(e.target.value)}
+                    onChange={e => {
+                      setStationaryWidth(e.target.value);
+                      const rest = { ...errors };
+                      delete rest.stationaryWidth;
+                      setErrors(rest);
+                    }}
                     required
                     style={{ width: '100%', background: changedFields.has('stationaryWidth') ? '#fffbe6' : undefined }}
                   />
@@ -712,7 +785,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                     id="door-width"
                     placeholder=" "
                     value={doorWidth}
-                    onChange={e => setDoorWidth(e.target.value)}
+                    onChange={e => {
+                      setDoorWidth(e.target.value);
+                      const rest = { ...errors };
+                      delete rest.doorWidth;
+                      setErrors(rest);
+                    }}
                     required
                     style={{ width: '100%', background: changedFields.has('doorWidth') ? '#fffbe6' : undefined }}
                   />
@@ -724,7 +802,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                     id="height2"
                     placeholder=" "
                     value={height}
-                    onChange={e => setHeight(e.target.value)}
+                    onChange={e => {
+                      setHeight(e.target.value);
+                      const rest = { ...errors };
+                      delete rest.height;
+                      setErrors(rest);
+                    }}
                     required
                     style={{ width: '100%', background: changedFields.has('height') ? '#fffbe6' : undefined }}
                   />
@@ -741,7 +824,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                     id="width"
                     placeholder=" "
                     value={width}
-                    onChange={e => setWidth(e.target.value)}
+                    onChange={e => {
+                      setWidth(e.target.value);
+                      const rest = { ...errors };
+                      delete rest.width;
+                      setErrors(rest);
+                    }}
                     required
                     style={{ width: '100%', background: changedFields.has('width') ? '#fffbe6' : undefined }}
                   />
@@ -754,7 +842,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                     id="height"
                     placeholder=" "
                     value={height}
-                    onChange={e => setHeight(e.target.value)}
+                    onChange={e => {
+                      setHeight(e.target.value);
+                      const rest = { ...errors };
+                      delete rest.height;
+                      setErrors(rest);
+                    }}
                     required
                     style={{ width: '100%', background: changedFields.has('height') ? '#fffbe6' : undefined }}
                   />
@@ -770,7 +863,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="hardware-color"
                   className={hardwareColor ? 'filled' : ''}
                   value={hardwareColor}
-                  onChange={e => setHardwareColor(e.target.value)}
+                  onChange={e => {
+                    setHardwareColor(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.hardwareColor;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
                 >
@@ -836,7 +934,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="width"
                   placeholder=" "
                   value={width}
-                  onChange={e => setWidth(e.target.value)}
+                  onChange={e => {
+                    setWidth(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.width;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('width') ? '#fffbe6' : undefined }}
                 />
@@ -849,7 +952,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="length"
                   placeholder=" "
                   value={length}
-                  onChange={e => setLength(e.target.value)}
+                  onChange={e => {
+                    setLength(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.length;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('length') ? '#fffbe6' : undefined }}
                 />
@@ -861,7 +969,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="height"
                   placeholder=" "
                   value={height}
-                  onChange={e => setHeight(e.target.value)}
+                  onChange={e => {
+                    setHeight(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.height;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('height') ? '#fffbe6' : undefined }}
                 />
@@ -876,7 +989,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="glass-color"
                   className={glassColor ? 'filled' : ''}
                   value={glassColor}
-                  onChange={e => setGlassColor(e.target.value)}
+                  onChange={e => {
+                    setGlassColor(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.glassColor;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('glassColor') ? '#fffbe6' : undefined }}
                 >
@@ -892,7 +1010,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="glass-thickness"
                   className={glassThickness ? 'filled' : ''}
                   value={glassThickness}
-                  onChange={e => setGlassThickness(e.target.value)}
+                  onChange={e => {
+                    setGlassThickness(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.glassThickness;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('glassThickness') ? '#fffbe6' : undefined }}
                 >
@@ -911,7 +1034,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="hardware-color"
                   className={hardwareColor ? 'filled' : ''}
                   value={hardwareColor}
-                  onChange={e => setHardwareColor(e.target.value)}
+                  onChange={e => {
+                    setHardwareColor(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.hardwareColor;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
                 >
@@ -975,7 +1103,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 id="glass-name"
                 placeholder=" "
                 value={projectName}
-                onChange={e => setProjectName(e.target.value)}
+                onChange={e => {
+                  setProjectName(e.target.value);
+                  const rest = { ...errors };
+                  delete rest.name;
+                  setErrors(rest);
+                }}
                 required
                 style={{ width: '100%', background: changedFields.has('name') ? '#fffbe6' : undefined }}
               />
@@ -988,7 +1121,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="glass-color"
                   className={glassColor ? 'filled' : ''}
                   value={glassColor}
-                  onChange={e => setGlassColor(e.target.value)}
+                  onChange={e => {
+                    setGlassColor(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.glassColor;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('glassColor') ? '#fffbe6' : undefined }}
                 >
@@ -1004,7 +1142,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="glass-thickness"
                   className={glassThickness ? 'filled' : ''}
                   value={glassThickness}
-                  onChange={e => setGlassThickness(e.target.value)}
+                  onChange={e => {
+                    setGlassThickness(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.glassThickness;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('glassThickness') ? '#fffbe6' : undefined }}
                 >
@@ -1024,7 +1167,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="width"
                   placeholder=" "
                   value={width}
-                  onChange={e => setWidth(e.target.value)}
+                  onChange={e => {
+                    setWidth(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.width;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('width') ? '#fffbe6' : undefined }}
                 />
@@ -1037,7 +1185,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="height"
                   placeholder=" "
                   value={height}
-                  onChange={e => setHeight(e.target.value)}
+                  onChange={e => {
+                    setHeight(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.height;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('height') ? '#fffbe6' : undefined }}
                 />
@@ -1054,7 +1207,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   id="hardware-color"
                   className={hardwareColor ? 'filled' : ''}
                   value={hardwareColor}
-                  onChange={e => setHardwareColor(e.target.value)}
+                  onChange={e => {
+                    setHardwareColor(e.target.value);
+                    const rest = { ...errors };
+                    delete rest.hardwareColor;
+                    setErrors(rest);
+                  }}
                   required
                   style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
                 >
@@ -1125,7 +1283,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           <textarea
             id="comment"
             value={comment}
-            onChange={e => setComment(e.target.value)}
+            onChange={e => {
+              setComment(e.target.value);
+              const rest = { ...errors };
+              delete rest.comment;
+              setErrors(rest);
+            }}
             className={comment ? 'filled' : ''}
             style={{ width: '100%', minHeight: 48, fontSize: 16, borderRadius: 8, border: '1px solid #ccc', padding: 12, marginBottom: 4, background: changedFields.has('comment') ? '#fffbe6' : undefined }}
           />
