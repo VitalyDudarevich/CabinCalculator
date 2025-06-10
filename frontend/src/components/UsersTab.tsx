@@ -10,15 +10,13 @@ interface UsersTabProps {
   users: User[];
   companies: Company[];
   selectedCompanyId: string | null;
-  loading: boolean;
-  error: string;
   onEdit: (u: User) => void;
   onDelete: (u: User) => void;
   onAdd: () => void;
   userRole: string;
 }
 
-const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId, loading, error, onEdit, onDelete, onAdd, userRole }) => {
+const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId, onEdit, onDelete, onAdd, userRole }) => {
   const companyName = selectedCompanyId === 'all'
     ? 'Все компании'
     : (companies.find(c => c._id === selectedCompanyId)?.name || '');
@@ -83,11 +81,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
         })
       ) : (
         <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
-          {loading ? (
-            <div style={{ color: '#888' }}>Загрузка...</div>
-          ) : error ? (
-            <div style={{ color: 'crimson' }}>{error}</div>
-          ) : users.length === 0 ? (
+          {users.length === 0 ? (
             <div style={{ color: '#888' }}>Нет пользователей</div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

@@ -114,6 +114,7 @@ export default function App() {
                         companies={companies}
                         selectedCompanyId={selectedCompanyId}
                         setSelectedCompanyId={setSelectedCompanyId}
+                        setCompanies={setCompanies}
                         onLogout={handleLogout}
                         onCalculator={() => (window.location.href = '/calculator')}
                       />

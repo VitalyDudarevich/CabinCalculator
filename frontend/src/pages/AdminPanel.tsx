@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import SettingsTab from '../components/SettingsTab';
 import CompaniesTab from '../components/CompaniesTab';
 import UsersTab from '../components/UsersTab';
-import ModalForm from '../components/ModalForm';
+// import ModalForm from '../components/ModalForm'; // удалено
 import HardwareTab from '../components/HardwareTab';
 // import HardwareTab from '../components/HardwareTab'; // если понадобится
 import type { User } from '../types/User';
@@ -25,6 +25,7 @@ interface AdminPanelProps {
   companies: Company[];
   selectedCompanyId: string;
   setSelectedCompanyId: (id: string) => void;
+  setCompanies: (companies: Company[]) => void;
   onLogout: () => void;
   onCalculator: () => void;
 }
@@ -34,44 +35,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   companies,
   selectedCompanyId,
   setSelectedCompanyId,
+  setCompanies,
   onLogout,
   onCalculator,
 }) => {
-  const [companiesLoading, setCompaniesLoading] = useState(false);
-  const [companiesError, setCompaniesError] = useState('');
   const [section, setSection] = useState('companies');
   const [users, setUsers] = useState<User[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [usersError, setUsersError] = useState('');
-  const [showAddCompany, setShowAddCompany] = useState(false);
-  const [companyForm, setCompanyForm] = useState({
-    name: '',
-    city: '',
-    ownerName: '',
-    ownerContact: '',
-  });
-  const [companyNameError, setCompanyNameError] = useState('');
-  const [editCompanyId, setEditCompanyId] = useState<string | null>(null);
-  const [showEditCompany, setShowEditCompany] = useState(false);
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [userForm, setUserForm] = useState({
-    username: '',
-    email: '',
-    password: '',
-    role: 'user',
-    companyId: '',
-  });
-  const [userFormErrors, setUserFormErrors] = useState<{ email?: string; username?: string }>({});
   const [hardwareByCompany, setHardwareByCompany] = useState<Record<string, HardwareItem[]>>({});
-  const [editUser, setEditUser] = useState<User | null>(null);
-  const [showEditUser, setShowEditUser] = useState(false);
-  const [editUserForm, setEditUserForm] = useState({
-    username: '',
-    email: '',
-    role: 'user',
-    companyId: '',
-  });
-  const [editUserFormErrors, setEditUserFormErrors] = useState<{ email?: string; username?: string }>({});
+
+  // Оставляем обработчики для UsersTab
+  const handleEditUser = () => {
+    // Реализуйте открытие модалки или редактирование пользователя
+    // ...
+  };
+  const handleDeleteUser = async (u: User) => {
+    if (!window.confirm(`Удалить пользователя "${u.username}"?`)) return;
+    // ...
+  };
+  const handleAddUser = () => {};
 
   // Универсальная функция fetch с авто-рефрешем токена
   async function fetchWithAuth(input: RequestInfo, init?: RequestInit, retry = true): Promise<Response> {
@@ -101,17 +82,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   useEffect(() => {
     if (section !== 'users') return;
-    setUsersLoading(true);
-    setUsersError('');
     let url = '/api/users';
     if (selectedCompanyId && selectedCompanyId !== 'all') {
       url += `?companyId=${selectedCompanyId}`;
     }
     fetchWithAuth(url)
       .then(res => res.json())
-      .then(data => setUsers(Array.isArray(data) ? data : []))
-      .catch(() => setUsersError('Ошибка загрузки пользователей'))
-      .finally(() => setUsersLoading(false));
+      .then(data => setUsers(Array.isArray(data) ? data : []));
   }, [section, selectedCompanyId]);
 
   useEffect(() => {
@@ -121,78 +98,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       .then(data => setHardwareByCompany(prev => ({ ...prev, [selectedCompanyId]: Array.isArray(data) ? data : [] })))
       .catch(() => setHardwareByCompany(prev => ({ ...prev, [selectedCompanyId]: [] })));
   }, [selectedCompanyId]);
-
-  const handleEditUser = (u: User) => {
-    setEditUser(u);
-    setEditUserForm({
-      username: u.username,
-      email: u.email,
-      role: u.role,
-      companyId: typeof u.companyId === 'object' ? u.companyId._id : (u.companyId || ''),
-    });
-    setEditUserFormErrors({});
-    setShowEditUser(true);
-  };
-
-  const handleDeleteUser = async (u: User) => {
-    if (!window.confirm(`Удалить пользователя "${u.username}"?`)) return;
-    const res = await fetchWithAuth(`/api/users/${u._id}`, { method: 'DELETE' });
-    const data = await res.json();
-    handleApiError(data);
-    setUsers(users => users.filter(user => user._id !== u._id));
-  };
-
-  const handleEditCompany = (company: Company) => {
-    setCompanyForm({
-      name: company.name || '',
-      city: company.city || '',
-      ownerName: company.ownerName || '',
-      ownerContact: company.ownerContact || '',
-    });
-    setEditCompanyId(company._id);
-    setShowEditCompany(true);
-  };
-
-  const handleApiError = (data: { error?: string }) => {
-    if (data?.error && /access token/i.test(data.error)) {
-      localStorage.removeItem('token');
-      onLogout(); // корректно разлогиниваем
-    }
-  };
-
-  const handleDeleteCompany = async (id: string) => {
-    if (!window.confirm('Удалить компанию?')) return;
-    const res = await fetchWithAuth(`/api/companies/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    handleApiError(data);
-  };
-
-  const handleAddCompany = async () => {
-    // Проверка уникальности имени (без учёта регистра)
-    const exists = companies.some(c => c.name.trim().toLowerCase() === companyForm.name.trim().toLowerCase());
-    if (exists) {
-      setCompanyNameError('Компания с таким именем уже существует');
-      return;
-    }
-    const res = await fetchWithAuth('/api/companies', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(companyForm),
-    });
-    const data = await res.json();
-    handleApiError(data);
-    setShowAddCompany(false);
-    setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-    setCompanyNameError('');
-    setCompaniesLoading(true);
-    fetchWithAuth('/api/companies')
-      .then(res => res.json())
-      .then(data => {
-        handleApiError(data);
-      })
-      .catch(() => setCompaniesError('Ошибка загрузки компаний'))
-      .finally(() => setCompaniesLoading(false));
-  };
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return <div style={{ padding: 32, textAlign: 'center', color: 'crimson', fontSize: 20 }}>Нет доступа к админ-панели</div>;
@@ -233,271 +138,44 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         </nav>
         {/* Content */}
         <div style={{ flex: 1, padding: 32, minHeight: 'calc(100vh - 56px)' }}>
-          {companiesLoading && <div style={{ color: '#888', margin: 32 }}>Загрузка компаний...</div>}
-          {companiesError && <div style={{ color: 'crimson', margin: 32 }}>{companiesError}</div>}
-          {!companiesLoading && !companiesError && (
-            <>
-              {section === 'companies' && (
-                <>
-                  <CompaniesTab
-                    companies={companies}
-                    selectedCompanyId={selectedCompanyId}
-                    onAdd={user.role === 'superadmin' ? () => setShowAddCompany(true) : undefined}
-                    onEdit={handleEditCompany}
-                    onDelete={handleDeleteCompany}
-                  />
-                  {user.role === 'superadmin' && (
-                    <>
-                      <button
-                        onClick={() => setShowAddCompany(true)}
-                        style={{ margin: '16px 0', padding: '10px 24px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
-                      >
-                        Добавить компанию
-                      </button>
-                      <ModalForm
-                        isOpen={showAddCompany}
-                        title="Добавить компанию"
-                        fields={[
-                          {
-                            name: 'name',
-                            label: 'Название компании',
-                            type: 'text',
-                            required: true,
-                            value: companyForm.name,
-                            onChange: v => {
-                              setCompanyForm(f => ({ ...f, name: String(v) }));
-                              setCompanyNameError('');
-                            },
-                          },
-                          { name: 'city', label: 'Город', type: 'text', value: companyForm.city, onChange: v => setCompanyForm(f => ({ ...f, city: String(v) })) },
-                          { name: 'ownerName', label: 'Имя владельца', type: 'text', value: companyForm.ownerName, onChange: v => setCompanyForm(f => ({ ...f, ownerName: String(v) })) },
-                          { name: 'ownerContact', label: 'Контакт владельца', type: 'text', value: companyForm.ownerContact, onChange: v => setCompanyForm(f => ({ ...f, ownerContact: String(v) })) },
-                        ]}
-                        companyNameError={companyNameError}
-                        onSubmit={handleAddCompany}
-                        onCancel={() => {
-                          setShowAddCompany(false);
-                          setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-                          setCompanyNameError('');
-                        }}
-                        submitText="Добавить"
-                      />
-                    </>
-                  )}
-                  <ModalForm
-                    isOpen={showEditCompany}
-                    title="Редактировать компанию"
-                    fields={[
-                      {
-                        name: 'name',
-                        label: 'Название компании',
-                        type: 'text',
-                        required: true,
-                        value: companyForm.name,
-                        onChange: v => setCompanyForm(f => ({ ...f, name: String(v) })),
-                      },
-                      { name: 'city', label: 'Город', type: 'text', value: companyForm.city, onChange: v => setCompanyForm(f => ({ ...f, city: String(v) })) },
-                      { name: 'ownerName', label: 'Имя владельца', type: 'text', value: companyForm.ownerName, onChange: v => setCompanyForm(f => ({ ...f, ownerName: String(v) })) },
-                      { name: 'ownerContact', label: 'Контакт владельца', type: 'text', value: companyForm.ownerContact, onChange: v => setCompanyForm(f => ({ ...f, ownerContact: String(v) })) },
-                    ]}
-                    onSubmit={async () => {
-                      if (!editCompanyId) return;
-                      const res = await fetchWithAuth(`/api/companies/${editCompanyId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(companyForm),
-                      });
-                      const data = await res.json();
-                      handleApiError(data);
-                      setShowEditCompany(false);
-                      setEditCompanyId(null);
-                      setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-                    }}
-                    onCancel={() => {
-                      setShowEditCompany(false);
-                      setEditCompanyId(null);
-                      setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-                    }}
-                    submitText="Сохранить"
-                  />
-                </>
-              )}
-              {section === 'users' && companies.length > 0 && (
-                <>
-                  <UsersTab
-                    users={users}
-                    companies={companies}
-                    selectedCompanyId={selectedCompanyId}
-                    loading={usersLoading}
-                    error={usersError}
-                    onEdit={handleEditUser}
-                    onDelete={handleDeleteUser}
-                    onAdd={() => setShowAddUser(true)}
-                    userRole={user.role}
-                  />
-                  <ModalForm
-                    isOpen={showAddUser}
-                    title="Добавить пользователя"
-                    fields={[
-                      {
-                        name: 'username',
-                        label: 'Имя пользователя',
-                        type: 'text',
-                        required: true,
-                        value: userForm.username,
-                        onChange: v => {
-                          setUserForm(f => ({ ...f, username: String(v) }));
-                          setUserFormErrors(e => ({ ...e, username: undefined }));
-                        },
-                        error: userFormErrors.username,
-                      },
-                      {
-                        name: 'email',
-                        label: 'Email',
-                        type: 'email',
-                        required: true,
-                        value: userForm.email,
-                        onChange: v => {
-                          setUserForm(f => ({ ...f, email: String(v) }));
-                          setUserFormErrors(e => ({ ...e, email: undefined }));
-                        },
-                        error: userFormErrors.email,
-                        autoComplete: 'off',
-                      },
-                      { name: 'password', label: 'Пароль', type: 'password', required: true, value: userForm.password, onChange: v => setUserForm(f => ({ ...f, password: String(v) })), autoComplete: 'new-password' },
-                      { name: 'role', label: 'Роль', type: 'select', required: true, value: userForm.role, onChange: v => setUserForm(f => ({ ...f, role: String(v) })), options: [ { value: 'user', label: 'Пользователь' }, { value: 'admin', label: 'Админ' } ] },
-                      ...(user.role === 'superadmin' ? [
-                        { name: 'companyId', label: 'Компания', type: 'select' as const, required: true, value: userForm.companyId, onChange: (value: string | number) => setUserForm(f => ({ ...f, companyId: String(value) })), options: companies.map(c => ({ value: c._id, label: c.name })) },
-                      ] : []),
-                    ]}
-                    onSubmit={async () => {
-                      setUserFormErrors({});
-                      const userToSend = user.role === 'superadmin'
-                        ? userForm
-                        : { ...userForm, companyId: user.companyId };
-                      const res = await fetchWithAuth('/api/users', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(userToSend),
-                      });
-                      const data = await res.json();
-                      handleApiError(data);
-                      if (!res.ok && data.error) {
-                        // Проверка на email
-                        if (/email/i.test(data.error) && /duplicate/i.test(data.error)) {
-                          setUserFormErrors({ email: 'Пользователь с таким email уже существует' });
-                          return;
-                        }
-                        // Проверка на username
-                        if (/username/i.test(data.error) && /duplicate/i.test(data.error)) {
-                          setUserFormErrors({ username: 'Пользователь с таким именем уже существует' });
-                          return;
-                        }
-                        // Если ошибка нераспознана — можно вывести общую ошибку (опционально)
-                        return;
-                      }
-                      setShowAddUser(false);
-                      setUserForm({ username: '', email: '', password: '', role: 'user', companyId: '' });
-                      setUserFormErrors({});
-                      setUsersLoading(true);
-                      fetchWithAuth('/api/users')
-                        .then(res => res.json())
-                        .then(data => { handleApiError(data); setUsers(Array.isArray(data) ? data : []); })
-                        .catch(() => setUsersError('Ошибка загрузки пользователей'))
-                        .finally(() => setUsersLoading(false));
-                    }}
-                    onCancel={() => {
-                      setShowAddUser(false);
-                      setUserForm({ username: '', email: '', password: '', role: 'user', companyId: '' });
-                      setUserFormErrors({});
-                    }}
-                    submitText="Добавить"
-                  />
-                  <ModalForm
-                    isOpen={showEditUser}
-                    title="Редактировать пользователя"
-                    fields={[
-                      {
-                        name: 'username',
-                        label: 'Имя пользователя',
-                        type: 'text',
-                        required: true,
-                        value: editUserForm.username,
-                        onChange: v => setEditUserForm(f => ({ ...f, username: String(v) })),
-                        error: editUserFormErrors.username,
-                      },
-                      {
-                        name: 'email',
-                        label: 'Email',
-                        type: 'email',
-                        required: true,
-                        value: editUserForm.email,
-                        onChange: v => setEditUserForm(f => ({ ...f, email: String(v) })),
-                        error: editUserFormErrors.email,
-                      },
-                      { name: 'role', label: 'Роль', type: 'select', required: true, value: editUserForm.role, onChange: v => setEditUserForm(f => ({ ...f, role: String(v) })), options: [ { value: 'user', label: 'Пользователь' }, { value: 'admin', label: 'Админ' } ] },
-                      { name: 'companyId', label: 'Компания', type: 'select', required: true, value: editUserForm.companyId, onChange: v => setEditUserForm(f => ({ ...f, companyId: String(v) })), options: companies.map(c => ({ value: c._id, label: c.name })) },
-                    ]}
-                    onSubmit={async () => {
-                      if (!editUser) return;
-                      setEditUserFormErrors({});
-                      const res = await fetchWithAuth(`/api/users/${editUser._id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(editUserForm),
-                      });
-                      const data = await res.json();
-                      handleApiError(data);
-                      if (!res.ok && data.error) {
-                        if (/email/i.test(data.error) && /duplicate/i.test(data.error)) {
-                          setEditUserFormErrors({ email: 'Пользователь с таким email уже существует' });
-                          return;
-                        }
-                        if (/username/i.test(data.error) && /duplicate/i.test(data.error)) {
-                          setEditUserFormErrors({ username: 'Пользователь с таким именем уже существует' });
-                          return;
-                        }
-                        return;
-                      }
-                      setShowEditUser(false);
-                      setEditUser(null);
-                      setUsersLoading(true);
-                      fetchWithAuth('/api/users')
-                        .then(res => res.json())
-                        .then(data => { handleApiError(data); setUsers(Array.isArray(data) ? data : []); })
-                        .catch(() => setUsersError('Ошибка загрузки пользователей'))
-                        .finally(() => setUsersLoading(false));
-                    }}
-                    onCancel={() => {
-                      setShowEditUser(false);
-                      setEditUser(null);
-                    }}
-                    submitText="Сохранить"
-                  />
-                  {user.role === 'admin' && (
-                    <div style={{ margin: '8px 0 16px 0', color: '#888', fontSize: 15 }}>
-                      Компания: {companies.find(c => c._id === user.companyId)?.name || ''}
-                    </div>
-                  )}
-                </>
-              )}
-              {section === 'hardware' && companies.length > 0 && (
-                <HardwareTab
-                  companies={companies}
-                  selectedCompanyId={selectedCompanyId}
-                  hardwareByCompany={hardwareByCompany}
-                  user={user}
-                  onLogout={onLogout}
-                  onCalculator={onCalculator}
-                />
-              )}
-              {section === 'settings' && companies.length > 0 && (
+          {/* Компании */}
+          {section === 'companies' && (
+            <CompaniesTab
+              companies={companies}
+              selectedCompanyId={selectedCompanyId}
+              setSelectedCompanyId={setSelectedCompanyId}
+              setCompanies={setCompanies}
+              user={user}
+              fetchWithAuth={fetchWithAuth}
+              onLogout={onLogout}
+            />
+          )}
+          {section === 'users' && companies.length > 0 && (
+            <UsersTab
+              users={users}
+              companies={companies}
+              selectedCompanyId={selectedCompanyId}
+              onEdit={handleEditUser}
+              onDelete={handleDeleteUser}
+              onAdd={handleAddUser}
+              userRole={user.role}
+            />
+          )}
+          {section === 'hardware' && companies.length > 0 && (
+            <HardwareTab
+              companies={companies}
+              selectedCompanyId={selectedCompanyId}
+              hardwareByCompany={hardwareByCompany}
+              user={user}
+              onLogout={onLogout}
+              onCalculator={onCalculator}
+            />
+          )}
+          {section === 'settings' && companies.length > 0 && (
             <SettingsTab
               currencyOptions={currencyOptions}
               company={companies.find(c => c._id === selectedCompanyId) || null}
             />
-          )}
-            </>
           )}
         </div>
       </div>
