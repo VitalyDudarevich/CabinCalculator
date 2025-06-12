@@ -185,8 +185,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   }, [projectName, config, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, status, manualPrice, selectedProject]);
 
   // 1. Универсальный сброс всех полей к дефолтным значениям
-  const resetAllFields = () => {
-    setProjectName('');
+  const resetAllFields = (preserveName = false) => {
+    if (!preserveName) setProjectName('');
     setConfig('');
     setDraftConfig('');
     setGlassColor(glassColors[0] || '');
@@ -216,10 +216,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setUniqueGlassErrors({});
   };
 
-  // 2. При смене конфигурации — сброс всех полей и установка projectHardware по логике
+  // 2. При смене конфигурации — сброс всех полей, кроме projectName
   const handleConfigChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
-    resetAllFields();
+    resetAllFields(true); // сохраняем projectName
     setConfig(value);
     setDraftConfig(value);
 
@@ -390,21 +390,32 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       ],
     };
 
+    let res, savedProject;
     try {
-      const res = await fetch(`${API_URL}/projects`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projectData),
-      });
-      if (!res.ok) throw new Error('Ошибка при сохранении проекта');
-      const savedProject = await res.json();
-
-      // Добавить проект в историю (через props.onNewProject)
-      if (typeof onNewProject === 'function') onNewProject(savedProject);
-
-      // Сбросить все поля
-      resetAllFields();
-      setSaveStatus('success');
+      if (selectedProject && selectedProject._id) {
+        // Редактирование: PUT
+        res = await fetch(`${API_URL}/projects/${selectedProject._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(projectData),
+        });
+        if (!res.ok) throw new Error('Ошибка при сохранении изменений');
+        savedProject = await res.json();
+        if (typeof onNewProject === 'function') onNewProject(savedProject);
+        setSaveStatus('success'); // Не сбрасываем поля!
+      } else {
+        // Новый проект: POST
+        res = await fetch(`${API_URL}/projects`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(projectData),
+        });
+        if (!res.ok) throw new Error('Ошибка при сохранении проекта');
+        savedProject = await res.json();
+        if (typeof onNewProject === 'function') onNewProject(savedProject);
+        resetAllFields(); // Только для нового проекта
+        setSaveStatus('success');
+      }
     } catch (e) {
       setSaveStatus('error');
       const errMsg = e instanceof Error ? e.message : 'Ошибка сохранения';
@@ -737,16 +748,16 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               </div>
               {projectHardware.length > 0 && (
                 <div style={{ marginTop: 12, marginBottom: 8 }}>
-                  {projectHardware.map(hw => (
-                    <div key={hw.hardwareId} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
+                  {projectHardware.map((hw, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
                       <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                         <QuantityControl
                           value={hw.quantity}
-                          onChange={v => setProjectHardware(list => list.map(item => item.hardwareId === hw.hardwareId ? { ...item, quantity: v } : item))}
+                          onChange={v => setProjectHardware(list => list.map((item, i) => i === idx ? { ...item, quantity: v } : item))}
                         />
                         <button
-                          onClick={() => setProjectHardware(list => list.filter(item => item.hardwareId !== hw.hardwareId))}
+                          onClick={() => setProjectHardware(list => list.filter((_, i) => i !== idx))}
                           style={{
                             width: 32,
                             height: 32,
@@ -958,16 +969,16 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               </div>
               {projectHardware.length > 0 && (
                 <div style={{ marginTop: 12, marginBottom: 8 }}>
-                  {projectHardware.map(hw => (
-                    <div key={hw.hardwareId} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
+                  {projectHardware.map((hw, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
                       <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                         <QuantityControl
                           value={hw.quantity}
-                          onChange={v => setProjectHardware(list => list.map(item => item.hardwareId === hw.hardwareId ? { ...item, quantity: v } : item))}
+                          onChange={v => setProjectHardware(list => list.map((item, i) => i === idx ? { ...item, quantity: v } : item))}
                         />
                         <button
-                          onClick={() => setProjectHardware(list => list.filter(item => item.hardwareId !== hw.hardwareId))}
+                          onClick={() => setProjectHardware(list => list.filter((_, i) => i !== idx))}
                           style={{
                             width: 32,
                             height: 32,
@@ -1129,16 +1140,16 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               </div>
               {projectHardware.length > 0 && (
                 <div style={{ marginTop: 12, marginBottom: 8 }}>
-                  {projectHardware.map(hw => (
-                    <div key={hw.hardwareId} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
+                  {projectHardware.map((hw, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
                       <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                         <QuantityControl
                           value={hw.quantity}
-                          onChange={v => setProjectHardware(list => list.map(item => item.hardwareId === hw.hardwareId ? { ...item, quantity: v } : item))}
+                          onChange={v => setProjectHardware(list => list.map((item, i) => i === idx ? { ...item, quantity: v } : item))}
                         />
                         <button
-                          onClick={() => setProjectHardware(list => list.filter(item => item.hardwareId !== hw.hardwareId))}
+                          onClick={() => setProjectHardware(list => list.filter((_, i) => i !== idx))}
                           style={{
                             width: 32,
                             height: 32,
@@ -1241,26 +1252,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                     <label htmlFor={`glass-height-${idx}`}>Высота (мм)</label>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  style={{
-                    background: '#fff',
-                    color: '#646cff',
-                    border: '2px solid #646cff',
-                    borderRadius: 8,
-                    padding: '10px 12px',
-                    fontWeight: 600,
-                    fontSize: 16,
-                    marginTop: 12,
-                    width: '100%',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s, color 0.15s',
-                    display: 'block'
-                  }}
-                  onMouseOver={e => (e.currentTarget.style.background = '#f5f6ff')}
-                  onMouseOut={e => (e.currentTarget.style.background = '#fff')}
-                  onClick={() => {}}
-                >Кастомизировать</button>
                 {uniqueGlassErrors[idx]?.name && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].name}</div>}
                 {uniqueGlassErrors[idx]?.color && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].color}</div>}
                 {uniqueGlassErrors[idx]?.thickness && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].thickness}</div>}

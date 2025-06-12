@@ -365,6 +365,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           {draft.glassThickness && (
             <div><b>Толщина стекла:</b> {draft.glassThickness} мм</div>
           )}
+          {draft.hardwareColor && <div><b>Цвет фурнитуры:</b> {hardwareColorLabels[draft.hardwareColor] || draft.hardwareColor}</div>}
           {/* Для стекляшки — общий размер стекла */}
           {draft.config === 'glass' && draft.width && draft.height && (
             <div><b>Размер стекла:</b> {draft.width} × {draft.height} мм</div>
@@ -414,11 +415,10 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                   checked={!!exactHeight}
                   onChange={e => onExactHeightChange?.(e.target.checked)}
                 />{' '}
-                Точная высота
+                Нестандартная высота
               </label>
             </div>
           )}
-          {draft.hardwareColor && <div><b>Цвет фурнитуры:</b> {hardwareColorLabels[draft.hardwareColor] || draft.hardwareColor}</div>}
           {draft.comment && <div><b>Комментарий:</b> {draft.comment}</div>}
           {/* Чекбокс "Точная высота" для всех прямых раздвижных */}
           {['straight', 'straight-glass', 'straight-opening'].includes(String(draft.config)) && (
@@ -429,7 +429,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                   checked={!!exactHeight}
                   onChange={e => onExactHeightChange?.(e.target.checked)}
                 />{' '}
-                Точная высота
+                Нестандартная высота
               </label>
             </div>
           )}
