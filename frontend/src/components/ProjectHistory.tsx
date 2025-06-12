@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaUserEdit, FaRegTrashAlt } from 'react-icons/fa';
 import type { DraftProjectData } from './CalculationDetails';
 
@@ -41,6 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], onEdit, onDelete }) => {
+  const [search, setSearch] = useState('');
   if (!user) {
     return (
       <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, minWidth: 260, minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, color: '#888', textAlign: 'center' }}>
@@ -49,14 +50,25 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
     );
   }
 
+  const filtered = search.trim()
+    ? projects.filter(p => p.name && p.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : projects;
+
   return (
     <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
       <h2 style={{ margin: '0 0 16px 0', fontSize: 24, fontWeight: 700 }}>История проектов</h2>
-      {projects.length === 0 ? (
+      <input
+        type="text"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Поиск по имени..."
+        style={{ width: '100%', marginBottom: 14, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
+      />
+      {filtered.length === 0 ? (
         <div style={{ color: '#888' }}>Нет проектов</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {projects.map(project => (
+          {filtered.map(project => (
             <div key={project._id} style={{ border: '1px solid #f0f0f0', borderRadius: 8, background: '#fafbff', padding: 16, boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ display: 'flex', alignItems: 'center', fontWeight: 600, fontSize: 15 }}>

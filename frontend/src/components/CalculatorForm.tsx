@@ -86,19 +86,14 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       setGlassColor(selectedProject.data?.glassColor || '');
       setGlassThickness(selectedProject.data?.glassThickness || '8');
       setHardwareColor(selectedProject.data?.hardwareColor || '');
-      setWidth(selectedProject.data?.width || '');
-      setHeight(selectedProject.data?.height || '');
       setLength(selectedProject.data?.length || '');
       setComment(selectedProject.data?.comment || '');
       setDelivery(selectedProject.data?.delivery !== undefined ? selectedProject.data.delivery : true);
       setInstallation(selectedProject.data?.installation !== undefined ? selectedProject.data.installation : true);
       setProjectHardware(Array.isArray(selectedProject.data?.projectHardware) ? selectedProject.data.projectHardware : []);
       setStatus(selectedProject.status || 'Рассчет');
-      setShowGlassSizes(selectedProject.data?.showGlassSizes || false);
       setStationarySize(selectedProject.data?.stationarySize || '');
       setDoorSize(selectedProject.data?.doorSize || '');
-      setStationaryWidth(selectedProject.data?.stationaryWidth || '');
-      setDoorWidth(selectedProject.data?.doorWidth || '');
       setExactHeight(selectedProject.data?.exactHeight || false);
       setManualPrice(undefined);
       // Для уникальной конфигурации — заполняем uniqueGlasses
@@ -110,6 +105,19 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         ]);
       }
       setUniqueGlassErrors({});
+      // Сначала выставляем showGlassSizes, затем подставляем размеры через setTimeout
+      setShowGlassSizes(selectedProject.data?.showGlassSizes || false);
+      setTimeout(() => {
+        if (selectedProject.data?.showGlassSizes) {
+          setStationaryWidth(selectedProject.data?.stationaryWidth || '');
+          setDoorWidth(selectedProject.data?.doorWidth || '');
+          setHeight(selectedProject.data?.height || '');
+        } else {
+          setWidth(selectedProject.data?.width || '');
+          setHeight(selectedProject.data?.height || '');
+        }
+        setChangedFields(new Set());
+      }, 0);
     }
   }, [selectedProject]);
 
@@ -261,7 +269,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
 
   // 3. При смене опции 'размеры проёма/размеры стекла' — сброс всех размеров
   useEffect(() => {
-    if (config === 'straight') {
+    if (!selectedProject && config === 'straight') {
       setDraftConfig(showGlassSizes ? 'straight-glass' : 'straight-opening');
       setWidth('');
       setHeight('');
@@ -270,10 +278,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       setDoorWidth('');
       setStationarySize('');
       setDoorSize('');
-    } else {
+    } else if (!selectedProject) {
       setDraftConfig(config);
     }
-  }, [config, showGlassSizes]);
+  }, [config, showGlassSizes, selectedProject]);
 
   // Вычисление размеров стекла для сохранения
   useEffect(() => {
@@ -392,6 +400,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         stationaryWidth,
         doorWidth,
         exactHeight,
+        uniqueGlasses: config === 'unique' ? uniqueGlasses : undefined,
       },
       companyId: effectiveCompanyId,
       status,
@@ -414,9 +423,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         savedProject = await res.json();
         if (typeof onNewProject === 'function') onNewProject(savedProject);
         setSaveStatus('success');
-        // Сбросить подсветку изменённых полей
         setChangedFields(new Set());
-        // Повторно синхронизировать значения полей с актуальным проектом (savedProject)
         if (savedProject) {
           setProjectName(savedProject.name || '');
           setConfig(savedProject.data?.config === 'straight-opening' || savedProject.data?.config === 'straight-glass' ? 'straight' : (savedProject.data?.config || ''));
@@ -439,7 +446,14 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           setDoorWidth(savedProject.data?.doorWidth || '');
           setManualPrice(undefined);
           setExactHeight(savedProject.data?.exactHeight || false);
-          // uniqueGlasses и uniqueGlassErrors если нужно — аналогично
+          if (savedProject.data?.uniqueGlasses && Array.isArray(savedProject.data.uniqueGlasses)) {
+            setUniqueGlasses(savedProject.data.uniqueGlasses);
+          } else {
+            setUniqueGlasses([
+              { name: 'Стекло 1', color: glassColors[0] || '', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
+            ]);
+          }
+          setUniqueGlassErrors({});
         }
       } else {
         // Новый проект: POST

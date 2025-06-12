@@ -66,7 +66,20 @@ const CalculatorPage: React.FC<{
         onChangeDraft={setDraftProjectData}
         selectedProject={selectedProject ?? undefined}
         onNewProject={project => {
-          if (project) setProjects(prev => [project, ...prev]);
+          if (project) {
+            setProjects(prev => {
+              const idx = prev.findIndex(p => p._id === project._id);
+              if (idx !== -1) {
+                // Обновляем существующий проект
+                const updated = [...prev];
+                updated[idx] = project;
+                return updated;
+              } else {
+                // Новый проект — добавляем в начало
+                return [project, ...prev];
+              }
+            });
+          }
           setSelectedProject(null);
           setDraftProjectData({});
         }}
