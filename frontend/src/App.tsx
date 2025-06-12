@@ -64,8 +64,6 @@ export default function App() {
         .then(data => {
           const list = Array.isArray(data) ? data : [];
           setCompanies(list);
-          // Не выставлять selectedCompanyId здесь!
-          // Header сам выставит 'all' для /admin, '' для /calculator
         })
         .catch(() => setCompanies([]));
     } else if (user && user.companyId) {
@@ -74,6 +72,15 @@ export default function App() {
         : isCompanyObj(user.companyId) ? user.companyId._id : '';
       if (adminCompanyId && selectedCompanyId !== adminCompanyId) {
         setSelectedCompanyId(adminCompanyId);
+      }
+      // Загружаем свою компанию для admin/user
+      if (adminCompanyId) {
+        fetchWithAuth(`http://localhost:5000/api/companies/${adminCompanyId}`)
+          .then(res => res.json())
+          .then(data => {
+            setCompanies(data && data._id ? [data] : []);
+          })
+          .catch(() => setCompanies([]));
       }
     }
   }, [user]);

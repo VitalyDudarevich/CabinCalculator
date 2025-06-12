@@ -44,8 +44,27 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
   const [search, setSearch] = useState('');
   if (!user) {
     return (
-      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, minWidth: 260, minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, color: '#888', textAlign: 'center' }}>
-        Авторизируйтесь, чтобы видеть историю проектов
+      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, minWidth: 260, minHeight: 120, width: 320, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 12 }}>История проектов</div>
+        <input
+          type="text"
+          placeholder="Поиск по имени..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            width: '100%',
+            maxWidth: 260,
+            marginBottom: 16,
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid #ccc',
+            fontSize: 16,
+            boxSizing: 'border-box',
+          }}
+        />
+        <div style={{ width: '100%', maxWidth: 260 }}>
+          <div style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Авторизируйтесь, чтобы видеть историю проектов</div>
+        </div>
       </div>
     );
   }
@@ -59,41 +78,52 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
       <h2 style={{ margin: '0 0 16px 0', fontSize: 24, fontWeight: 700 }}>История проектов</h2>
       <input
         type="text"
+        placeholder="Поиск по имени..."
         value={search}
         onChange={e => setSearch(e.target.value)}
-        placeholder="Поиск по имени..."
-        style={{ width: '100%', marginBottom: 14, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
+        style={{
+          width: '100%',
+          maxWidth: 260,
+          marginBottom: 16,
+          padding: '8px 12px',
+          borderRadius: 8,
+          border: '1px solid #ccc',
+          fontSize: 16,
+          boxSizing: 'border-box',
+        }}
       />
-      {filtered.length === 0 ? (
-        <div style={{ color: '#888' }}>Нет проектов</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {filtered.map(project => (
-            <div key={project._id} style={{ border: '1px solid #f0f0f0', borderRadius: 8, background: '#fafbff', padding: 16, boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ display: 'flex', alignItems: 'center', fontWeight: 600, fontSize: 15 }}>
-                  <span style={{ display: 'inline-block', minWidth: 12, minHeight: 12, borderRadius: 6, background: STATUS_COLORS[project.status || 'Рассчет'] || '#bdbdbd', marginRight: 8, verticalAlign: 'middle' }} />
-                  {STATUS_LABELS[project.status || 'Рассчет'] || project.status || 'Рассчёт'}
-                </span>
-                <span>
-                  <span title="Редактировать" onClick={() => onEdit && onEdit(project)} style={{ display: 'inline-block', marginRight: 10, width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
-                    <FaUserEdit color="#888" size={16} />
+      <div style={{ width: '100%', maxWidth: 260 }}>
+        {filtered.length === 0 ? (
+          <div style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Нет проектов</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {filtered.map(project => (
+              <div key={project._id} style={{ border: '1px solid #f0f0f0', borderRadius: 8, background: '#fafbff', padding: 16, boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', fontWeight: 600, fontSize: 15 }}>
+                    <span style={{ display: 'inline-block', minWidth: 12, minHeight: 12, borderRadius: 6, background: STATUS_COLORS[project.status || 'Рассчет'] || '#bdbdbd', marginRight: 8, verticalAlign: 'middle' }} />
+                    {STATUS_LABELS[project.status || 'Рассчет'] || project.status || 'Рассчёт'}
                   </span>
-                  <span title="Удалить" onClick={() => onDelete && onDelete(project)} style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
-                    <FaRegTrashAlt color="#888" size={16} />
+                  <span>
+                    <span title="Редактировать" onClick={() => onEdit && onEdit(project)} style={{ display: 'inline-block', marginRight: 10, width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
+                      <FaUserEdit color="#888" size={16} />
+                    </span>
+                    <span title="Удалить" onClick={() => onDelete && onDelete(project)} style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
+                      <FaRegTrashAlt color="#888" size={16} />
+                    </span>
                   </span>
-                </span>
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8, wordBreak: 'break-word' }}>{project.name}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ color: '#222', fontWeight: 700, fontSize: 16 }}>Сумма:</span>
+                  <span style={{ color: '#222', fontWeight: 700, fontSize: 16 }}>{typeof project.price === 'number' ? project.price.toLocaleString('ru-RU') : 0} GEL</span>
+                </div>
+                <div style={{ color: '#888', fontSize: 13 }}>{new Date(project.createdAt).toLocaleString()}</div>
               </div>
-              <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8, wordBreak: 'break-word' }}>{project.name}</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ color: '#222', fontWeight: 700, fontSize: 16 }}>Сумма:</span>
-                <span style={{ color: '#222', fontWeight: 700, fontSize: 16 }}>{typeof project.price === 'number' ? project.price.toLocaleString('ru-RU') : 0} GEL</span>
-              </div>
-              <div style={{ color: '#888', fontSize: 13 }}>{new Date(project.createdAt).toLocaleString()}</div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

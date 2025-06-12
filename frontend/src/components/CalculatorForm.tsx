@@ -170,9 +170,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         stationaryWidth,
         doorWidth,
         exactHeight,
+        uniqueGlasses: draftConfig === 'unique' ? uniqueGlasses : undefined,
       });
     }
-  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, projectHardware, showGlassSizes, stationarySize, doorSize, stationaryWidth, doorWidth, exactHeight]);
+  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, projectHardware, showGlassSizes, stationarySize, doorSize, stationaryWidth, doorWidth, exactHeight, uniqueGlasses]);
 
   // useEffect для синхронизации draft
   React.useEffect(() => {
@@ -506,6 +507,9 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       return newErrs;
     });
   };
+
+  // Проверка на незаполненные поля хотя бы в одном стекле
+  const hasEmptyGlassField = draftConfig === 'unique' && uniqueGlasses.some(g => !g.name || !g.color || !g.thickness || !g.width || !g.height);
 
   return (
     <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: 480, margin: '0 32px' }}>
@@ -1330,7 +1334,16 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               onMouseOver={e => (e.currentTarget.style.background = '#f5f6ff')}
               onMouseOut={e => (e.currentTarget.style.background = '#fff')}
               onClick={handleAddGlass}
-              disabled={uniqueGlasses.length >= 10}
+              disabled={
+                uniqueGlasses.length >= 10 ||
+                uniqueGlasses.some(glass =>
+                  !glass.name?.trim() ||
+                  !glass.color?.trim() ||
+                  !glass.thickness?.trim() ||
+                  !glass.width?.toString().trim() ||
+                  !glass.height?.toString().trim()
+                )
+              }
             >ДОБАВИТЬ СТЕКЛО</button>
             <div style={{ marginTop: 20 }}>
               <AddHardwareButton
@@ -1390,6 +1403,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             onClose={() => setShowAddHardwareDialog(false)}
             projectHardware={projectHardware}
           />
+        )}
+        {/* Сообщение о незаполненных полях стекла */}
+        {hasEmptyGlassField && (
+          <div style={{ color: 'red', fontWeight: 600, marginBottom: 8 }}>
+            Заполните все поля стекла
+          </div>
         )}
       </div>
     </div>

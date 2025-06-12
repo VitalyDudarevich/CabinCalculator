@@ -9,14 +9,6 @@ import type { Company } from '../types/Company';
 import type { HardwareItem } from '../types/HardwareItem';
 import Header from '../components/Header';
 
-const sections = [
-  { key: 'companies', label: 'Компании' },
-  { key: 'users', label: 'Пользователи' },
-  { key: 'hardware', label: 'Цены' },
-  // { key: 'services', label: 'Услуги' }, // Удалено по просьбе пользователя
-  { key: 'settings', label: 'Настройки' },
-];
-
 const currencyOptions = ['GEL', 'USD', 'RR'];
 
 interface AdminPanelProps {
@@ -71,35 +63,49 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [hardwareByCompany, setHardwareByCompany] = useState<Record<string, HardwareItem[]>>({});
 
+  // Получаем companyId для admin/user
+  let effectiveCompanyId = selectedCompanyId;
+  if (user && (user.role === 'admin' || user.role === 'user')) {
+    effectiveCompanyId = typeof user.companyId === 'string' ? user.companyId : (user.companyId && typeof user.companyId === 'object' && '_id' in user.companyId ? user.companyId._id : '');
+  }
+
   useEffect(() => {
     if (section !== 'users') return;
     let url = '/api/users';
-    if (selectedCompanyId && selectedCompanyId !== 'all') {
-      url += `?companyId=${selectedCompanyId}`;
+    if (effectiveCompanyId && effectiveCompanyId !== 'all') {
+      url += `?companyId=${effectiveCompanyId}`;
     }
     fetchWithAuth(url, undefined, true, onLogout)
       .then((res: unknown) => (res as Response).json())
       .then((data: unknown) => setUsers(Array.isArray(data) ? data : []));
-  }, [section, selectedCompanyId, onLogout]);
+  }, [section, effectiveCompanyId, onLogout]);
 
   useEffect(() => {
-    if (!selectedCompanyId || selectedCompanyId === 'all') return;
-    fetchWithAuth(`/api/hardware?companyId=${selectedCompanyId}`, undefined, true, onLogout)
+    if (!effectiveCompanyId || effectiveCompanyId === 'all') return;
+    fetchWithAuth(`/api/hardware?companyId=${effectiveCompanyId}`, undefined, true, onLogout)
       .then((res: unknown) => (res as Response).json())
-      .then((data: unknown) => setHardwareByCompany(prev => ({ ...prev, [selectedCompanyId]: Array.isArray(data) ? data : [] })))
-      .catch(() => setHardwareByCompany(prev => ({ ...prev, [selectedCompanyId]: [] })));
-  }, [selectedCompanyId, onLogout]);
+      .then((data: unknown) => setHardwareByCompany(prev => ({ ...prev, [effectiveCompanyId]: Array.isArray(data) ? data : [] })))
+      .catch(() => setHardwareByCompany(prev => ({ ...prev, [effectiveCompanyId]: [] })));
+  }, [effectiveCompanyId, onLogout]);
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return <div style={{ padding: 32, textAlign: 'center', color: 'crimson', fontSize: 20 }}>Нет доступа к админ-панели</div>;
   }
+
+  // Формируем вкладки динамически по роли
+  const sections = [
+    ...(user && user.role === 'superadmin' ? [{ key: 'companies', label: 'Компании' }] : []),
+    { key: 'users', label: 'Пользователи' },
+    { key: 'hardware', label: 'Цены' },
+    { key: 'settings', label: 'Настройки' },
+  ];
 
   return (
     <div style={{ minHeight: '100vh', background: '#f6f8fa' }}>
       <Header 
         user={user} 
         companies={companies} 
-        selectedCompanyId={selectedCompanyId} 
+        selectedCompanyId={effectiveCompanyId} 
         setSelectedCompanyId={setSelectedCompanyId} 
         onLogout={onLogout} 
       />
@@ -133,7 +139,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           {section === 'companies' && (
             <CompaniesTab
               companies={companies}
-              selectedCompanyId={selectedCompanyId}
+              selectedCompanyId={effectiveCompanyId}
               setSelectedCompanyId={setSelectedCompanyId}
               setCompanies={setCompanies}
               user={user}
@@ -146,7 +152,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               users={users}
               setUsers={setUsers}
               companies={companies}
-              selectedCompanyId={selectedCompanyId}
+              selectedCompanyId={effectiveCompanyId}
               userRole={user.role}
               fetchWithAuth={(input, init, retry) => fetchWithAuth(input, init, retry, onLogout)}
             />
@@ -154,7 +160,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           {section === 'hardware' && companies.length > 0 && (
             <HardwareTab
               companies={companies}
-              selectedCompanyId={selectedCompanyId}
+              selectedCompanyId={effectiveCompanyId}
               hardwareByCompany={hardwareByCompany}
               user={user}
               onLogout={onLogout}
@@ -164,7 +170,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           {section === 'settings' && companies.length > 0 && (
             <SettingsTab
               currencyOptions={currencyOptions}
-              company={companies.find(c => c._id === selectedCompanyId) || null}
+              company={companies.find(c => c._id === effectiveCompanyId) || null}
             />
           )}
         </div>

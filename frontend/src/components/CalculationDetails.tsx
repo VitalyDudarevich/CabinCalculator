@@ -140,62 +140,20 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   const usdRate = settings?.usdRate ? parseFloat(settings.usdRate) : 0;
 
   if (settings && draft && draft.config) {
-    // --- Расчёт и отображение стекла по конфигурации ---
-    if (
-      typeof draft.glassColor === 'string' &&
-      typeof draft.glassThickness === 'string' &&
-      companyId
-    ) {
-      let widthM = 0;
-      let heightM = 0;
-      let area = 0;
-      let label = '';
-      if (draft.config === 'glass' && draft.width && draft.height) {
-        // Стекляшка: всегда width × height
-        widthM = Number(draft.width) / 1000;
-        heightM = Number(draft.height) / 1000;
-        area = +(widthM * heightM).toFixed(2);
-        label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
-      } else if (["straight", "straight-glass", "straight-opening"].includes(String(draft.config))) {
-        if (draft.showGlassSizes && draft.stationaryWidth != null && draft.doorWidth != null && draft.height != null) {
-          const sw = Number(draft.stationaryWidth);
-          const dw = Number(draft.doorWidth);
-          const h = Number(draft.height);
-          if (!isNaN(sw) && !isNaN(dw) && !isNaN(h)) {
-            const widthSum = sw + 30 + dw;
-            widthM = widthSum / 1000;
-            heightM = h / 1000;
-            area = +(widthM * heightM).toFixed(2);
-            label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
-            console.log('draft.showGlassSizes:', draft.showGlassSizes);
-            console.log('stationaryWidth:', sw, 'doorWidth:', dw, 'height:', h);
-            console.log('Итоговый label стекла:', label);
-            console.log('Рассчитанная площадь (area):', area);
-          }
-        } else if (!draft.showGlassSizes && draft.width && draft.height) {
-          // Прямая раздвижная, размеры проёма
-          widthM = (Number(draft.width) + 30) / 1000;
-          heightM = Number(draft.height) / 1000;
-          area = +(widthM * heightM).toFixed(2);
-          label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
-        }
-      } else if (draft.width && draft.height) {
-        // Остальные конфигурации — по width × height
-        widthM = Number(draft.width) / 1000;
-        heightM = Number(draft.height) / 1000;
-        area = +(widthM * heightM).toFixed(2);
-        label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
-      }
-      if (label) {
+    // --- Уникальная конфигурация: расчет по каждому стеклу ---
+    if (draft.config === 'unique' && Array.isArray(draft.uniqueGlasses) && draft.uniqueGlasses.length > 0) {
+      draft.uniqueGlasses.forEach(glass => {
+        const width = Number(glass.width);
+        const height = Number(glass.height);
+        const area = !isNaN(width) && !isNaN(height) ? +(width * height / 1000000).toFixed(2) : 0;
         let glassPrice = 0;
         let glassFound = false;
+        const label = `${glass.name}: ${glass.color} ${glass.thickness} мм: ${glass.width} х ${glass.height}`;
         if (settings.glassList) {
           const normalizeThickness = (val: string) => val.replace(/[^\d]/g, '');
-          console.log('glass search input:', draft.glassColor, draft.glassThickness);
-          console.log('available glasses:', settings.glassList);
           const glassItem = settings.glassList.find((g) => {
-            const colorMatch = g.color.trim().toLowerCase() === draft.glassColor!.trim().toLowerCase();
-            const thicknessMatch = !g.thickness || normalizeThickness(g.thickness) === normalizeThickness(String(draft.glassThickness));
+            const colorMatch = g.color.trim().toLowerCase() === String(glass.color).trim().toLowerCase();
+            const thicknessMatch = !g.thickness || normalizeThickness(g.thickness) === normalizeThickness(String(glass.thickness));
             const companyMatch = String(g.companyId) === String(companyId);
             return colorMatch && thicknessMatch && companyMatch;
           });
@@ -207,132 +165,197 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         if (glassFound) {
           const glassTotal = +(glassPrice * area).toFixed(2);
           positions.push({
-            label,
-            price: 0,
+            label: `${label} (${area} м²)`,
+            price: glassPrice,
             total: glassTotal,
           });
           total += glassTotal;
         } else {
           positions.push({
-            label: `Нет цены для выбранного стекла`,
+            label: `${label} (нет цены)`,
             price: 0,
             total: 0,
           });
         }
+      });
+      // Дальнейшие позиции (фурнитура, доставка, монтаж, базовая стоимость) добавляются ниже по общему алгоритму, как для других конфигураций
+    } else {
+      // --- Расчёт и отображение стекла по конфигурации ---
+      if (
+        typeof draft.glassColor === 'string' &&
+        typeof draft.glassThickness === 'string' &&
+        companyId
+      ) {
+        let widthM = 0;
+        let heightM = 0;
+        let area = 0;
+        let label = '';
+        if (draft.config === 'glass' && draft.width && draft.height) {
+          // Стекляшка: всегда width × height
+          widthM = Number(draft.width) / 1000;
+          heightM = Number(draft.height) / 1000;
+          area = +(widthM * heightM).toFixed(2);
+          label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
+        } else if (["straight", "straight-glass", "straight-opening"].includes(String(draft.config))) {
+          if (draft.showGlassSizes && draft.stationaryWidth != null && draft.doorWidth != null && draft.height != null) {
+            const sw = Number(draft.stationaryWidth);
+            const dw = Number(draft.doorWidth);
+            const h = Number(draft.height);
+            if (!isNaN(sw) && !isNaN(dw) && !isNaN(h)) {
+              const widthSum = sw + 30 + dw;
+              widthM = widthSum / 1000;
+              heightM = h / 1000;
+              area = +(widthM * heightM).toFixed(2);
+              label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
+              console.log('draft.showGlassSizes:', draft.showGlassSizes);
+              console.log('stationaryWidth:', sw, 'doorWidth:', dw, 'height:', h);
+              console.log('Итоговый label стекла:', label);
+              console.log('Рассчитанная площадь (area):', area);
+            }
+          } else if (!draft.showGlassSizes && draft.width && draft.height) {
+            // Прямая раздвижная, размеры проёма
+            widthM = (Number(draft.width) + 30) / 1000;
+            heightM = Number(draft.height) / 1000;
+            area = +(widthM * heightM).toFixed(2);
+            label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
+          }
+        } else if (draft.width && draft.height) {
+          // Остальные конфигурации — по width × height
+          widthM = Number(draft.width) / 1000;
+          heightM = Number(draft.height) / 1000;
+          area = +(widthM * heightM).toFixed(2);
+          label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
+        }
+        if (label) {
+          let glassPrice = 0;
+          let glassFound = false;
+          if (settings.glassList) {
+            const normalizeThickness = (val: string) => val.replace(/[^\d]/g, '');
+            console.log('glass search input:', draft.glassColor, draft.glassThickness);
+            console.log('available glasses:', settings.glassList);
+            const glassItem = settings.glassList.find((g) => {
+              const colorMatch = g.color.trim().toLowerCase() === draft.glassColor!.trim().toLowerCase();
+              const thicknessMatch = !g.thickness || normalizeThickness(g.thickness) === normalizeThickness(String(draft.glassThickness));
+              const companyMatch = String(g.companyId) === String(companyId);
+              return colorMatch && thicknessMatch && companyMatch;
+            });
+            if (glassItem) {
+              glassPrice = glassItem.price;
+              glassFound = true;
+            }
+          }
+          if (glassFound) {
+            const glassTotal = +(glassPrice * area).toFixed(2);
+            positions.push({
+              label,
+              price: 0,
+              total: glassTotal,
+            });
+            total += glassTotal;
+          } else {
+            positions.push({
+              label: `Нет цены для выбранного стекла`,
+              price: 0,
+              total: 0,
+            });
+          }
+        }
+      }
+      // 2. Фурнитура/профили/система/труба
+      if (!draft.projectHardware || draft.projectHardware.length === 0) {
+        console.warn('Нет фурнитуры в проекте');
+      } else if (Array.isArray(draft.projectHardware)) {
+        draft.projectHardware.forEach(hw => {
+          let price = 0;
+          let foundPrice = false;
+          const labelBase = `${hw.name} (${hw.quantity} шт.)`;
+          if (settings.hardwareList) {
+            const found = settings.hardwareList.find(
+              (h) =>
+                h.name && normalizeName(h.name) === normalizeName(hw.name) &&
+                String(h.companyId) === String(companyId)
+            );
+            if (found !== undefined) {
+              price = found.price ?? 0;
+              foundPrice = true;
+            }
+          }
+          if (!foundPrice && settings.baseCosts) {
+            const base = settings.baseCosts.find(
+              (b) =>
+                b.name && normalizeName(b.name) === normalizeName(hw.name)
+            );
+            if (base !== undefined) {
+              price = base.value ?? 0;
+              foundPrice = true;
+            }
+          }
+          const totalHw = +(price * hw.quantity).toFixed(2);
+          positions.push({
+            label: foundPrice ? labelBase : `${labelBase} (нет цены)` ,
+            price,
+            total: foundPrice ? totalHw : 0,
+          });
+          if (foundPrice) total += totalHw;
+        });
+      }
+      // 3. Доставка
+      const deliveryService = services.find(s => s.name.toLowerCase().includes('доставка'));
+      if (deliveryService) deliveryPrice = deliveryService.price;
+      else if (settings?.baseCosts) {
+        const deliveryCost = settings.baseCosts.find(b => b.id === 'delivery' || b.name.toLowerCase().includes('доставка'));
+        if (deliveryCost) deliveryPrice = deliveryCost.value;
+      }
+      if (typeof draft.delivery === 'boolean' && draft.delivery && deliveryPrice) {
+        positions.push({
+          label: `Доставка:`,
+          qty: '',
+          price: deliveryPrice,
+          total: deliveryPrice,
+        });
+        total += deliveryPrice;
+      }
+      // 4. Монтаж
+      const installService = services.find(s => s.name.toLowerCase().includes('монтаж') || s.name.includes('установка'));
+      if (installService) installPrice = installService.price;
+      else if (settings?.baseCosts) {
+        const installCost = settings.baseCosts.find(b => b.id === 'installation' || b.name.toLowerCase().includes('монтаж'));
+        if (installCost) installPrice = installCost.value;
+      }
+      if (typeof draft.installation === 'boolean' && draft.installation && installPrice) {
+        positions.push({
+          label: `Монтаж:`,
+          qty: '',
+          price: installPrice,
+          total: installPrice,
+        });
+        total += installPrice;
+      }
+      // 5. Базовая стоимость
+      let baseCost = settings.baseCosts.find(b => b.id === draft.config);
+      if (!baseCost) {
+        // Попробовать найти по name, если id не совпадает
+        baseCost = settings.baseCosts.find(b =>
+          normalizeName(b.name).includes('базовая стоимость') &&
+          (
+            (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
+            (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
+            (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
+            (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
+          )
+        );
+      }
+      if (baseCost) {
+        positions.push({
+          label: 'Базовая стоимость',
+          qty: '',
+          price: baseCost.value,
+          total: baseCost.value,
+        });
+        total += baseCost.value;
       }
     }
-    // 2. Фурнитура/профили/система/труба
-    if (!draft.projectHardware || draft.projectHardware.length === 0) {
-      console.warn('Нет фурнитуры в проекте');
-    } else if (Array.isArray(draft.projectHardware)) {
-      draft.projectHardware.forEach(hw => {
-        let price = 0;
-        let foundPrice = false;
-        const labelBase = `${hw.name} (${hw.quantity} шт.)`;
-        if (settings.hardwareList) {
-          const found = settings.hardwareList.find(
-            (h) =>
-              h.name && normalizeName(h.name) === normalizeName(hw.name) &&
-              String(h.companyId) === String(companyId)
-          );
-          if (found !== undefined) {
-            price = found.price ?? 0;
-            foundPrice = true;
-          }
-        }
-        if (!foundPrice && settings.baseCosts) {
-          const base = settings.baseCosts.find(
-            (b) =>
-              b.name && normalizeName(b.name) === normalizeName(hw.name)
-          );
-          if (base !== undefined) {
-            price = base.value ?? 0;
-            foundPrice = true;
-          }
-        }
-        const totalHw = +(price * hw.quantity).toFixed(2);
-        positions.push({
-          label: foundPrice ? labelBase : `${labelBase} (нет цены)` ,
-          price,
-          total: foundPrice ? totalHw : 0,
-        });
-        if (foundPrice) total += totalHw;
-      });
-    }
-    // 3. Доставка
-    const deliveryService = services.find(s => s.name.toLowerCase().includes('доставка'));
-    if (deliveryService) deliveryPrice = deliveryService.price;
-    else if (settings?.baseCosts) {
-      const deliveryCost = settings.baseCosts.find(b => b.id === 'delivery' || b.name.toLowerCase().includes('доставка'));
-      if (deliveryCost) deliveryPrice = deliveryCost.value;
-    }
-    if (typeof draft.delivery === 'boolean' && draft.delivery && deliveryPrice) {
-      positions.push({
-        label: `Доставка:`,
-        qty: '',
-        price: deliveryPrice,
-        total: deliveryPrice,
-      });
-      total += deliveryPrice;
-    }
-    // 4. Монтаж
-    const installService = services.find(s => s.name.toLowerCase().includes('монтаж') || s.name.toLowerCase().includes('установка'));
-    if (installService) installPrice = installService.price;
-    else if (settings?.baseCosts) {
-      const installCost = settings.baseCosts.find(b => b.id === 'installation' || b.name.toLowerCase().includes('монтаж'));
-      if (installCost) installPrice = installCost.value;
-    }
-    if (typeof draft.installation === 'boolean' && draft.installation && installPrice) {
-      positions.push({
-        label: `Монтаж:`,
-        qty: '',
-        price: installPrice,
-        total: installPrice,
-      });
-      total += installPrice;
-    }
-    // 5. Базовая стоимость
-    let baseCost = settings.baseCosts.find(b => b.id === draft.config);
-    if (!baseCost) {
-      // Попробовать найти по name, если id не совпадает
-      baseCost = settings.baseCosts.find(b =>
-        normalizeName(b.name).includes('базовая стоимость') &&
-        (
-          (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
-          (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
-          (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
-          (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
-        )
-      );
-    }
-    if (baseCost) {
-      positions.push({
-        label: 'Базовая стоимость',
-        qty: '',
-        price: baseCost.value,
-        total: baseCost.value,
-      });
-      total += baseCost.value;
-    }
   }
-
-  // --- Группировка позиций ---
-  const hardwareNames = draft.projectHardware?.map(hw => hw.name) || [];
-  const additionalPositions = positions.filter(
-    pos =>
-      pos.label.startsWith('Доставка') ||
-      pos.label.startsWith('Монтаж') ||
-      pos.label === 'Базовая стоимость'
-  );
-  // Основные позиции (стекло и прочее, кроме фурнитуры и "Дополнительно")
-  const mainPositions = positions.filter(pos =>
-    !hardwareNames.some(name => pos.label.includes(name)) &&
-    !(
-      pos.label.startsWith('Доставка') ||
-      pos.label.startsWith('Монтаж') ||
-      pos.label === 'Базовая стоимость'
-    )
-  );
 
   // --- Новый useEffect для передачи total наружу ---
   useEffect(() => {
@@ -360,10 +383,109 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                 : configLabel}
             </div>
           )}
-          {draft.glassColor && (
+          {/* Для уникальной конфигурации — выводим все стёкла с размерами и толщиной с мм */}
+          {draft.config === 'unique' && Array.isArray(draft.uniqueGlasses) && draft.uniqueGlasses.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <b>Стёкла:</b>
+              <ul style={{ margin: '6px 0 0 0', paddingLeft: 24 }}>
+                {draft.uniqueGlasses.map((glass, idx) => (
+                  <li key={idx}>
+                    {glass.name}: {glass.color} {glass.thickness} мм: {glass.width} х {glass.height}
+                  </li>
+                ))}
+              </ul>
+              {/* Визуальный разделитель */}
+              <hr style={{ margin: '18px 0 18px 0', border: 0, borderTop: '1px solid #e0e0e0' }} />
+              {/* Блок расчёта стоимости */}
+              <div style={{ marginBottom: 16 }}>
+                {/* Основные позиции (например, стекло) */}
+                {positions.map((pos, idx) => (
+                  <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{pos.label}:</span>
+                    <span><b>{pos.total} ₾</b></span>
+                  </div>
+                ))}
+                {/* Фурнитура */}
+                {draft.projectHardware && draft.projectHardware.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <b>Фурнитура:</b>
+                    <ul style={{ margin: '6px 0 0 0', padding: 0, listStyle: 'none' }}>
+                      {draft.projectHardware.map(hw => {
+                        let price = 0;
+                        let foundPrice = false;
+                        if (settings && settings.hardwareList) {
+                          const found = settings.hardwareList.find(
+                            (h) =>
+                              h.name && normalizeName(h.name) === normalizeName(hw.name) &&
+                              String(h.companyId) === String(companyId)
+                          );
+                          if (found !== undefined) {
+                            price = found.price ?? 0;
+                            foundPrice = true;
+                          }
+                        }
+                        if (!foundPrice && settings && settings.baseCosts) {
+                          const base = settings.baseCosts.find(
+                            (b) =>
+                              b.name && normalizeName(b.name) === normalizeName(hw.name)
+                          );
+                          if (base !== undefined) {
+                            price = base.value ?? 0;
+                            foundPrice = true;
+                          }
+                        }
+                        const totalHw = +(price * hw.quantity).toFixed(2);
+                        return (
+                          <li key={hw.hardwareId} style={{ padding: '2px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span
+                              style={{ maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}
+                              title={`${hw.name} (${hw.quantity} шт)`}
+                            >
+                              {hw.name} ({hw.quantity} шт)
+                            </span>
+                            {foundPrice ? (
+                              <b style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>{totalHw} {settings ? settings.currency : 'GEL'}</b>
+                            ) : (
+                              <span style={{ color: '#b71c1c', fontSize: 14, marginLeft: 8, whiteSpace: 'nowrap' }}>нет цены</span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+                {/* Дополнительно */}
+                {positions.filter(
+                  pos =>
+                    pos.label.startsWith('Доставка') ||
+                    pos.label.startsWith('Монтаж') ||
+                    pos.label === 'Базовая стоимость'
+                ).length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <b>Дополнительно:</b>
+                    <ul style={{ margin: '6px 0 0 0', padding: 0, listStyle: 'none' }}>
+                      {positions.filter(
+                        pos =>
+                          pos.label.startsWith('Доставка') ||
+                          pos.label.startsWith('Монтаж') ||
+                          pos.label === 'Базовая стоимость'
+                      ).map((pos, idx) => (
+                        <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
+                          <span>{pos.label}</span>
+                          <b style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>{pos.total.toFixed(2)} {settings ? settings.currency : 'GEL'}</b>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {/* Для остальных конфигураций — старый вывод */}
+          {draft.config !== 'unique' && draft.glassColor && (
             <div><b>Цвет стекла:</b> {draft.glassColor}</div>
           )}
-          {draft.glassThickness && (
+          {draft.config !== 'unique' && draft.glassThickness && (
             <div><b>Толщина стекла:</b> {draft.glassThickness} мм</div>
           )}
           {draft.hardwareColor && <div><b>Цвет фурнитуры:</b> {hardwareColorLabels[draft.hardwareColor] || draft.hardwareColor}</div>}
@@ -420,7 +542,6 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
               </label>
             </div>
           )}
-          {draft.comment && <div><b>Комментарий:</b> {draft.comment}</div>}
           {/* Чекбокс "Точная высота" для всех прямых раздвижных */}
           {['straight', 'straight-glass', 'straight-opening'].includes(String(draft.config)) && (
             <div style={{ margin: '8px 0' }}>
@@ -436,124 +557,51 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           )}
           {/* Визуальный разделитель */}
           <hr style={{ margin: '18px 0 18px 0', border: 0, borderTop: '1px solid #e0e0e0' }} />
-          {/* Блок расчёта стоимости */}
-          <div style={{ marginBottom: 16 }}>
-            {/* Основные позиции (например, стекло) */}
-            {mainPositions.map((pos, idx) => (
-              <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>{pos.label}:</span>
-                <span><b>{pos.total} ₾</b></span>
-              </div>
-            ))}
-            {/* Фурнитура */}
-            {draft.projectHardware && draft.projectHardware.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <b>Фурнитура:</b>
-                <ul style={{ margin: '6px 0 0 0', padding: 0, listStyle: 'none' }}>
-                  {draft.projectHardware.map(hw => {
-                    let price = 0;
-                    let foundPrice = false;
-                    if (settings && settings.hardwareList) {
-                      const found = settings.hardwareList.find(
-                        (h) =>
-                          h.name && normalizeName(h.name) === normalizeName(hw.name) &&
-                          String(h.companyId) === String(companyId)
-                      );
-                      if (found !== undefined) {
-                        price = found.price ?? 0;
-                        foundPrice = true;
-                      }
-                    }
-                    if (!foundPrice && settings && settings.baseCosts) {
-                      const base = settings.baseCosts.find(
-                        (b) =>
-                          b.name && normalizeName(b.name) === normalizeName(hw.name)
-                      );
-                      if (base !== undefined) {
-                        price = base.value ?? 0;
-                        foundPrice = true;
-                      }
-                    }
-                    const totalHw = +(price * hw.quantity).toFixed(2);
-                    return (
-                      <li key={hw.hardwareId} style={{ padding: '2px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span
-                          style={{ maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}
-                          title={`${hw.name} (${hw.quantity} шт)`}
-                        >
-                          {hw.name} ({hw.quantity} шт)
-                        </span>
-                        {foundPrice ? (
-                          <b style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>{totalHw} {settings ? settings.currency : 'GEL'}</b>
-                        ) : (
-                          <span style={{ color: '#b71c1c', fontSize: 14, marginLeft: 8, whiteSpace: 'nowrap' }}>нет цены</span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-            {/* Дополнительно */}
-            {additionalPositions.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <b>Дополнительно:</b>
-                <ul style={{ margin: '6px 0 0 0', padding: 0, listStyle: 'none' }}>
-                  {additionalPositions.map((pos, idx) => (
-                    <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
-                      <span>{pos.label}</span>
-                      <b style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>{pos.total.toFixed(2)} {settings ? settings.currency : 'GEL'}</b>
-                    </li>
+          {/* Итоговая цена и история цены — теперь внизу */}
+          {settings && positions.length > 0 ? (
+            <div style={{ color: '#222', fontSize: 16, marginTop: 24 }}>
+              {/* История изменения цен — только для проектов с projectName и priceHistory */}
+              {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0 && (
+                <div style={{ marginTop: 0, background: '#f8f8f8', borderRadius: 8, padding: 12, border: '1px solid #e0e0e0' }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>История изменения цен:</div>
+                  {/* Первая цена — дата создания проекта */}
+                  <div style={{ color: '#888', fontSize: 15, marginBottom: 2 }}>
+                    {draft.priceHistory[0].price} GEL <span style={{ fontSize: 13, marginLeft: 8 }}>{draft.createdAt ? new Date(draft.createdAt).toLocaleString() : new Date(draft.priceHistory[0].date).toLocaleString()}</span> <span style={{ color: '#aaa', fontSize: 13 }}>(первоначальная)</span>
+                  </div>
+                  {/* Промежуточные изменения */}
+                  {draft.priceHistory.length > 2 && draft.priceHistory.slice(1, -1).map((ph, idx) => (
+                    <div key={idx} style={{ color: '#888', fontSize: 15, marginBottom: 2 }}>
+                      {ph.price} GEL <span style={{ fontSize: 13, marginLeft: 8 }}>{new Date(ph.date).toLocaleString()}</span>
+                    </div>
                   ))}
-                </ul>
+                  {/* Последняя цена — текущая */}
+                  {draft.priceHistory.length > 1 && (
+                    <div style={{ color: '#222', fontSize: 15, marginBottom: 2, fontWeight: 600 }}>
+                      {draft.priceHistory[draft.priceHistory.length - 1].price} GEL <span style={{ fontSize: 13, marginLeft: 8 }}>{new Date(draft.priceHistory[draft.priceHistory.length - 1].date).toLocaleString()}</span> <span style={{ color: '#1976d2', fontSize: 13 }}>(текущая)</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div style={{ fontWeight: 700, fontSize: 18, marginTop: 16 }}>
+                Итого: {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
+                  ? draft.priceHistory[draft.priceHistory.length - 1].price.toFixed(2)
+                  : total.toFixed(2)} {settings.currency}
               </div>
-            )}
-          </div>
+              {usdRate > 0 && (
+                <div style={{ color: '#888', fontSize: 15, marginTop: 4 }}>
+                  ~ {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
+                    ? (draft.priceHistory[draft.priceHistory.length - 1].price / usdRate).toFixed(2)
+                    : (total / usdRate).toFixed(2)} $
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       ) : (
       <div style={{ color: '#888', fontSize: 16 }}>
         Заполните данные проекта, чтобы увидеть детали расчёта.
       </div>
       )}
-      {/* Итоговая цена и история цены — теперь внизу */}
-      {settings && positions.length > 0 ? (
-        <div style={{ color: '#222', fontSize: 16, marginTop: 24 }}>
-          {/* История изменения цен — только для проектов с projectName и priceHistory */}
-          {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0 && (
-            <div style={{ marginTop: 0, background: '#f8f8f8', borderRadius: 8, padding: 12, border: '1px solid #e0e0e0' }}>
-              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>История изменения цен:</div>
-              {/* Первая цена — дата создания проекта */}
-              <div style={{ color: '#888', fontSize: 15, marginBottom: 2 }}>
-                {draft.priceHistory[0].price} GEL <span style={{ fontSize: 13, marginLeft: 8 }}>{draft.createdAt ? new Date(draft.createdAt).toLocaleString() : new Date(draft.priceHistory[0].date).toLocaleString()}</span> <span style={{ color: '#aaa', fontSize: 13 }}>(первоначальная)</span>
-              </div>
-              {/* Промежуточные изменения */}
-              {draft.priceHistory.length > 2 && draft.priceHistory.slice(1, -1).map((ph, idx) => (
-                <div key={idx} style={{ color: '#888', fontSize: 15, marginBottom: 2 }}>
-                  {ph.price} GEL <span style={{ fontSize: 13, marginLeft: 8 }}>{new Date(ph.date).toLocaleString()}</span>
-                </div>
-              ))}
-              {/* Последняя цена — текущая */}
-              {draft.priceHistory.length > 1 && (
-                <div style={{ color: '#222', fontSize: 15, marginBottom: 2, fontWeight: 600 }}>
-                  {draft.priceHistory[draft.priceHistory.length - 1].price} GEL <span style={{ fontSize: 13, marginLeft: 8 }}>{new Date(draft.priceHistory[draft.priceHistory.length - 1].date).toLocaleString()}</span> <span style={{ color: '#1976d2', fontSize: 13 }}>(текущая)</span>
-                </div>
-              )}
-            </div>
-          )}
-          <div style={{ fontWeight: 700, fontSize: 18, marginTop: 16 }}>
-            Итого: {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
-              ? draft.priceHistory[draft.priceHistory.length - 1].price.toFixed(2)
-              : total.toFixed(2)} {settings.currency}
-          </div>
-          {usdRate > 0 && (
-            <div style={{ color: '#888', fontSize: 15, marginTop: 4 }}>
-              ~ {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
-                ? (draft.priceHistory[draft.priceHistory.length - 1].price / usdRate).toFixed(2)
-                : (total / usdRate).toFixed(2)} $
-            </div>
-          )}
-        </div>
-      ) : null}
     </div>
   );
 };
