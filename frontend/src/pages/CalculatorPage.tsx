@@ -18,16 +18,25 @@ const CalculatorPage: React.FC<{
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [totalPrice, setTotalPrice] = useState<number>(0);
 
+  // --- ДОБАВЛЕНО: определяем companyId и selectedCompanyId для admin/user ---
+  let effectiveCompanyId = companyId;
+  let effectiveSelectedCompanyId = selectedCompanyId;
+  if (user && (user.role === 'admin' || user.role === 'user')) {
+    const id = typeof user.companyId === 'string' ? user.companyId : (user.companyId && typeof user.companyId === 'object' && '_id' in user.companyId ? user.companyId._id : '');
+    effectiveCompanyId = id;
+    effectiveSelectedCompanyId = id;
+  }
+
   useEffect(() => {
-    if (!selectedCompanyId) {
+    if (!effectiveSelectedCompanyId) {
       setProjects([]);
       return;
     }
-    fetchWithAuth(`http://localhost:5000/api/projects?companyId=${selectedCompanyId}`)
+    fetchWithAuth(`http://localhost:5000/api/projects?companyId=${effectiveSelectedCompanyId}`)
       .then(res => res.json())
       .then(data => setProjects(Array.isArray(data) ? data : []))
       .catch(() => setProjects([]));
-  }, [selectedCompanyId]);
+  }, [effectiveSelectedCompanyId]);
 
   const handleEditProject = (project: Project) => {
     setSelectedProject(project);
@@ -52,7 +61,7 @@ const CalculatorPage: React.FC<{
     <div style={{ display: 'flex', flexDirection: 'row', gap: 0, alignItems: 'flex-start', justifyContent: 'center', padding: 32, minHeight: 'calc(100vh - 56px)', background: '#f6f8fa' }}>
       <CalculationDetails
         draft={selectedProject ? { ...selectedProject.data, projectName: selectedProject.name, price: selectedProject.price, priceHistory: selectedProject.priceHistory } : draftProjectData}
-        companyId={selectedCompanyId}
+        companyId={effectiveSelectedCompanyId}
         exactHeight={draftProjectData.exactHeight ?? false}
         onExactHeightChange={checked => {
           setDraftProjectData(draft => ({ ...draft, exactHeight: checked }));
@@ -60,9 +69,9 @@ const CalculatorPage: React.FC<{
         onTotalChange={setTotalPrice}
       />
       <CalculatorForm
-        companyId={companyId}
+        companyId={effectiveCompanyId}
         user={user}
-        selectedCompanyId={selectedCompanyId}
+        selectedCompanyId={effectiveSelectedCompanyId}
         onChangeDraft={setDraftProjectData}
         selectedProject={selectedProject ?? undefined}
         onNewProject={project => {
