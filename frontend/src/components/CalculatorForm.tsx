@@ -99,6 +99,17 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       setDoorSize(selectedProject.data?.doorSize || '');
       setStationaryWidth(selectedProject.data?.stationaryWidth || '');
       setDoorWidth(selectedProject.data?.doorWidth || '');
+      setExactHeight(selectedProject.data?.exactHeight || false);
+      setManualPrice(undefined);
+      // Для уникальной конфигурации — заполняем uniqueGlasses
+      if (selectedProject.data?.uniqueGlasses && Array.isArray(selectedProject.data.uniqueGlasses)) {
+        setUniqueGlasses(selectedProject.data.uniqueGlasses);
+      } else {
+        setUniqueGlasses([
+          { name: 'Стекло 1', color: glassColors[0] || '', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
+        ]);
+      }
+      setUniqueGlassErrors({});
     }
   }, [selectedProject]);
 
@@ -402,7 +413,34 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         if (!res.ok) throw new Error('Ошибка при сохранении изменений');
         savedProject = await res.json();
         if (typeof onNewProject === 'function') onNewProject(savedProject);
-        setSaveStatus('success'); // Не сбрасываем поля!
+        setSaveStatus('success');
+        // Сбросить подсветку изменённых полей
+        setChangedFields(new Set());
+        // Повторно синхронизировать значения полей с актуальным проектом (savedProject)
+        if (savedProject) {
+          setProjectName(savedProject.name || '');
+          setConfig(savedProject.data?.config === 'straight-opening' || savedProject.data?.config === 'straight-glass' ? 'straight' : (savedProject.data?.config || ''));
+          setDraftConfig(savedProject.data?.config || '');
+          setGlassColor(savedProject.data?.glassColor || '');
+          setGlassThickness(savedProject.data?.glassThickness || '8');
+          setHardwareColor(savedProject.data?.hardwareColor || '');
+          setWidth(savedProject.data?.width || '');
+          setHeight(savedProject.data?.height || '');
+          setLength(savedProject.data?.length || '');
+          setComment(savedProject.data?.comment || '');
+          setDelivery(savedProject.data?.delivery !== undefined ? savedProject.data.delivery : true);
+          setInstallation(savedProject.data?.installation !== undefined ? savedProject.data.installation : true);
+          setProjectHardware(Array.isArray(savedProject.data?.projectHardware) ? savedProject.data.projectHardware : []);
+          setStatus(savedProject.status || 'Рассчет');
+          setShowGlassSizes(savedProject.data?.showGlassSizes || false);
+          setStationarySize(savedProject.data?.stationarySize || '');
+          setDoorSize(savedProject.data?.doorSize || '');
+          setStationaryWidth(savedProject.data?.stationaryWidth || '');
+          setDoorWidth(savedProject.data?.doorWidth || '');
+          setManualPrice(undefined);
+          setExactHeight(savedProject.data?.exactHeight || false);
+          // uniqueGlasses и uniqueGlassErrors если нужно — аналогично
+        }
       } else {
         // Новый проект: POST
         res = await fetch(`${API_URL}/projects`, {

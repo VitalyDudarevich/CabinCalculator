@@ -29,6 +29,7 @@ interface DraftProjectData {
   doorSize?: string;
   stationaryWidth?: string;
   doorWidth?: string;
+  uniqueGlasses?: Array<{ name: string; color: string; thickness: string; width: string; height: string }>;
 }
 
 interface Settings {
