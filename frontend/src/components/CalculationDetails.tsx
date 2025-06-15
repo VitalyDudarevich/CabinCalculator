@@ -20,6 +20,7 @@ interface DraftProjectData {
   projectHardware?: HardwareDraftItem[];
   delivery?: boolean;
   installation?: boolean;
+  dismantling?: boolean;
   priceHistory?: { price: number; date: string }[];
   price?: number;
   createdAt?: string;
@@ -316,10 +317,12 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         total += deliveryPrice;
       }
       // 4. Монтаж
-      const installService = services.find(s => s.name.toLowerCase().includes('монтаж') || s.name.includes('установка'));
+      const installService = services.find(
+        s => s.name.trim().toLowerCase() === 'монтаж' || s.name.trim().toLowerCase() === 'установка'
+      );
       if (installService) installPrice = installService.price;
       else if (settings?.baseCosts) {
-        const installCost = settings.baseCosts.find(b => b.id === 'installation' || b.name.toLowerCase().includes('монтаж'));
+        const installCost = settings.baseCosts.find(b => b.id === 'installation' || b.name.toLowerCase() === 'монтаж');
         if (installCost) installPrice = installCost.value;
       }
       if (typeof draft.installation === 'boolean' && draft.installation && installPrice) {
@@ -330,6 +333,19 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           total: installPrice,
         });
         total += installPrice;
+      }
+      // 4.1 Демонтаж
+      const dismantleService = services.find(s => s.name.trim().toLowerCase() === 'демонтаж');
+      let dismantlePrice = 0;
+      if (dismantleService) dismantlePrice = dismantleService.price;
+      if (typeof draft.dismantling === 'boolean' && draft.dismantling && dismantlePrice) {
+        positions.push({
+          label: `Демонтаж:`,
+          qty: '',
+          price: dismantlePrice,
+          total: dismantlePrice,
+        });
+        total += dismantlePrice;
       }
       // 5. Базовая стоимость
       let baseCost = settings.baseCosts.find(b => b.id === draft.config);
@@ -498,9 +514,9 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             draft.showGlassSizes ? (
               draft.stationaryWidth && draft.doorWidth && draft.height ? (
                 <div>
-                  <b>Размеры проёма:</b> {Number(draft.stationaryWidth) + Number(draft.doorWidth)} × {draft.height} мм
+                  <b>Размеры проёма:</b> {draft.stationaryWidth} × {draft.height} мм
                   <ul style={{ margin: '6px 0 0 0', paddingLeft: 24, listStyle: 'disc' }}>
-                    <li>Стационар: {Number(draft.stationaryWidth) + 30} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм</li>
+                    <li>Стационар: {Number(draft.stationaryWidth) - Number(draft.doorWidth) + 30} × {draft.exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм</li>
                     <li>Дверь: {Number(draft.doorWidth)} × {draft.exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8} мм</li>
                   </ul>
                 </div>

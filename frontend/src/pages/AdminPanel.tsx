@@ -86,9 +86,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   }, []);
 
   // Получаем companyId для admin/user
-  let effectiveCompanyId = selectedCompanyId;
+  let effectiveCompanyId = '';
   if (user && (user.role === 'admin' || user.role === 'user')) {
     effectiveCompanyId = typeof user.companyId === 'string' ? user.companyId : (user.companyId && typeof user.companyId === 'object' && '_id' in user.companyId ? user.companyId._id : '');
+  } else if (user && user.role === 'superadmin' && companies.length > 0) {
+    effectiveCompanyId = selectedCompanyId;
   }
 
   // --- Синхронизация секции и подвкладки с query-параметрами ---
@@ -132,6 +134,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   useEffect(() => {
     if (!effectiveCompanyId || effectiveCompanyId === 'all') return;
+    if (!effectiveCompanyId) return;
     fetchWithAuth(`/api/hardware?companyId=${effectiveCompanyId}`, undefined, true, onLogout)
       .then((res: unknown) => (res as Response).json())
       .then((data: unknown) => setHardwareByCompany(prev => ({ ...prev, [effectiveCompanyId]: Array.isArray(data) ? data : [] })))

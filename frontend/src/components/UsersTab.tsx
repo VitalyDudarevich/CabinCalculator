@@ -63,7 +63,11 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
       });
       const data = await res.json();
       if (!res.ok) {
-        setUserFormError(data?.error || 'Ошибка при добавлении пользователя');
+        if (data?.error && /duplicate key/i.test(data.error) && /username/i.test(data.error)) {
+          setUserFormError('Пользователь с таким именем уже существует');
+        } else {
+          setUserFormError(data?.error || 'Ошибка при добавлении пользователя');
+        }
         return;
       }
       setShowAddUser(false);

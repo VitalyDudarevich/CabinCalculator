@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // import ModalForm from './ModalForm'; // больше не используется
-
-interface User {
-  _id: string;
-  role: string;
-  username: string;
-  email: string;
-  companyId?: string;
-}
+import type { User } from '../types/User';
 
 interface Company {
   _id: string;
@@ -27,7 +20,7 @@ export interface ServicesTabProps {
   companies: Company[];
   selectedCompanyId: string;
   onLogout: () => void;
-  onCalculator: () => void;
+  onCalculator?: () => void;
 }
 
 const API_URL = 'http://localhost:5000/api';
@@ -162,38 +155,41 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
       {error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
       {success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
       {editList.length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет услуг</div>}
-      {editList.map((item, idx) => (
-        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, position: 'relative' }}>
-          <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {item.name}:
-            <input
-              type="number"
-              value={item.price === null ? '' : item.price}
-              disabled={!editMode}
-              readOnly={!editMode}
-              onChange={e => {
-                const val = e.target.value;
-                setEditList(list => list.map((it, i) => i === idx ? { ...it, price: val === '' ? null : Number(val) } : it));
-              }}
-              style={{
-                width: 140,
-                padding: 8,
-                borderRadius: 6,
-                border: '1px solid #ccc',
-                fontSize: 15,
-                marginTop: 2,
-                background: !editMode ? '#f5f5f5' : '#fff',
-                boxSizing: 'border-box',
-                color: !editMode ? '#888' : undefined
-              }}
-              placeholder="Цена"
-            />
-          </label>
-          {editMode && (
-            <button type="button" onClick={() => handleDeleteItem(idx)} style={{ color: '#e53e3e', background: 'none', border: 'none', fontWeight: 700, fontSize: 20, cursor: 'pointer', marginTop: 18 }} title="Удалить">✕</button>
-          )}
-        </div>
-      ))}
+      {editList.map((item, idx) => {
+        const displayName = item.name.trim().toLowerCase() === 'установка' ? 'Монтаж' : item.name;
+        return (
+          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, position: 'relative' }}>
+            <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {displayName}:
+              <input
+                type="number"
+                value={item.price === null ? '' : item.price}
+                disabled={!editMode}
+                readOnly={!editMode}
+                onChange={e => {
+                  const val = e.target.value;
+                  setEditList(list => list.map((it, i) => i === idx ? { ...it, price: val === '' ? null : Number(val) } : it));
+                }}
+                style={{
+                  width: 140,
+                  padding: 8,
+                  borderRadius: 6,
+                  border: '1px solid #ccc',
+                  fontSize: 15,
+                  marginTop: 2,
+                  background: !editMode ? '#f5f5f5' : '#fff',
+                  boxSizing: 'border-box',
+                  color: !editMode ? '#888' : undefined
+                }}
+                placeholder="Цена"
+              />
+            </label>
+            {editMode && (
+              <button type="button" onClick={() => handleDeleteItem(idx)} style={{ color: '#e53e3e', background: 'none', border: 'none', fontWeight: 700, fontSize: 20, cursor: 'pointer', marginTop: 18 }} title="Удалить">✕</button>
+            )}
+          </div>
+        );
+      })}
       {editMode && (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>

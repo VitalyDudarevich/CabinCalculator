@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import type { User } from '../types/User';
 
 interface HeaderProps {
-  user: { username: string; role: string } | null;
+  user: User | null;
   companies?: { _id: string; name: string }[];
   selectedCompanyId?: string;
   setSelectedCompanyId?: (id: string) => void;
@@ -71,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 56, background: '#fff', boxShadow: '0 2px 8px #0001', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 32px', zIndex: 100 }}>
       {/* Дропдаун выбора компании для суперадмина (оставляем всегда) */}
-      {user && user.role === 'superadmin' && setSelectedCompanyId && !isMobile && (
+      {user && user.role === 'superadmin' && setSelectedCompanyId && !isMobile && companies.length > 0 && (
         <select
           value={selectedCompanyId}
           onChange={handleCompanyChange}
@@ -151,7 +152,7 @@ const Header: React.FC<HeaderProps> = ({
                       ? (!sectionParam || sectionParam === 'companies')
                       : sectionParam === s.key;
                     let adminBg = isAdminPage ? (isActive && s.key === 'companies' ? '#646cff' : '#e0e7ff') : 'transparent';
-                    let adminColor = isAdminPage ? (isActive && s.key === 'companies' ? '#fff' : isActive ? '#646cff' : '#222') : '#222';
+                    const adminColor = isAdminPage ? (isActive && s.key === 'companies' ? '#fff' : isActive ? '#646cff' : '#222') : '#222';
                     let adminBorder = 'none';
                     if (isActive && isAdminPage && s.key !== 'companies') {
                       adminBg = '#fff';
@@ -166,8 +167,11 @@ const Header: React.FC<HeaderProps> = ({
                           if (s.key !== 'companies') {
                             url = `/admin?section=${s.key}`;
                           }
-                          if ((window as any).adminSetSection) {
-                            (window as any).adminSetSection(s.key);
+                          // Явное расширение window для adminSetSection
+                          type WindowWithAdminSection = Window & { adminSetSection?: (key: string) => void };
+                          const win = window as WindowWithAdminSection;
+                          if (win.adminSetSection) {
+                            win.adminSetSection(s.key);
                           }
                           navigate(url);
                         }}
@@ -197,7 +201,7 @@ const Header: React.FC<HeaderProps> = ({
               <div style={{ borderTop: '1px solid #eee', margin: '24px 0 0 0', padding: '16px 0 0 0', display: 'flex', justifyContent: 'center' }}>
                 {user && (
                   <button
-                    onClick={() => { setMenuOpen(false); onLogout && onLogout(); }}
+                    onClick={() => { setMenuOpen(false); if (onLogout) onLogout(); }}
                     style={{
                       width: 180,
                       padding: '14px 0',

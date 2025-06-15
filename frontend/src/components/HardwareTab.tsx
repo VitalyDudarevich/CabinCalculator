@@ -42,7 +42,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'hardware' | 'services' | 'basecosts' | 'glass'>(activeSubTab as any || 'hardware');
+  const [activeTab, setActiveTab] = useState<'hardware' | 'services' | 'basecosts' | 'glass'>((activeSubTab as 'hardware' | 'services' | 'basecosts' | 'glass') || 'hardware');
 
   // Для формы добавления
   const allSections = Array.from(new Set([
@@ -61,7 +61,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   // Синхронизируем activeTab с activeSubTab
   React.useEffect(() => {
     if (activeSubTab && activeSubTab !== activeTab) {
-      setActiveTab(activeSubTab as any);
+      setActiveTab(activeSubTab as 'hardware' | 'services' | 'basecosts' | 'glass');
     }
   }, [activeSubTab]);
 
@@ -71,7 +71,12 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
     if (onChangeSubTab) onChangeSubTab(tab);
   };
 
-  if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
+  if (!selectedCompanyId || !company) {
+    if (!companies.length) {
+      return <div style={{ color: '#888', margin: 32 }}>Нет компаний для отображения</div>;
+    }
+    return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
+  }
 
   // Получаем секции для колонок
   let allSectionsForColumns = Array.from(new Set(editList.map(i => i.section).filter(s => s !== 'Стекло')));
@@ -485,7 +490,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
             companies={companies}
             selectedCompanyId={selectedCompanyId}
             onLogout={onLogout}
-            onCalculator={onCalculator}
+            {...(onCalculator ? { onCalculator } : {})}
           />
         )}
         {activeTab === 'basecosts' && (

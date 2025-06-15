@@ -47,7 +47,7 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
     });
     const data = await res.json();
     handleApiError(data);
-    setShowAddCompany && setShowAddCompany(false);
+    if (setShowAddCompany) setShowAddCompany(false);
     setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
     setCompanyNameError('');
     const companiesRes = await fetchWithAuth('/api/companies');
@@ -112,7 +112,7 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
           Компании
         </h2>
         {user.role === 'superadmin' && companies.length > 0 && (
-          <button onClick={() => setShowAddCompany && setShowAddCompany(true)} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
+          <button onClick={() => { if (setShowAddCompany) setShowAddCompany(true); }} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
           Добавить
         </button>
         )}
@@ -174,7 +174,7 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
           companyNameError={companyNameError}
           onSubmit={handleAddCompany}
           onCancel={() => {
-            setShowAddCompany && setShowAddCompany(false);
+            if (setShowAddCompany) setShowAddCompany(false);
             setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
             setCompanyNameError('');
           }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AuthPage from './pages/AuthPage';
 import AdminPanel from './pages/AdminPanel';
@@ -36,6 +36,8 @@ export default function App() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [token, setToken] = useState<string>(() => localStorage.getItem('token') || '');
   const [userLoaded, setUserLoaded] = useState(false);
+  const [globalSuccess, setGlobalSuccess] = useState('');
+  const successTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Восстановление пользователя при изменении токена
   useEffect(() => {
@@ -104,7 +106,24 @@ export default function App() {
         selectedCompanyId={selectedCompanyId}
         setSelectedCompanyId={setSelectedCompanyId}
         onLogout={handleLogout}
-      />
+      >
+        {globalSuccess && (
+          <div style={{
+            background: '#e6ffed',
+            color: '#1a7f37',
+            fontWeight: 600,
+            fontSize: 18,
+            padding: '12px 0',
+            textAlign: 'center',
+            borderBottom: '1px solid #b7eb8f',
+            boxShadow: '0 2px 8px #1a7f3722',
+            zIndex: 100,
+            position: 'relative',
+          }}>
+            {globalSuccess}
+          </div>
+        )}
+      </Header>
       <div style={{ marginTop: 56, minHeight: 'calc(100vh - 56px)' }}>
         {!userLoaded ? (
           <div>Загрузка...</div>
@@ -115,7 +134,7 @@ export default function App() {
               <Route
                 path="/admin"
                 element={
-                  selectedCompanyId
+                  user.role === 'superadmin' || selectedCompanyId
                     ? <AdminPanel
                         user={user}
                         companies={companies}
@@ -123,7 +142,6 @@ export default function App() {
                         setSelectedCompanyId={setSelectedCompanyId}
                         setCompanies={setCompanies}
                         onLogout={handleLogout}
-                        onCalculator={() => (window.location.href = '/calculator')}
                       />
                     : <div>Нет доступа: проверь companyId</div>
                 }
