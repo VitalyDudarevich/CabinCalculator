@@ -6,6 +6,7 @@ import CalculatorPageWrapper from './pages/CalculatorPage';
 import Header from './components/Header';
 import type { Company } from './types/Company';
 import { fetchWithAuth } from './utils/auth';
+import { API_URL } from './utils/api';
 
 // interface Company {
 //   _id: string;
@@ -42,7 +43,7 @@ export default function App() {
   useEffect(() => {
     setError('');
     if (token) {
-      fetchWithAuth('http://localhost:5000/api/auth/me', {
+      fetchWithAuth(`${API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(res => res.json())
@@ -65,7 +66,7 @@ export default function App() {
   useEffect(() => {
     setError('');
     if (user && user.role === 'superadmin') {
-      fetchWithAuth('http://localhost:5000/api/companies')
+      fetchWithAuth(`${API_URL}/api/companies`)
         .then(res => res.json())
         .then(data => {
           const list = Array.isArray(data) ? data : [];
@@ -84,7 +85,7 @@ export default function App() {
         setSelectedCompanyId(adminCompanyId);
       }
       if (adminCompanyId) {
-        fetchWithAuth(`http://localhost:5000/api/companies/${adminCompanyId}`)
+        fetchWithAuth(`${API_URL}/api/companies/${adminCompanyId}`)
           .then(res => res.json())
           .then(data => {
             setCompanies(data && data._id ? [data] : []);

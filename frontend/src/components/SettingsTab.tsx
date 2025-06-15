@@ -1,5 +1,7 @@
 // import type { User } from '../pages/AdminPanel';
 import React, { useState, useEffect } from 'react';
+import { API_URL as BASE_API_URL } from '../utils/api';
+const API_URL = `${BASE_API_URL}/api`;
 // ... существующий код ...
 // Здесь будет содержимое вкладки 'Настройки', вынесенное из AdminPanel.tsx 
 
@@ -30,8 +32,6 @@ interface SettingsTabProps {
   company: Company | null;
   onAdd?: () => void;
 }
-
-const API_URL = 'http://localhost:5000/api';
 
 const DEFAULT_BASE_COSTS: BaseCostItem[] = [
   { id: 'glass', name: 'Базовая стоимость стекляшки', value: 0 },

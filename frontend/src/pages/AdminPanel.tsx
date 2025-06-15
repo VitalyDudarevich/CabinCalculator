@@ -9,6 +9,7 @@ import type { Company } from '../types/Company';
 import type { HardwareItem } from '../types/HardwareItem';
 import Header from '../components/Header';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { API_URL } from '../utils/api';
 
 // Добавляю расширение Window для интеграции с Header
 declare global {
@@ -34,7 +35,7 @@ interface AdminPanelProps {
 // Универсальная функция fetch с авто-рефрешем токена
 async function fetchWithAuth(input: RequestInfo, init?: RequestInit, retry = true, onLogoutCb?: () => void): Promise<Response> {
   const url = typeof input === 'string' && input.startsWith('/api')
-    ? `http://localhost:5000${input}`
+    ? `${API_URL}${input}`
     : input;
   const token = localStorage.getItem('token');
   const headers = { ...(init?.headers || {}), Authorization: `Bearer ${token || ''}` };
@@ -42,7 +43,7 @@ async function fetchWithAuth(input: RequestInfo, init?: RequestInit, retry = tru
 
   if ((res.status === 401 || res.status === 400) && retry) {
     // Попытка обновить токен
-    const refreshRes = await fetch('http://localhost:5000/api/auth/refresh', { method: 'POST', credentials: 'include' });
+    const refreshRes = await fetch(`${API_URL}/api/auth/refresh`, { method: 'POST', credentials: 'include' });
     if (refreshRes.ok) {
       const { token: newToken } = await refreshRes.json();
       if (newToken) {

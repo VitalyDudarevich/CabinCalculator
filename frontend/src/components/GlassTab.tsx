@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL as BASE_API_URL } from '../utils/api';
+const API_URL = `${BASE_API_URL}/api`;
 
 interface Company {
   _id: string;
@@ -18,8 +20,6 @@ interface GlassTabProps {
   companies: Company[];
   selectedCompanyId: string;
 }
-
-const API_URL = 'http://localhost:5000/api';
 
 const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => {
   const company = companies.find(c => c._id === selectedCompanyId);

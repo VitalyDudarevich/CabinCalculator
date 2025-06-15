@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_URL as BASE_API_URL } from '../utils/api';
 
 interface HardwareDraftItem {
   hardwareId: string;
@@ -79,6 +80,8 @@ const normalizeName = (name: string) =>
       .trim()
       .toLowerCase();
 
+const API_URL = `${BASE_API_URL}/api`;
+
 const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyId, onTotalChange, exactHeight, onExactHeightChange }) => {
   console.log('draft:', draft);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -90,10 +93,10 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
     const fetchAll = async () => {
       try {
         const [settingsRes, glassRes, hardwareRes, servicesRes] = await Promise.all([
-          fetch(`http://localhost:5000/api/settings?companyId=${companyId}`),
-          fetch(`http://localhost:5000/api/glass?companyId=${companyId}`),
-          fetch(`http://localhost:5000/api/hardware?companyId=${companyId}`),
-          fetch(`http://localhost:5000/api/services?companyId=${companyId}`),
+          fetch(`${API_URL}/settings?companyId=${companyId}`),
+          fetch(`${API_URL}/glass?companyId=${companyId}`),
+          fetch(`${API_URL}/hardware?companyId=${companyId}`),
+          fetch(`${API_URL}/services?companyId=${companyId}`),
         ]);
 
         const [settingsData, glassList, hardwareList, servicesList] = await Promise.all([

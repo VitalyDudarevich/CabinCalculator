@@ -1,6 +1,7 @@
 // auth.ts — утилиты для работы с access/refresh токенами
 
-const API_URL = 'http://localhost:5000/api/auth';
+import { API_URL as BASE_API_URL } from './api';
+const API_URL = `${BASE_API_URL}/api/auth`;
 
 export async function refreshAccessToken() {
   // Пытаемся обновить access token через refresh token (refresh хранится в httpOnly cookie)

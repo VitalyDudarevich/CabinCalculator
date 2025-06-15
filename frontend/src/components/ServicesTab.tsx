@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // import ModalForm from './ModalForm'; // больше не используется
 import type { User } from '../types/User';
+import { API_URL as BASE_API_URL } from '../utils/api';
 
 interface Company {
   _id: string;
@@ -23,7 +24,7 @@ export interface ServicesTabProps {
   onCalculator?: () => void;
 }
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = `${BASE_API_URL}/api`;
 
 const ServicesTab: React.FC<ServicesTabProps> = ({
   company,

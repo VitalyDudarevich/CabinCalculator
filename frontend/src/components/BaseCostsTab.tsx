@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL as BASE_API_URL } from '../utils/api';
+const API_URL = `${BASE_API_URL}/api`;
 
 interface Company {
   _id: string;
@@ -14,8 +16,6 @@ interface BaseCostItem {
 interface BaseCostsTabProps {
   company: Company;
 }
-
-const API_URL = 'http://localhost:5000/api';
 
 const DEFAULT_BASE_COSTS: BaseCostItem[] = [
   { id: 'glass', name: 'Базовая стоимость стекляшки', value: 0 },

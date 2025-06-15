@@ -5,6 +5,7 @@ import type { ModalFormField } from './ModalForm';
 import type { User } from '../types/User';
 import BaseCostsTab from './BaseCostsTab';
 import GlassTab from './GlassTab';
+import { API_URL as BASE_API_URL } from '../utils/api';
 
 interface Company {
   _id: string;
@@ -31,7 +32,7 @@ interface HardwareTabProps {
 
 const MAIN_SECTIONS = ['Профили', 'Крепления'];
 const COLUMNS = 3;
-const API_URL = 'http://localhost:5000/api';
+const API_URL = `${BASE_API_URL}/api`;
 
 const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, hardwareByCompany, user, onLogout, onCalculator, activeSubTab, onChangeSubTab }) => {
   const company = companies.find(c => c._id === selectedCompanyId);

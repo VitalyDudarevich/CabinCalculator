@@ -7,6 +7,7 @@ import type { User } from '../types/User';
 // import type { Company } from '../types/Company';
 import type { DraftProjectData } from '../components/CalculationDetails';
 import { fetchWithAuth } from '../utils/auth';
+import { API_URL } from '../utils/api';
 
 const CalculatorPage: React.FC<{
   companyId?: string;
@@ -32,7 +33,7 @@ const CalculatorPage: React.FC<{
       setProjects([]);
       return;
     }
-    fetchWithAuth(`http://localhost:5000/api/projects?companyId=${effectiveSelectedCompanyId}`)
+    fetchWithAuth(`${API_URL}/api/projects?companyId=${effectiveSelectedCompanyId}`)
       .then(res => res.json())
       .then(data => setProjects(Array.isArray(data) ? data : []))
       .catch(() => setProjects([]));
@@ -49,7 +50,7 @@ const CalculatorPage: React.FC<{
 
   const handleDeleteProject = async (project: Project) => {
     if (!window.confirm('Удалить проект?')) return;
-    await fetchWithAuth(`http://localhost:5000/api/projects/${project._id}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API_URL}/api/projects/${project._id}`, { method: 'DELETE' });
     setProjects(prev => prev.filter(p => p._id !== project._id));
     if (selectedProject && selectedProject._id === project._id) {
       setSelectedProject(null);

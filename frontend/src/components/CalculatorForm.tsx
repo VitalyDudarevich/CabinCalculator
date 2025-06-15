@@ -5,8 +5,8 @@ import { QuantityControl } from './AddHardwareDialog';
 import type { User } from '../types/User';
 import type { DraftProjectData } from './CalculationDetails';
 import type { Project } from './ProjectHistory';
-
-const API_URL = 'http://localhost:5000/api';
+import { API_URL as BASE_API_URL } from '../utils/api';
+const API_URL = `${BASE_API_URL}/api`;
 
 const HARDWARE_COLORS = [
   { value: '', label: '' },

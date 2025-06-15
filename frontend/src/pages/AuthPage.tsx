@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-
-const API_URL = 'http://localhost:5000/api/auth';
+import { API_URL } from '../utils/api';
 
 interface User {
   _id: string;
@@ -21,6 +20,8 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
   const [localToken, setLocalToken] = useState('');
   const [localUser, setLocalUser] = useState<User | null>(null);
 
+  const AUTH_API_URL = `${API_URL}/api/auth`;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -28,7 +29,7 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
-    const res = await fetch(`${API_URL}/login`, {
+    const res = await fetch(`${AUTH_API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ emailOrUsername: form.emailOrUsername, password: form.password }),
@@ -48,7 +49,7 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
 
   const handleMe = async () => {
     setMessage('');
-    const res = await fetch(`${API_URL}/me`, {
+    const res = await fetch(`${AUTH_API_URL}/me`, {
       headers: { Authorization: `Bearer ${localToken}` },
     });
     const data = await res.json();
