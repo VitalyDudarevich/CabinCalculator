@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AuthPage from './pages/AuthPage';
 import AdminPanel from './pages/AdminPanel';
@@ -36,11 +36,11 @@ export default function App() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [token, setToken] = useState<string>(() => localStorage.getItem('token') || '');
   const [userLoaded, setUserLoaded] = useState(false);
-  const [globalSuccess, setGlobalSuccess] = useState('');
-  const successTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [error, setError] = useState<string>('');
 
   // Восстановление пользователя при изменении токена
   useEffect(() => {
+    setError('');
     if (token) {
       fetchWithAuth('http://localhost:5000/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
@@ -50,7 +50,10 @@ export default function App() {
           if (data.user) setUser(data.user);
           else setUser(null);
         })
-        .catch(() => setUser(null))
+        .catch(() => {
+          setUser(null);
+          setError('Ошибка загрузки пользователя.');
+        })
         .finally(() => setUserLoaded(true));
     } else {
       setUser(null);
@@ -58,8 +61,9 @@ export default function App() {
     }
   }, [token]);
 
-  // Загрузка компаний для суперадмина
+  // Загрузка компаний для суперадмина и админа
   useEffect(() => {
+    setError('');
     if (user && user.role === 'superadmin') {
       fetchWithAuth('http://localhost:5000/api/companies')
         .then(res => res.json())
@@ -67,23 +71,31 @@ export default function App() {
           const list = Array.isArray(data) ? data : [];
           setCompanies(list);
         })
-        .catch(() => setCompanies([]));
+        .catch(() => {
+          setCompanies([]);
+          setError('Ошибка загрузки компаний.');
+        });
     } else if (user && user.companyId) {
+      // companyId может быть строкой или объектом
       const adminCompanyId = typeof user.companyId === 'string'
         ? user.companyId
         : isCompanyObj(user.companyId) ? user.companyId._id : '';
       if (adminCompanyId && selectedCompanyId !== adminCompanyId) {
         setSelectedCompanyId(adminCompanyId);
       }
-      // Загружаем свою компанию для admin/user
       if (adminCompanyId) {
         fetchWithAuth(`http://localhost:5000/api/companies/${adminCompanyId}`)
           .then(res => res.json())
           .then(data => {
             setCompanies(data && data._id ? [data] : []);
           })
-          .catch(() => setCompanies([]));
+          .catch(() => {
+            setCompanies([]);
+            setError('Ошибка загрузки компании.');
+          });
       }
+    } else {
+      setCompanies([]);
     }
   }, [user]);
 
@@ -91,6 +103,10 @@ export default function App() {
   const handleLogout = () => {
     setUser(null);
     setToken('');
+    setCompanies([]);
+    setSelectedCompanyId('');
+    setUserLoaded(false);
+    setError('');
     localStorage.removeItem('token');
   };
 
@@ -107,21 +123,19 @@ export default function App() {
         setSelectedCompanyId={setSelectedCompanyId}
         onLogout={handleLogout}
       >
-        {globalSuccess && (
+        {error && (
           <div style={{
-            background: '#e6ffed',
-            color: '#1a7f37',
+            background: '#fff1f0',
+            color: '#cf1322',
             fontWeight: 600,
-            fontSize: 18,
-            padding: '12px 0',
+            fontSize: 16,
+            padding: '10px 0',
             textAlign: 'center',
-            borderBottom: '1px solid #b7eb8f',
-            boxShadow: '0 2px 8px #1a7f3722',
-            zIndex: 100,
+            borderBottom: '1px solid #ffa39e',
+            boxShadow: '0 2px 8px #cf132222',
+            zIndex: 101,
             position: 'relative',
-          }}>
-            {globalSuccess}
-          </div>
+          }}>{error}</div>
         )}
       </Header>
       <div style={{ marginTop: 56, minHeight: 'calc(100vh - 56px)' }}>

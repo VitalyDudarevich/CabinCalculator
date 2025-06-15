@@ -8,6 +8,7 @@ interface HeaderProps {
   selectedCompanyId?: string;
   setSelectedCompanyId?: (id: string) => void;
   onLogout?: () => void;
+  children?: React.ReactNode;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -16,6 +17,7 @@ const Header: React.FC<HeaderProps> = ({
   selectedCompanyId = '',
   setSelectedCompanyId,
   onLogout,
+  children,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -346,6 +348,7 @@ const Header: React.FC<HeaderProps> = ({
           )}
         </>
       )}
+      {children}
     </header>
   );
 };

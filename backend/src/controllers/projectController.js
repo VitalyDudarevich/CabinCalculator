@@ -67,6 +67,9 @@ exports.updateProject = async (req, res) => {
       ];
       project.status = req.body.status;
     }
+    // Удаляем priceHistory и statusHistory из req.body, чтобы не затирать историю
+    delete req.body.priceHistory;
+    delete req.body.statusHistory;
     // Обновляем остальные поля
     Object.assign(project, req.body);
     project.updatedAt = new Date();

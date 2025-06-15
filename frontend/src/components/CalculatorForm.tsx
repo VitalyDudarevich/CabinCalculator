@@ -384,7 +384,15 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setSaveStatus('idle');
     setErrors({});
     const now = new Date().toISOString();
-    const finalPrice = totalPrice ?? 0;
+    // Корректно определяем итоговую цену
+    let finalPrice;
+    if (manualPrice !== undefined) {
+      finalPrice = manualPrice;
+    } else if (selectedProject && selectedProject.price !== undefined) {
+      finalPrice = selectedProject.price;
+    } else {
+      finalPrice = totalPrice ?? 0;
+    }
     // Собираем данные проекта
     const projectData = {
       name: projectName,
@@ -429,6 +437,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         if (!res.ok) throw new Error('Ошибка при сохранении изменений');
         savedProject = await res.json();
         if (typeof onNewProject === 'function') onNewProject(savedProject);
+        // Сбросить все поля к дефолтным значениям, как при создании нового проекта
+        resetAllFields();
         setSaveStatus('success');
         setChangedFields(new Set());
         if (savedProject) {
@@ -481,6 +491,11 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       const errMsg = e instanceof Error ? e.message : 'Ошибка сохранения';
       setErrors({ global: errMsg });
     }
+    // Сбросить выбранный проект и draftProjectData после сохранения
+    if (typeof onNewProject === 'function') onNewProject(undefined);
+    resetAllFields();
+    setSaveStatus('success');
+    setChangedFields(new Set());
   };
 
   const handleAddGlass = () => {
@@ -1315,6 +1330,22 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           СОХРАНИТЬ
         </button>
       </div>
+      {/* История изменения статусов */}
+      {selectedProject && Array.isArray(selectedProject.statusHistory) && selectedProject.statusHistory.length > 0 && (() => {
+        const statusHistory = selectedProject.statusHistory || [];
+        return (
+          <div style={{ marginTop: 18, background: '#f8f8f8', borderRadius: 8, padding: 12, border: '1px solid #e0e0e0' }}>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>История изменения статусов:</div>
+            {statusHistory.map((sh, idx) => (
+              <div key={idx} style={{ color: idx === statusHistory.length - 1 ? '#1976d2' : '#888', fontSize: 15, marginBottom: 2, fontWeight: idx === statusHistory.length - 1 ? 600 : 400 }}>
+                {sh.status} <span style={{ fontSize: 13, marginLeft: 8 }}>{new Date(sh.date).toLocaleString()}</span>
+                {idx === 0 && <span style={{ color: '#aaa', fontSize: 13, marginLeft: 8 }}>(первоначальный)</span>}
+                {idx === statusHistory.length - 1 && <span style={{ color: '#1976d2', fontSize: 13, marginLeft: 8 }}>(текущий)</span>}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
       {showAddHardwareDialog && (
         <AddHardwareDialog
           hardwareList={hardwareList}
