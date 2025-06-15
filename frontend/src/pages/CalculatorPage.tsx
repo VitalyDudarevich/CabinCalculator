@@ -58,44 +58,116 @@ const CalculatorPage: React.FC<{
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'row', gap: 0, alignItems: 'flex-start', justifyContent: 'center', padding: 32, minHeight: 'calc(100vh - 56px)', background: '#f6f8fa' }}>
-      <CalculationDetails
-        draft={selectedProject ? { ...selectedProject.data, projectName: selectedProject.name, price: selectedProject.price, priceHistory: selectedProject.priceHistory } : draftProjectData}
-        companyId={effectiveSelectedCompanyId}
-        exactHeight={draftProjectData.exactHeight ?? false}
-        onExactHeightChange={checked => {
-          setDraftProjectData(draft => ({ ...draft, exactHeight: checked }));
+    <>
+      <div
+        className="main-layout"
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          gap: 0,
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          padding: 32,
+          minHeight: 'calc(100vh - 56px)',
+          background: '#f6f8fa',
+          width: '100vw',
+          boxSizing: 'border-box',
         }}
-        onTotalChange={setTotalPrice}
-      />
-      <CalculatorForm
-        companyId={effectiveCompanyId}
-        user={user}
-        selectedCompanyId={effectiveSelectedCompanyId}
-        onChangeDraft={setDraftProjectData}
-        selectedProject={selectedProject ?? undefined}
-        onNewProject={project => {
-          if (project) {
-            setProjects(prev => {
-              const idx = prev.findIndex(p => p._id === project._id);
-              if (idx !== -1) {
-                // Обновляем существующий проект
-                const updated = [...prev];
-                updated[idx] = project;
-                return updated;
-              } else {
-                // Новый проект — добавляем в начало
-                return [project, ...prev];
-              }
-            });
+      >
+        <div className="calculation-details" style={{ minWidth: 320, maxWidth: 380, flex: '0 0 340px', marginRight: 24 }}>
+          <CalculationDetails
+            draft={selectedProject ? { ...selectedProject.data, projectName: selectedProject.name, price: selectedProject.price, priceHistory: selectedProject.priceHistory } : draftProjectData}
+            companyId={effectiveSelectedCompanyId}
+            exactHeight={draftProjectData.exactHeight ?? false}
+            onExactHeightChange={checked => {
+              setDraftProjectData(draft => ({ ...draft, exactHeight: checked }));
+            }}
+            onTotalChange={setTotalPrice}
+          />
+        </div>
+        <div className="calculator-form-wrapper" style={{ flex: 1, minWidth: 340, maxWidth: 700, margin: '0 24px' }}>
+          <div className="calculator-form">
+            <CalculatorForm
+              companyId={effectiveCompanyId}
+              user={user}
+              selectedCompanyId={effectiveSelectedCompanyId}
+              onChangeDraft={setDraftProjectData}
+              selectedProject={selectedProject ?? undefined}
+              onNewProject={project => {
+                if (project) {
+                  setProjects(prev => {
+                    const idx = prev.findIndex(p => p._id === project._id);
+                    if (idx !== -1) {
+                      // Обновляем существующий проект
+                      const updated = [...prev];
+                      updated[idx] = project;
+                      return updated;
+                    } else {
+                      // Новый проект — добавляем в начало
+                      return [project, ...prev];
+                    }
+                  });
+                }
+                // Всегда сбрасываем selectedProject и draftProjectData при нажатии 'Новый проект'
+                setSelectedProject(null);
+                setDraftProjectData({});
+              }}
+              totalPrice={totalPrice}
+            />
+          </div>
+        </div>
+        <div className="project-history" style={{ minWidth: 320, maxWidth: 380, flex: '0 0 340px', marginLeft: 24 }}>
+          <ProjectHistory
+            user={user}
+            projects={projects}
+            onEdit={handleEditProject}
+            onDelete={handleDeleteProject}
+          />
+        </div>
+      </div>
+      <style>{`
+        @media (max-width: 600px) {
+          .main-layout {
+            flex-direction: column !important;
+            padding: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
           }
-          setSelectedProject(null);
-          setDraftProjectData({});
-        }}
-        totalPrice={totalPrice}
-      />
-      <ProjectHistory user={user} projects={projects} onEdit={handleEditProject} onDelete={handleDeleteProject} />
-    </div>
+          .calculator-form-wrapper {
+            order: 1 !important;
+            padding: 0 !important;
+          }
+          .calculation-details {
+            order: 2 !important;
+          }
+          .project-history {
+            order: 3 !important;
+          }
+          .calculator-form-wrapper,
+          .calculation-details,
+          .project-history {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            margin: 0 0 12px 0 !important;
+            box-sizing: border-box !important;
+          }
+          .calculator-form {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+            padding: 8px !important;
+            box-sizing: border-box !important;
+            background: #fff !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
+    </>
   );
 };
 

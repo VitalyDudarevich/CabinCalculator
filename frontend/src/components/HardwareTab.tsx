@@ -24,14 +24,16 @@ interface HardwareTabProps {
   hardwareByCompany: Record<string, HardwareItem[]>;
   user: User;
   onLogout: () => void;
-  onCalculator: () => void;
+  onCalculator?: () => void;
+  activeSubTab?: string;
+  onChangeSubTab?: (sub: string) => void;
 }
 
 const MAIN_SECTIONS = ['Профили', 'Крепления'];
 const COLUMNS = 3;
 const API_URL = 'http://localhost:5000/api';
 
-const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, hardwareByCompany, user, onLogout, onCalculator }) => {
+const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, hardwareByCompany, user, onLogout, onCalculator, activeSubTab, onChangeSubTab }) => {
   const company = companies.find(c => c._id === selectedCompanyId);
   const [editList, setEditList] = useState<HardwareItem[]>(hardwareByCompany[selectedCompanyId] || []);
   const [showAdd, setShowAdd] = useState(false);
@@ -40,7 +42,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'hardware' | 'services' | 'basecosts' | 'glass'>('hardware');
+  const [activeTab, setActiveTab] = useState<'hardware' | 'services' | 'basecosts' | 'glass'>(activeSubTab as any || 'hardware');
 
   // Для формы добавления
   const allSections = Array.from(new Set([
@@ -55,6 +57,19 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   React.useEffect(() => {
     setEditList(hardwareByCompany[selectedCompanyId] || []);
   }, [hardwareByCompany, selectedCompanyId]);
+
+  // Синхронизируем activeTab с activeSubTab
+  React.useEffect(() => {
+    if (activeSubTab && activeSubTab !== activeTab) {
+      setActiveTab(activeSubTab as any);
+    }
+  }, [activeSubTab]);
+
+  // При смене подвкладки вызываем onChangeSubTab
+  const handleChangeTab = (tab: 'hardware' | 'services' | 'basecosts' | 'glass') => {
+    setActiveTab(tab);
+    if (onChangeSubTab) onChangeSubTab(tab);
+  };
 
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
@@ -221,7 +236,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
       <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 24, borderBottom: '2px solid #e0e7ef' }}>
         <div style={{ display: 'flex', gap: 0 }}>
           <button
-            onClick={() => setActiveTab('hardware')}
+            onClick={() => handleChangeTab('hardware')}
             style={{
               padding: '12px 36px',
               border: 'none',
@@ -243,7 +258,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
             Фурнитура
           </button>
           <button
-            onClick={() => setActiveTab('glass')}
+            onClick={() => handleChangeTab('glass')}
             style={{
               padding: '12px 36px',
               border: 'none',
@@ -265,7 +280,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
             Стекло
           </button>
           <button
-            onClick={() => setActiveTab('services')}
+            onClick={() => handleChangeTab('services')}
             style={{
               padding: '12px 36px',
               border: 'none',
@@ -287,7 +302,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
             Услуги
           </button>
           <button
-            onClick={() => setActiveTab('basecosts')}
+            onClick={() => handleChangeTab('basecosts')}
             style={{
               padding: '12px 36px',
               border: 'none',
@@ -350,7 +365,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
                   lineHeight: 1.25,
                 }}
               >
-                Добавить фурнитуру
+                Добавить
               </button>
             </>
           )}
@@ -358,6 +373,20 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
         </div>
       </div>
       {/* Содержимое вкладок */}
+      <style>{`
+        @media (max-width: 600px) {
+          .hardware-columns {
+            flex-direction: column !important;
+            gap: 8px !important;
+          }
+          .hardware-column {
+            min-width: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
       <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 32, minHeight: 320, marginTop: -2 }}>
         {activeTab === 'hardware' && (
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
@@ -367,9 +396,9 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
         {activeTab === 'hardware' && error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
         {activeTab === 'hardware' && success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
         {activeTab === 'hardware' && (
-          <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
+          <div className="hardware-columns" style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
             {columns.map((sectionList, colIdx) => (
-              <div key={colIdx} style={{ background: 'none', minWidth: 260, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 24 }}>
+              <div key={colIdx} className="hardware-column" style={{ background: 'none', minWidth: 260, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 24 }}>
                 {sectionList.map(section => (
                   <div key={section} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative' }}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>

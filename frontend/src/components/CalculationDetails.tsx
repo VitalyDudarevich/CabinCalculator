@@ -555,8 +555,20 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
               </label>
             </div>
           )}
-          {/* Визуальный разделитель */}
-          <hr style={{ margin: '18px 0 18px 0', border: 0, borderTop: '1px solid #e0e0e0' }} />
+          {/* Универсальная разбивка стоимости */}
+          {positions && positions.length > 0 && (
+            <div style={{ margin: '18px 0 0 0' }}>
+              <b>Разбивка стоимости:</b>
+              <ul style={{ margin: '6px 0 0 0', paddingLeft: 0, listStyle: 'none' }}>
+                {positions.map((pos, idx) => (
+                  <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
+                    <span>{pos.label}</span>
+                    <span><b>{pos.total} GEL</b></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {/* Итоговая цена и история цены — теперь внизу */}
           {settings && positions.length > 0 ? (
             <div style={{ color: '#222', fontSize: 16, marginTop: 24 }}>

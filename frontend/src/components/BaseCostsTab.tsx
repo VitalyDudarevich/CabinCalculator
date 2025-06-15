@@ -133,7 +133,7 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   return (
-    <div style={{ maxWidth: 540, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24 }}>
+    <div className="base-costs-tab-root" style={{ maxWidth: 540, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, flex: 1 }}>Базовая стоимость конструкций</h2>
         <button
@@ -215,6 +215,17 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
           {addError && <div style={{ color: 'crimson', marginTop: 4 }}>{addError}</div>}
         </>
       )}
+      <style>{`
+        @media (max-width: 600px) {
+          .base-costs-tab-root {
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            padding: 8px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

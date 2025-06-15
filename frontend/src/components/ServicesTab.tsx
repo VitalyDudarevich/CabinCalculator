@@ -125,7 +125,7 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
   };
 
   return (
-    <div style={{ maxWidth: 540, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24 }}>
+    <div className="services-tab-root" style={{ maxWidth: 540, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, flex: 1 }}>Услуги {companyName}</h2>
         <button
@@ -225,6 +225,17 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
           {addError && <div style={{ color: 'crimson', marginTop: 4 }}>{addError}</div>}
         </>
       )}
+      <style>{`
+        @media (max-width: 600px) {
+          .services-tab-root {
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            padding: 8px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

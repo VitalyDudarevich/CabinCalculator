@@ -20,6 +20,8 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
   const [userForm, setUserForm] = React.useState({ username: '', email: '', password: '', role: 'user', phone: '' });
   const [userFormError, setUserFormError] = React.useState('');
   const [userFormFieldNames, setUserFormFieldNames] = React.useState({ username: 'username', password: 'password' });
+  const [showEditUser, setShowEditUser] = React.useState(false);
+  const [editUser, setEditUser] = React.useState<User | null>(null);
 
   const companyName = selectedCompanyId === 'all'
     ? 'Все компании'
@@ -77,6 +79,85 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
         .then(data => setUsers(Array.isArray(data) ? data : []));
     } catch {
       setUserFormError('Ошибка сети');
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditUser(user);
+    setUserForm({
+      username: user.username || '',
+      email: user.email || '',
+      password: '',
+      role: user.role || 'user',
+      phone: (typeof user === 'object' && 'phone' in user && typeof user['phone'] === 'string' ? user['phone'] : '')
+    });
+    setShowEditUser(true);
+    setUserFormError('');
+    setUserFormFieldNames({
+      username: 'username_' + Date.now(),
+      password: 'password_' + Date.now(),
+    });
+  };
+
+  const handleSubmitEditUser = async () => {
+    if (!editUser) return;
+    if (!userForm.username || !userForm.email) {
+      setUserFormError('Все обязательные поля должны быть заполнены');
+      return;
+    }
+    const body: Record<string, string> = {
+      username: userForm.username,
+      email: userForm.email,
+      role: userForm.role,
+      phone: userForm.phone,
+    };
+    if (userForm.password) body.password = userForm.password;
+    if (selectedCompanyId && selectedCompanyId !== 'all') {
+      body.companyId = selectedCompanyId;
+    }
+    try {
+      const res = await fetchWithAuth(`/api/users/${editUser._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setUserFormError(data?.error || 'Ошибка при редактировании пользователя');
+        return;
+      }
+      setShowEditUser(false);
+      setEditUser(null);
+      setUserForm({ username: '', email: '', password: '', role: 'user', phone: '' });
+      setUserFormError('');
+      // Обновляем список пользователей
+      let url = '/api/users';
+      if (selectedCompanyId && selectedCompanyId !== 'all') {
+        url += `?companyId=${selectedCompanyId}`;
+      }
+      fetchWithAuth(url)
+        .then(res => res.json())
+        .then(data => setUsers(Array.isArray(data) ? data : []));
+    } catch {
+      setUserFormError('Ошибка сети');
+    }
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    if (!window.confirm('Удалить пользователя?')) return;
+    try {
+      const res = await fetchWithAuth(`/api/users/${user._id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Ошибка удаления');
+      // Обновляем список пользователей
+      let url = '/api/users';
+      if (selectedCompanyId && selectedCompanyId !== 'all') {
+        url += `?companyId=${selectedCompanyId}`;
+      }
+      fetchWithAuth(url)
+        .then(res => res.json())
+        .then(data => setUsers(Array.isArray(data) ? data : []));
+    } catch {
+      alert('Ошибка удаления пользователя');
     }
   };
 
@@ -169,7 +250,13 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
                         : (companies.find(c => c._id === u.companyId)?.name || '-')}
                     </td>
                     <td style={{ padding: 8, textAlign: 'center' }}>
-                      {/* TODO: реализовать редактирование/удаление */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                        <button onClick={() => handleEditUser(u)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1976d2', fontSize: 18, padding: 0 }} title="Редактировать">✏️</button>
+                        <button onClick={() => handleDeleteUser(u)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53935', fontSize: 22, padding: 0, fontWeight: 700, width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.15s' }} title="Удалить"
+                          onMouseOver={e => (e.currentTarget.style.color = '#b71c1c')}
+                          onMouseOut={e => (e.currentTarget.style.color = '#e53935')}
+                        >×</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -178,6 +265,53 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
           )}
         </div>
       )}
+      <ModalForm
+        isOpen={showEditUser}
+        title="Редактировать пользователя"
+        fields={[
+          { name: userFormFieldNames.username, label: 'Имя пользователя', type: 'text', required: true, value: userForm.username, onChange: v => setUserForm(f => ({ ...f, username: String(v) })), autoComplete: 'off' },
+          { name: 'email', label: 'Email', type: 'email', required: true, value: userForm.email, onChange: v => setUserForm(f => ({ ...f, email: String(v) })), autoComplete: 'off' },
+          { name: userFormFieldNames.password, label: 'Пароль', type: 'password', required: false, value: userForm.password, onChange: v => setUserForm(f => ({ ...f, password: String(v) })), autoComplete: 'off' },
+          { name: 'role', label: 'Роль', type: 'select', required: true, value: userForm.role, onChange: v => setUserForm(f => ({ ...f, role: String(v) })), options: [
+            { value: 'user', label: 'Пользователь' },
+            { value: 'admin', label: 'Админ' },
+          ], autoComplete: 'off' },
+          { name: 'phone', label: 'Телефон', type: 'text', value: userForm.phone, onChange: v => setUserForm(f => ({ ...f, phone: String(v) })), autoComplete: 'off' },
+        ]}
+        onSubmit={handleSubmitEditUser}
+        onCancel={() => { setShowEditUser(false); setEditUser(null); setUserFormError(''); }}
+        submitText="Сохранить"
+        companyNameError={userFormError}
+      />
+      <style>{`
+        @media (max-width: 600px) {
+          .users-table {
+            width: 100vw !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: #fff !important;
+            table-layout: fixed !important;
+          }
+          .users-table th, .users-table td {
+            padding: 8px 4px !important;
+            border: none !important;
+            background: #fff !important;
+            word-break: break-word !important;
+          }
+          .users-table tr {
+            border-bottom: 1px solid #e0e0e0 !important;
+          }
+          .users-table tr:last-child {
+            border-bottom: none !important;
+          }
+          .users-table th {
+            font-size: 15px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

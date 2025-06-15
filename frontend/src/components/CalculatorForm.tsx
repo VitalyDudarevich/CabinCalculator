@@ -512,142 +512,11 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const hasEmptyGlassField = draftConfig === 'unique' && uniqueGlasses.some(g => !g.name || !g.color || !g.thickness || !g.width || !g.height);
 
   return (
-    <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: 480, margin: '0 32px' }}>
-      <h2 style={{ fontWeight: 700, fontSize: 24, marginBottom: 20 }}>
+    <div className="calculator-form-root" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
+      <h2 style={{ fontWeight: 700, fontSize: 24, margin: '0 0 12px 0' }}>
         {selectedProject ? `Редактирование ${selectedProject.name || ''}` : 'Новый проект'}
       </h2>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-        <button style={{ flex: 1, padding: '10px 0', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={handleNewProject}>НОВЫЙ ПРОЕКТ</button>
-        <button
-          style={{
-            flex: 1,
-            padding: '10px 0',
-            borderRadius: 8,
-            background: !selectedProject || changedFields.size > 0 ? '#646cff' : '#ccc',
-            color: '#fff',
-            border: 'none',
-            fontWeight: 600,
-            fontSize: 16,
-            cursor: !selectedProject || changedFields.size > 0 ? 'pointer' : 'not-allowed',
-            opacity: !selectedProject || changedFields.size > 0 ? 1 : 0.7,
-          }}
-          disabled={!!selectedProject && changedFields.size === 0}
-          onClick={handleSaveProject}
-        >
-          СОХРАНИТЬ
-        </button>
-      </div>
-      {/* Статус только при редактировании, стилизован как остальные поля */}
-      {selectedProject && (
-        <>
-          <div className="form-group" style={{ marginBottom: 8 }}>
-            <select
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              className={status ? 'filled' : ''}
-              style={{ fontWeight: 500, fontSize: 16, background: changedFields.has('status') ? '#fffbe6' : undefined }}
-            >
-              <option value="" disabled hidden></option>
-              {STATUS_OPTIONS.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-            <label>Статус</label>
-          </div>
-          {/* Поле для ручного изменения итоговой цены */}
-          <div className="form-group" style={{ marginBottom: 8 }}>
-            <input
-              type="number"
-              value={manualPrice === undefined ? '' : manualPrice}
-              onChange={e => {
-                const val = e.target.value;
-                setManualPrice(val === '' ? undefined : Math.max(0, Math.floor(Number(val))));
-              }}
-              min={0}
-              step={1}
-              style={{
-                fontWeight: 500,
-                fontSize: 16,
-                background: selectedProject && manualPrice !== undefined && manualPrice !== selectedProject.price ? '#fffbe6' : undefined
-              }}
-              placeholder=""
-            />
-            <label>Изменить цену</label>
-          </div>
-        </>
-      )}
-      {/* Встраиваем CSS для плавающих лейблов */}
-      <style>{`
-        .form-group { position: relative; margin: 12px 0; width: 100%; max-width: 480px; }
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-          width: 100%;
-          box-sizing: border-box;
-          padding: 16px 12px 8px 12px;
-          font-size: 16px;
-          border: 1px solid #ccc;
-          border-radius: 8px;
-          background: #fff;
-          transition: border-color 0.2s;
-        }
-        .form-group select {
-          appearance: none;
-          -webkit-appearance: none;
-          -moz-appearance: none;
-          padding-right: 32px;
-          background: url('data:image/svg+xml;utf8,<svg fill="#646cff" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7.293 7.293a1 1 0 011.414 0L10 8.586l1.293-1.293a1 1 0 111.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z"/></svg>') no-repeat right 12px center, #fff;
-        }
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-          border-color: #646cff;
-          outline: none;
-        }
-        .form-group label {
-          position: absolute;
-          top: 50%;
-          left: 12px;
-          color: #888;
-          background: #fff;
-          padding: 0 4px;
-          font-size: 15px;
-          pointer-events: none;
-          transition: 0.2s ease all;
-          transform: translateY(-50%);
-        }
-        .form-group input:focus + label,
-        .form-group input:not(:placeholder-shown) + label,
-        .form-group textarea.filled + label,
-        .form-group textarea:focus + label {
-          top: -10px;
-          left: 8px;
-          font-size: 12px;
-          color: #888;
-          transform: none;
-        }
-        .form-group select.filled + label,
-        .form-group select:focus + label {
-          top: -10px;
-          left: 8px;
-          font-size: 12px;
-          color: #888;
-          transform: none;
-        }
-        /* Скрыть стрелки у размеров стекла */
-        .glass-size-input::-webkit-outer-spin-button,
-        .glass-size-input::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-        .glass-size-input {
-          -moz-appearance: textfield;
-        }
-      `}</style>
-      {saveStatus === 'success' && <div style={{ color: 'green', marginBottom: 8 }}>Проект успешно сохранён!</div>}
-      {saveStatus === 'error' && <div style={{ color: 'red', marginBottom: 8 }}>Ошибка при сохранении проекта</div>}
-      {errors.company && <div style={{ color: 'red', fontSize: 13, marginTop: 8 }}>{errors.company}</div>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0 }}>
+      <div className="form-fields" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0 }}>
         {/* Название проекта */}
         <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
           <input
@@ -1364,53 +1233,215 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             Установка
           </label>
         </div>
-        {/* Комментарий всегда последнее поле */}
-        <div className="form-group" style={{ width: '100%' }}>
+        {/* Комментарий */}
+        <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
           <textarea
             id="comment"
+            placeholder="Комментарий"
             value={comment}
-            onChange={e => {
-              setComment(e.target.value);
-              const rest = { ...errors };
-              delete rest.comment;
-              setErrors(rest);
-            }}
-            className={comment ? 'filled' : ''}
-            style={{ width: '100%', minHeight: 48, fontSize: 16, borderRadius: 8, border: '1px solid #ccc', padding: 12, marginBottom: 4, background: changedFields.has('comment') ? '#fffbe6' : undefined }}
+            onChange={e => setComment(e.target.value)}
+            style={{ width: '100%', minHeight: 48, resize: 'vertical', borderRadius: 8, border: '1px solid #ccc', padding: 8, fontSize: 15, marginTop: 8 }}
           />
-          <label htmlFor="comment">Комментарий</label>
         </div>
-        {/* История изменения статусов */}
-        {selectedProject && Array.isArray(selectedProject.statusHistory) && selectedProject.statusHistory.length > 0 && (
-          <div style={{ margin: '12px 0 0 0', padding: '12px 10px', background: '#f8f8f8', borderRadius: 8, border: '1px solid #e0e0e0' }}>
-            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>История статусов:</div>
-            {selectedProject.statusHistory && selectedProject.statusHistory.map((sh, idx) => (
-              <div key={idx} style={{ color: idx === (selectedProject.statusHistory?.length ?? 0) - 1 ? '#1976d2' : '#888', fontSize: 15, marginBottom: 2, fontWeight: idx === (selectedProject.statusHistory?.length ?? 0) - 1 ? 600 : 400 }}>
-                {sh.status} <span style={{ fontSize: 13, marginLeft: 8 }}>{new Date(sh.date).toLocaleString()}</span>
-                {idx === 0 && <span style={{ color: '#aaa', fontSize: 13 }}> (первоначальный)</span>}
-                {idx === (selectedProject.statusHistory?.length ?? 0) - 1 && <span style={{ color: '#1976d2', fontSize: 13 }}> (текущий)</span>}
-              </div>
-            ))}
-          </div>
-        )}
-        {showAddHardwareDialog && (
-          <AddHardwareDialog
-            hardwareList={hardwareList}
-            onSave={selected => {
-              setProjectHardware(list => [...list, ...selected]);
-              setShowAddHardwareDialog(false);
+        {/* Кнопки действий */}
+        <div className="form-actions" style={{ display: 'flex', gap: 16, margin: '12px 0 0 0' }}>
+          <button style={{ flex: 1, padding: '10px 0', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={handleNewProject}>НОВЫЙ ПРОЕКТ</button>
+          <button
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              borderRadius: 8,
+              background: !selectedProject || changedFields.size > 0 ? '#646cff' : '#ccc',
+              color: '#fff',
+              border: 'none',
+              fontWeight: 600,
+              fontSize: 16,
+              cursor: !selectedProject || changedFields.size > 0 ? 'pointer' : 'not-allowed',
+              opacity: !selectedProject || changedFields.size > 0 ? 1 : 0.7,
             }}
-            onClose={() => setShowAddHardwareDialog(false)}
-            projectHardware={projectHardware}
-          />
-        )}
-        {/* Сообщение о незаполненных полях стекла */}
-        {hasEmptyGlassField && (
-          <div style={{ color: 'red', fontWeight: 600, marginBottom: 8 }}>
-            Заполните все поля стекла
-          </div>
-        )}
+            disabled={!!selectedProject && changedFields.size === 0}
+            onClick={handleSaveProject}
+          >
+            СОХРАНИТЬ
+          </button>
+        </div>
       </div>
+      {/* Статус только при редактировании, стилизован как остальные поля */}
+      {selectedProject && (
+        <>
+          <div className="form-group" style={{ marginBottom: 8 }}>
+            <select
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+              className={status ? 'filled' : ''}
+              style={{ fontWeight: 500, fontSize: 16, background: changedFields.has('status') ? '#fffbe6' : undefined }}
+            >
+              <option value="" disabled hidden></option>
+              {STATUS_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            <label>Статус</label>
+          </div>
+          {/* Поле для ручного изменения итоговой цены */}
+          <div className="form-group" style={{ marginBottom: 8 }}>
+            <input
+              type="number"
+              value={manualPrice === undefined ? '' : manualPrice}
+              onChange={e => {
+                const val = e.target.value;
+                setManualPrice(val === '' ? undefined : Math.max(0, Math.floor(Number(val))));
+              }}
+              min={0}
+              step={1}
+              style={{
+                fontWeight: 500,
+                fontSize: 16,
+                background: selectedProject && manualPrice !== undefined && manualPrice !== selectedProject.price ? '#fffbe6' : undefined
+              }}
+              placeholder=""
+            />
+            <label>Изменить цену</label>
+          </div>
+        </>
+      )}
+      {/* История изменения статусов */}
+      {selectedProject && Array.isArray(selectedProject.statusHistory) && selectedProject.statusHistory.length > 0 && (
+        <div style={{ margin: '12px 0 0 0', padding: '12px 10px', background: '#f8f8f8', borderRadius: 8, border: '1px solid #e0e0e0' }}>
+          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>История статусов:</div>
+          {selectedProject.statusHistory && selectedProject.statusHistory.map((sh, idx) => (
+            <div key={idx} style={{ color: idx === (selectedProject.statusHistory?.length ?? 0) - 1 ? '#1976d2' : '#888', fontSize: 15, marginBottom: 2, fontWeight: idx === (selectedProject.statusHistory?.length ?? 0) - 1 ? 600 : 400 }}>
+              {sh.status} <span style={{ fontSize: 13, marginLeft: 8 }}>{new Date(sh.date).toLocaleString()}</span>
+              {idx === 0 && <span style={{ color: '#aaa', fontSize: 13 }}> (первоначальный)</span>}
+              {idx === (selectedProject.statusHistory?.length ?? 0) - 1 && <span style={{ color: '#1976d2', fontSize: 13 }}> (текущий)</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {showAddHardwareDialog && (
+        <AddHardwareDialog
+          hardwareList={hardwareList}
+          onSave={selected => {
+            setProjectHardware(list => [...list, ...selected]);
+            setShowAddHardwareDialog(false);
+          }}
+          onClose={() => setShowAddHardwareDialog(false)}
+          projectHardware={projectHardware}
+        />
+      )}
+      {/* Сообщение о незаполненных полях стекла */}
+      {hasEmptyGlassField && (
+        <div style={{ color: 'red', fontWeight: 600, marginBottom: 8 }}>
+          Заполните все поля стекла
+        </div>
+      )}
+      <style>{`
+        .calculator-form-root {
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 1px 4px #0001;
+          padding: 24px;
+          width: 100%;
+          max-width: 480px;
+          margin: 0 auto;
+          box-sizing: border-box;
+        }
+        .calculator-form-root .form-group,
+        .calculator-form-root input,
+        .calculator-form-root select,
+        .calculator-form-root textarea {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+        @media (max-width: 600px) {
+          .calculator-form-root {
+            padding: 8px !important;
+            max-width: 100% !important;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+          }
+          .form-actions {
+            order: 99;
+            margin-top: 12px !important;
+            margin-bottom: 0 !important;
+          }
+        }
+        .form-group { position: relative; margin: 12px 0; width: 100%; max-width: 480px; }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 16px 12px 8px 12px;
+          font-size: 16px;
+          border: 1px solid #ccc;
+          border-radius: 8px;
+          background: #fff;
+          transition: border-color 0.2s;
+        }
+        .form-group select {
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          padding-right: 32px;
+          background: url('data:image/svg+xml;utf8,<svg fill="#646cff" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7.293 7.293a1 1 0 011.414 0L10 8.586l1.293-1.293a1 1 0 111.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z"/></svg>') no-repeat right 12px center, #fff;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+          border-color: #646cff;
+          outline: none;
+        }
+        .form-group label {
+          position: absolute;
+          top: 50%;
+          left: 12px;
+          color: #888;
+          background: #fff;
+          padding: 0 4px;
+          font-size: 15px;
+          pointer-events: none;
+          transition: 0.2s ease all;
+          transform: translateY(-50%);
+        }
+        .form-group input:focus + label,
+        .form-group input:not(:placeholder-shown) + label,
+        .form-group textarea.filled + label,
+        .form-group textarea:focus + label {
+          top: -10px;
+          left: 8px;
+          font-size: 12px;
+          color: #888;
+          transform: none;
+        }
+        .form-group select.filled + label,
+        .form-group select:focus + label {
+          top: -10px;
+          left: 8px;
+          font-size: 12px;
+          color: #888;
+          transform: none;
+        }
+        /* Скрыть стрелки у размеров стекла */
+        .glass-size-input::-webkit-outer-spin-button,
+        .glass-size-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .glass-size-input {
+          -moz-appearance: textfield;
+        }
+        .calculator-form-root h2 {
+          margin: 0 0 12px 0 !important;
+        }
+        .form-actions {
+          margin-top: 12px !important;
+        }
+      `}</style>
+      {saveStatus === 'success' && <div style={{ color: 'green', marginBottom: 8 }}>Проект успешно сохранён!</div>}
+      {saveStatus === 'error' && <div style={{ color: 'red', marginBottom: 8 }}>Ошибка при сохранении проекта</div>}
+      {errors.company && <div style={{ color: 'red', fontSize: 13, marginTop: 8 }}>{errors.company}</div>}
     </div>
   );
 };

@@ -12,10 +12,11 @@ interface CompaniesTabProps {
   user: User;
   fetchWithAuth: (input: RequestInfo, init?: RequestInit, retry?: boolean) => Promise<Response>;
   onLogout: () => void;
+  showAddCompany?: boolean;
+  setShowAddCompany?: (show: boolean) => void;
 }
 
-const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyId, setSelectedCompanyId, setCompanies, user, fetchWithAuth, onLogout }) => {
-  const [showAddCompany, setShowAddCompany] = useState(false);
+const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyId, setSelectedCompanyId, setCompanies, user, fetchWithAuth, onLogout, showAddCompany, setShowAddCompany }) => {
   const [companyForm, setCompanyForm] = useState({ name: '', city: '', ownerName: '', ownerContact: '' });
   const [companyNameError, setCompanyNameError] = useState('');
   const [editCompanyId, setEditCompanyId] = useState<string | null>(null);
@@ -46,7 +47,7 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
     });
     const data = await res.json();
     handleApiError(data);
-    setShowAddCompany(false);
+    setShowAddCompany && setShowAddCompany(false);
     setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
     setCompanyNameError('');
     const companiesRes = await fetchWithAuth('/api/companies');
@@ -79,10 +80,29 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
 
   const handleDeleteCompany = async (id: string) => {
     if (!window.confirm('Удалить компанию?')) return;
+
     const res = await fetchWithAuth(`/api/companies/${id}`, { method: 'DELETE' });
     const data = await res.json();
     handleApiError(data);
-    // После удаления можно обновить список компаний через fetchWithAuth, если нужно
+
+    // После удаления: обновляем список компаний
+    const companiesRes = await fetchWithAuth('/api/companies');
+    const companiesList = await companiesRes.json();
+    if (Array.isArray(companiesList)) {
+      setCompanies(companiesList);
+
+      // если удалена текущая выбранная компания, сбрасываем выбранную
+      if (selectedCompanyId === id) {
+        if (companiesList.length > 0) {
+          setSelectedCompanyId(companiesList[0]._id);
+        } else {
+          setSelectedCompanyId('');
+        }
+      }
+    }
+
+    // Гарантируем возврат на вкладку Компании
+    if (window.adminSetSection) window.adminSetSection('companies');
   };
 
   return (
@@ -91,17 +111,17 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
         <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>
           Компании
         </h2>
-        {user.role === 'superadmin' && (
-          <button onClick={() => setShowAddCompany(true)} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
+        {user.role === 'superadmin' && companies.length > 0 && (
+          <button onClick={() => setShowAddCompany && setShowAddCompany(true)} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
           Добавить
         </button>
         )}
       </div>
-      <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
-        <>
-        {displayCompanies.length === 0 ? (
+      <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {displayCompanies.length === 0 && user.role !== 'superadmin' && (
           <div style={{ color: '#888' }}>Нет компаний</div>
-        ) : (
+        )}
+        {displayCompanies.length > 0 && (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f6f8ff' }}>
@@ -132,71 +152,70 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
             </tbody>
           </table>
         )}
-          <ModalForm
-            isOpen={showAddCompany}
-            title="Добавить компанию"
-            fields={[
-              {
-                name: 'name',
-                label: 'Название компании',
-                type: 'text',
-                required: true,
-                value: companyForm.name,
-                onChange: v => {
-                  setCompanyForm(f => ({ ...f, name: String(v) }));
-                  setCompanyNameError('');
-                },
+        <ModalForm
+          isOpen={!!showAddCompany}
+          title="Добавить компанию"
+          fields={[
+            {
+              name: 'name',
+              label: 'Название компании',
+              type: 'text',
+              required: true,
+              value: companyForm.name,
+              onChange: v => {
+                setCompanyForm(f => ({ ...f, name: String(v) }));
+                setCompanyNameError('');
               },
-              { name: 'city', label: 'Город', type: 'text', value: companyForm.city, onChange: v => setCompanyForm(f => ({ ...f, city: String(v) })) },
-              { name: 'ownerName', label: 'Имя владельца', type: 'text', value: companyForm.ownerName, onChange: v => setCompanyForm(f => ({ ...f, ownerName: String(v) })) },
-              { name: 'ownerContact', label: 'Контакт владельца', type: 'text', value: companyForm.ownerContact, onChange: v => setCompanyForm(f => ({ ...f, ownerContact: String(v) })) },
-            ]}
-            companyNameError={companyNameError}
-            onSubmit={handleAddCompany}
-            onCancel={() => {
-              setShowAddCompany(false);
-              setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-              setCompanyNameError('');
-            }}
-            submitText="Добавить"
-          />
-          <ModalForm
-            isOpen={showEditCompany}
-            title="Редактировать компанию"
-            fields={[
-              {
-                name: 'name',
-                label: 'Название компании',
-                type: 'text',
-                required: true,
-                value: companyForm.name,
-                onChange: v => setCompanyForm(f => ({ ...f, name: String(v) })),
-              },
-              { name: 'city', label: 'Город', type: 'text', value: companyForm.city, onChange: v => setCompanyForm(f => ({ ...f, city: String(v) })) },
-              { name: 'ownerName', label: 'Имя владельца', type: 'text', value: companyForm.ownerName, onChange: v => setCompanyForm(f => ({ ...f, ownerName: String(v) })) },
-              { name: 'ownerContact', label: 'Контакт владельца', type: 'text', value: companyForm.ownerContact, onChange: v => setCompanyForm(f => ({ ...f, ownerContact: String(v) })) },
-            ]}
-            onSubmit={async () => {
-              if (!editCompanyId) return;
-              const res = await fetchWithAuth(`/api/companies/${editCompanyId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(companyForm),
-              });
-              const data = await res.json();
-              handleApiError(data);
-              setShowEditCompany(false);
-              setEditCompanyId(null);
-              setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-            }}
-            onCancel={() => {
-              setShowEditCompany(false);
-              setEditCompanyId(null);
-              setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
-            }}
-            submitText="Сохранить"
-          />
-        </>
+            },
+            { name: 'city', label: 'Город', type: 'text', value: companyForm.city, onChange: v => setCompanyForm(f => ({ ...f, city: String(v) })) },
+            { name: 'ownerName', label: 'Имя владельца', type: 'text', value: companyForm.ownerName, onChange: v => setCompanyForm(f => ({ ...f, ownerName: String(v) })) },
+            { name: 'ownerContact', label: 'Контакт владельца', type: 'text', value: companyForm.ownerContact, onChange: v => setCompanyForm(f => ({ ...f, ownerContact: String(v) })) },
+          ]}
+          companyNameError={companyNameError}
+          onSubmit={handleAddCompany}
+          onCancel={() => {
+            setShowAddCompany && setShowAddCompany(false);
+            setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
+            setCompanyNameError('');
+          }}
+          submitText="Добавить"
+        />
+        <ModalForm
+          isOpen={showEditCompany}
+          title="Редактировать компанию"
+          fields={[
+            {
+              name: 'name',
+              label: 'Название компании',
+              type: 'text',
+              required: true,
+              value: companyForm.name,
+              onChange: v => setCompanyForm(f => ({ ...f, name: String(v) })),
+            },
+            { name: 'city', label: 'Город', type: 'text', value: companyForm.city, onChange: v => setCompanyForm(f => ({ ...f, city: String(v) })) },
+            { name: 'ownerName', label: 'Имя владельца', type: 'text', value: companyForm.ownerName, onChange: v => setCompanyForm(f => ({ ...f, ownerName: String(v) })) },
+            { name: 'ownerContact', label: 'Контакт владельца', type: 'text', value: companyForm.ownerContact, onChange: v => setCompanyForm(f => ({ ...f, ownerContact: String(v) })) },
+          ]}
+          onSubmit={async () => {
+            if (!editCompanyId) return;
+            const res = await fetchWithAuth(`/api/companies/${editCompanyId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(companyForm),
+            });
+            const data = await res.json();
+            handleApiError(data);
+            setShowEditCompany(false);
+            setEditCompanyId(null);
+            setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
+          }}
+          onCancel={() => {
+            setShowEditCompany(false);
+            setEditCompanyId(null);
+            setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
+          }}
+          submitText="Сохранить"
+        />
       </div>
     </div>
   );
