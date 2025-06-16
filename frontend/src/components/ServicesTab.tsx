@@ -32,14 +32,11 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
   companies,
 }) => {
   const [editMode, setEditMode] = useState(false);
-  const [addName, setAddName] = useState('');
-  const [addPrice, setAddPrice] = useState<number | ''>('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [editList, setEditList] = useState<ServiceItem[]>([]);
   const [originalList, setOriginalList] = useState<ServiceItem[]>([]);
   const [error, setError] = useState('');
-  const [addError, setAddError] = useState('');
 
   const companyName = selectedCompanyId === 'all'
     ? 'Все компании'
@@ -53,8 +50,15 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
     fetch(`${API_URL}/services?companyId=${companyId}`)
       .then(res => res.json())
       .then(data => {
-        setEditList(Array.isArray(data) ? data : []);
-        setOriginalList(Array.isArray(data) ? data : []);
+        // Преобразуем услуги: добавляем serviceId = name
+        const withId: ServiceItem[] = (Array.isArray(data) ? data : []).map((s) => ({
+          name: s.name,
+          price: s.price,
+          type: s.type,
+          serviceId: s.serviceId || s.name
+        }));
+        setEditList(withId);
+        setOriginalList(withId);
         setLoading(false);
       })
       .catch(() => {
@@ -65,22 +69,6 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
   }, [selectedCompanyId, company?._id]);
 
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
-
-  const handleAdd = () => {
-    if (!addName.trim()) return;
-    const exists = editList.some(s => s.name.trim().toLowerCase() === addName.trim().toLowerCase());
-    if (exists) {
-      setAddError('Услуга с таким названием уже существует');
-      return;
-    }
-    setEditList(prev => ([
-      ...prev,
-      { name: addName.trim(), price: addPrice === '' || addPrice == null ? null : Number(addPrice) }
-    ]));
-    setAddName('');
-    setAddPrice('');
-    setAddError('');
-  };
 
   const handleDeleteItem = (idx: number) => {
     setEditList(list => list.filter((_, i) => i !== idx));
@@ -191,37 +179,6 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
           </div>
         );
       })}
-      {editMode && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-            <input
-              type="text"
-              placeholder="Название услуги"
-              value={addName}
-              onChange={e => { setAddName(e.target.value); setAddError(''); }}
-              style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, flex: 2, background: '#fff', boxSizing: 'border-box' }}
-            />
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Цена"
-              value={addPrice}
-              onChange={e => setAddPrice(e.target.value === '' ? '' : Number(e.target.value))}
-              style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, width: 140, marginTop: 2, background: '#fff', boxSizing: 'border-box' }}
-            />
-            <button
-              type="button"
-              onClick={handleAdd}
-              style={{ padding: '8px 16px', borderRadius: 8, background: addName.trim() ? '#646cff' : '#bbb', color: '#fff', border: 'none', fontWeight: 500, fontSize: 15, cursor: addName.trim() ? 'pointer' : 'not-allowed' }}
-              disabled={!addName.trim()}
-            >
-              Добавить
-            </button>
-          </div>
-          {addError && <div style={{ color: 'crimson', marginTop: 4 }}>{addError}</div>}
-        </>
-      )}
       <style>{`
         @media (max-width: 600px) {
           .services-tab-root {

@@ -6,7 +6,7 @@ import type { User } from '../types/User';
 import type { DraftProjectData } from './CalculationDetails';
 import type { Project } from './ProjectHistory';
 import { API_URL as BASE_API_URL } from '../utils/api';
-const API_URL = `${BASE_API_URL}/api`;
+import AddServiceDialog, { type ServiceItem as DialogServiceItem } from './AddServiceDialog';
 
 const HARDWARE_COLORS = [
   { value: '', label: '' },
@@ -76,6 +76,9 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const [uniqueGlassErrors, setUniqueGlassErrors] = useState<{ [idx: number]: { [field: string]: string } }>({});
   const [dismantling, setDismantling] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showAddServiceDialog, setShowAddServiceDialog] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<DialogServiceItem[]>([]);
+  const [serviceList, setServiceList] = useState<DialogServiceItem[]>([]);
   // resolvedCompanyId больше не нужен, используем selectedCompanyId
   const effectiveCompanyId = user?.role === 'superadmin' ? selectedCompanyId : (companyId || localStorage.getItem('companyId') || '');
 
@@ -129,9 +132,9 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     const fetchAll = async () => {
       try {
         const [, glassRes, hardwareRes] = await Promise.all([
-          fetch(`${API_URL}/settings?companyId=${effectiveCompanyId}`),
-          fetch(`${API_URL}/glass?companyId=${effectiveCompanyId}`),
-          fetch(`${API_URL}/hardware?companyId=${effectiveCompanyId}`),
+          fetch(`${BASE_API_URL}/api/settings?companyId=${effectiveCompanyId}`),
+          fetch(`${BASE_API_URL}/api/glass?companyId=${effectiveCompanyId}`),
+          fetch(`${BASE_API_URL}/api/hardware?companyId=${effectiveCompanyId}`),
         ]);
         const [glassListData, hardwareListData] = await Promise.all([
           glassRes.json(),
@@ -149,6 +152,22 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       }
     };
     fetchAll();
+  }, [effectiveCompanyId]);
+
+  // Получение списка услуг для компании
+  useEffect(() => {
+    if (!effectiveCompanyId) return;
+    fetch(`${BASE_API_URL}/api/services?companyId=${effectiveCompanyId}`)
+      .then(res => res.json())
+      .then(data => {
+        const list: DialogServiceItem[] = (Array.isArray(data) ? data : []).map((s: { serviceId?: string; name: string; price: number }) => ({
+          serviceId: s.serviceId || s.name,
+          name: s.name,
+          price: s.price
+        }));
+        setServiceList(list);
+      })
+      .catch(() => setServiceList([]));
   }, [effectiveCompanyId]);
 
   // Хелпер для обновления draft
@@ -175,9 +194,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         doorWidth,
         exactHeight,
         uniqueGlasses: draftConfig === 'unique' ? uniqueGlasses : undefined,
+        projectServices: selectedServices,
       });
     }
-  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, dismantling, projectHardware, showGlassSizes, stationarySize, doorSize, stationaryWidth, doorWidth, exactHeight, uniqueGlasses]);
+  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, dismantling, projectHardware, showGlassSizes, stationarySize, doorSize, stationaryWidth, doorWidth, exactHeight, uniqueGlasses, selectedServices]);
 
   // useEffect для синхронизации draft
   React.useEffect(() => {
@@ -245,10 +265,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   // 2. При смене конфигурации — сброс всех полей, кроме projectName
   const handleConfigChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
-    resetAllFields(true); // сохраняем projectName
     setConfig(value);
     setDraftConfig(value);
-
+    setChangedFields(fields => new Set(fields).add('config'));
+    // Дефолтная фурнитура для каждой конфигурации
     if (value === 'glass') {
       setProjectHardware([
         { hardwareId: '', name: 'Профиль', quantity: 1 },
@@ -270,8 +290,9 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         { hardwareId: '', name: 'уголок турба-труба прямоугольное', quantity: 1 },
         { hardwareId: '', name: 'Уплотнитель F', quantity: 4 }
       ]);
+    } else {
+      setProjectHardware([]);
     }
-    setUniqueGlassErrors({});
   };
 
   // 3. При смене опции 'размеры проёма/размеры стекла' — сброс всех размеров
@@ -324,9 +345,11 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const handleNewProject = () => {
     resetAllFields();
     setGlassColor(glassColors[0] || '');
+    setSelectedServices([]);
     if (onChangeDraft) onChangeDraft({});
     if (onNewProject) onNewProject();
     setExactHeight(false);
+    setProjectHardware([]); // Сбросить фурнитуру при новом проекте
   };
 
   // Валидация формы
@@ -418,6 +441,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         doorWidth,
         exactHeight,
         uniqueGlasses: config === 'unique' ? uniqueGlasses : undefined,
+        projectServices: selectedServices,
       },
       companyId: effectiveCompanyId,
       status,
@@ -431,7 +455,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     try {
       if (selectedProject && selectedProject._id) {
         // Редактирование: PUT
-        res = await fetch(`${API_URL}/projects/${selectedProject._id}`, {
+        res = await fetch(`${BASE_API_URL}/api/projects/${selectedProject._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(projectData),
@@ -441,6 +465,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         if (typeof onNewProject === 'function') onNewProject(savedProject);
         // Сбросить все поля к дефолтным значениям, как при создании нового проекта
         resetAllFields();
+        setSelectedServices([]);
         setSaveStatus('success');
         setChangedFields(new Set());
         if (savedProject) {
@@ -477,7 +502,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         }
       } else {
         // Новый проект: POST
-        res = await fetch(`${API_URL}/projects`, {
+        res = await fetch(`${BASE_API_URL}/api/projects`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(projectData),
@@ -485,7 +510,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         if (!res.ok) throw new Error('Ошибка при сохранении проекта');
         savedProject = await res.json();
         if (typeof onNewProject === 'function') onNewProject(savedProject);
-        resetAllFields(); // Только для нового проекта
+        resetAllFields();
+        setSelectedServices([]);
         setSaveStatus('success');
       }
     } catch (e) {
@@ -498,6 +524,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     resetAllFields();
     setSaveStatus('success');
     setChangedFields(new Set());
+    setProjectHardware([]); // Сбросить фурнитуру после сохранения
   };
 
   const handleAddGlass = () => {
@@ -1282,21 +1309,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           </div>
         </>
       )}
-      {/* Чекбоксы "Доставка" и "Установка" всегда перед комментарием */}
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', margin: '32px 0 0 0' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, background: changedFields.has('delivery') ? '#fffbe6' : undefined, borderRadius: 4, padding: '2px 4px' }}>
-          <input type="checkbox" checked={delivery} onChange={e => setDelivery(e.target.checked)} />
-          Доставка
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, background: changedFields.has('installation') ? '#fffbe6' : undefined, borderRadius: 4, padding: '2px 4px' }}>
-          <input type="checkbox" checked={installation} onChange={e => setInstallation(e.target.checked)} />
-          Монтаж
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, background: changedFields.has('dismantling') ? '#fffbe6' : undefined, borderRadius: 4, padding: '2px 4px' }}>
-          <input type="checkbox" checked={dismantling} onChange={e => setDismantling(e.target.checked)} />
-          Демонтаж
-        </label>
-      </div>
       {/* Комментарий */}
       <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
         <textarea
@@ -1307,6 +1319,68 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           style={{ width: '100%', minHeight: 48, resize: 'vertical', borderRadius: 8, border: '1px solid #ccc', padding: 8, fontSize: 15, marginTop: 8 }}
         />
       </div>
+      {config && (
+        <button
+          type="button"
+          style={{
+            padding: '10px 12px',
+            borderRadius: 8,
+            background: '#fff',
+            color: '#646cff',
+            border: '2px solid #646cff',
+            fontWeight: 600,
+            fontSize: 16,
+            cursor: showAddServiceDialog ? 'not-allowed' : 'pointer',
+            marginTop: 12,
+            width: '100%',
+            opacity: showAddServiceDialog ? 0.5 : 1,
+          }}
+          onClick={() => setShowAddServiceDialog(true)}
+          disabled={showAddServiceDialog}
+        >
+          ДОБАВИТЬ УСЛУГУ
+        </button>
+      )}
+      {showAddServiceDialog && (
+        <AddServiceDialog
+          serviceList={serviceList}
+          projectServices={selectedServices}
+          onSave={selected => { setSelectedServices(selected); setShowAddServiceDialog(false); }}
+          onClose={() => setShowAddServiceDialog(false)}
+        />
+      )}
+      {selectedServices.length > 0 && (
+        <div style={{ marginTop: 12, marginBottom: 8 }}>
+          {selectedServices.map((service, idx) => (
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
+              <span style={{ flex: 1, minWidth: 0 }}>{service.name}</span>
+              <button
+                onClick={() => setSelectedServices(list => list.filter((_, i) => i !== idx))}
+                style={{
+                  width: 32,
+                  height: 32,
+                  border: 'none',
+                  borderRadius: '50%',
+                  background: 'none',
+                  color: '#e53935',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 22,
+                  transition: 'color 0.15s',
+                  margin: 0,
+                }}
+                title="Удалить"
+                onMouseOver={e => (e.currentTarget.style.color = '#b71c1c')}
+                onMouseOut={e => (e.currentTarget.style.color = '#e53935')}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       {/* Кнопки действий */}
       <div className="form-actions" style={{ display: 'flex', gap: 16, margin: '12px 0 0 0' }}>
         <button style={{ flex: 1, padding: '10px 0', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={handleNewProject}>НОВЫЙ ПРОЕКТ</button>

@@ -32,6 +32,7 @@ interface DraftProjectData {
   stationaryWidth?: string;
   doorWidth?: string;
   uniqueGlasses?: Array<{ name: string; color: string; thickness: string; width: string; height: string }>;
+  projectServices?: { name: string; price: number }[];
 }
 
 interface Settings {
@@ -85,7 +86,6 @@ const API_URL = `${BASE_API_URL}/api`;
 const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyId, onTotalChange, exactHeight, onExactHeightChange }) => {
   console.log('draft:', draft);
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [services, setServices] = useState<{ name: string; price: number }[]>([]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -116,11 +116,9 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         } else {
           setSettings(null);
         }
-        setServices(Array.isArray(servicesList) ? servicesList : []);
       } catch (e) {
         console.error('Ошибка загрузки настроек:', e);
         setSettings(null);
-        setServices([]);
       }
     };
 
@@ -311,7 +309,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           });
         }
         // 3. Доставка
-        const deliveryService = services.find(s => s.name.toLowerCase().includes('доставка'));
+        const deliveryService = servicesList.find(s => s.name.toLowerCase().includes('доставка'));
         if (deliveryService) deliveryPrice = deliveryService.price;
         else if (settings?.baseCosts) {
           const deliveryCost = settings.baseCosts.find(b => b.id === 'delivery' || b.name.toLowerCase().includes('доставка'));
@@ -327,7 +325,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           total += deliveryPrice;
         }
         // 4. Монтаж
-        const installService = services.find(
+        const installService = servicesList.find(
           s => s.name.trim().toLowerCase() === 'монтаж' || s.name.trim().toLowerCase() === 'установка'
         );
         if (installService) installPrice = installService.price;
@@ -345,7 +343,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           total += installPrice;
         }
         // 4.1 Демонтаж
-        const dismantleService = services.find(s => s.name.trim().toLowerCase() === 'демонтаж');
+        const dismantleService = servicesList.find(s => s.name.trim().toLowerCase() === 'демонтаж');
         let dismantlePrice = 0;
         if (dismantleService) dismantlePrice = dismantleService.price;
         if (typeof draft.dismantling === 'boolean' && draft.dismantling && dismantlePrice) {
@@ -416,6 +414,17 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           total: foundPrice ? totalHw : 0,
         });
         if (foundPrice) total += totalHw;
+      });
+    }
+    // После расчёта позиций (positions) и total, добавляю:
+    if (draft.projectServices && Array.isArray(draft.projectServices)) {
+      draft.projectServices.forEach(service => {
+        positions.push({
+          label: service.name,
+          price: service.price,
+          total: service.price,
+        });
+        total += service.price;
       });
     }
   }

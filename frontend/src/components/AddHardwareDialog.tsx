@@ -279,13 +279,40 @@ const AddHardwareDialog: React.FC<AddHardwareDialogProps> = ({ hardwareList, onS
           >Добавить</button>
         </div>
         {/* Кнопки управления */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #ccc', background: '#f5f5f5', cursor: 'pointer' }}>Закрыть</button>
+        <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
           <button
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              borderRadius: 8,
+              background: '#eee',
+              color: '#333',
+              border: 'none',
+              fontWeight: 600,
+              fontSize: 16,
+              cursor: 'pointer'
+            }}
+          >Отмена</button>
+          <button
+            type="button"
             onClick={() => onSave(selected)}
             disabled={selected.length === 0}
-            style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: selected.length > 0 ? '#646cff' : '#ccc', color: '#fff', fontWeight: 600, cursor: selected.length > 0 ? 'pointer' : 'not-allowed' }}
-          >Сохранить</button>
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              borderRadius: 8,
+              background: selected.length > 0 ? '#646cff' : '#ccc',
+              color: '#fff',
+              border: 'none',
+              fontWeight: 600,
+              fontSize: 16,
+              cursor: selected.length > 0 ? 'pointer' : 'not-allowed',
+              marginLeft: 0
+            }}
+          >
+            Сохранить
+          </button>
         </div>
       </div>
     </div>
