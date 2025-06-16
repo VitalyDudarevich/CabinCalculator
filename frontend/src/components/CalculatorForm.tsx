@@ -71,7 +71,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const [doorWidth, setDoorWidth] = useState('');
   const [exactHeight, setExactHeight] = useState(false);
   const [uniqueGlasses, setUniqueGlasses] = useState([
-    { name: 'Стекло 1', color: glassColors[0] || '', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
+    { name: 'Стекло 1', color: 'прозрачный', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
   ]);
   const [uniqueGlassErrors, setUniqueGlassErrors] = useState<{ [idx: number]: { [field: string]: string } }>({});
   const [dismantling, setDismantling] = useState(false);
@@ -107,7 +107,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         setUniqueGlasses(selectedProject.data.uniqueGlasses);
       } else {
         setUniqueGlasses([
-          { name: 'Стекло 1', color: glassColors[0] || '', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
+          { name: 'Стекло 1', color: 'прозрачный', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
         ]);
       }
       setUniqueGlassErrors({});
@@ -256,7 +256,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setChangedFields(new Set());
     setExactHeight(false);
     setUniqueGlasses([
-      { name: 'Стекло 1', color: glassColors[0] || '', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
+      { name: 'Стекло 1', color: 'прозрачный', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
     ]);
     setUniqueGlassErrors({});
     setDismantling(false);
@@ -268,6 +268,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setConfig(value);
     setDraftConfig(value);
     setChangedFields(fields => new Set(fields).add('config'));
+    setSelectedServices([]);
     // Дефолтная фурнитура для каждой конфигурации
     if (value === 'glass') {
       setProjectHardware([
@@ -345,7 +346,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const handleNewProject = () => {
     resetAllFields();
     setGlassColor(glassColors[0] || '');
-    setSelectedServices([]);
     if (onChangeDraft) onChangeDraft({});
     if (onNewProject) onNewProject();
     setExactHeight(false);
@@ -495,7 +495,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             setUniqueGlasses(savedProject.data.uniqueGlasses);
           } else {
             setUniqueGlasses([
-              { name: 'Стекло 1', color: glassColors[0] || '', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
+              { name: 'Стекло 1', color: 'прозрачный', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
             ]);
           }
           setUniqueGlassErrors({});
@@ -531,7 +531,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     if (uniqueGlasses.length < 10) {
       setUniqueGlasses(list => [...list, {
         name: `Стекло ${list.length + 1}`,
-        color: glassColors[0] || '',
+        color: 'прозрачный',
         thickness: GLASS_THICKNESS[0]?.value || '',
         width: '',
         height: ''
@@ -1309,16 +1309,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           </div>
         </>
       )}
-      {/* Комментарий */}
-      <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
-        <textarea
-          id="comment"
-          placeholder="Комментарий"
-          value={comment}
-          onChange={e => setComment(e.target.value)}
-          style={{ width: '100%', minHeight: 48, resize: 'vertical', borderRadius: 8, border: '1px solid #ccc', padding: 8, fontSize: 15, marginTop: 8 }}
-        />
-      </div>
       {config && (
         <button
           type="button"
@@ -1381,6 +1371,16 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           ))}
         </div>
       )}
+      {/* Комментарий */}
+      <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
+        <textarea
+          id="comment"
+          placeholder="Комментарий"
+          value={comment}
+          onChange={e => setComment(e.target.value)}
+          style={{ width: '105%', minHeight: 60, resize: 'vertical', borderRadius: 8, border: '1px solid #ccc', padding: 8, fontSize: 15, marginTop: 8 }}
+        />
+      </div>
       {/* Кнопки действий */}
       <div className="form-actions" style={{ display: 'flex', gap: 16, margin: '12px 0 0 0' }}>
         <button style={{ flex: 1, padding: '10px 0', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={handleNewProject}>НОВЫЙ ПРОЕКТ</button>
