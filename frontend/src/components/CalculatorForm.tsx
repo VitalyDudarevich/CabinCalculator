@@ -75,6 +75,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   ]);
   const [uniqueGlassErrors, setUniqueGlassErrors] = useState<{ [idx: number]: { [field: string]: string } }>({});
   const [dismantling, setDismantling] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   // resolvedCompanyId больше не нужен, используем selectedCompanyId
   const effectiveCompanyId = user?.role === 'superadmin' ? selectedCompanyId : (companyId || localStorage.getItem('companyId') || '');
 
@@ -380,6 +381,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   };
 
   const handleSaveProject = async () => {
+    setIsSubmitted(true);
     if (!validateForm()) return;
     setSaveStatus('idle');
     setErrors({});
@@ -529,9 +531,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       return newErrs;
     });
   };
-
-  // Проверка на незаполненные поля хотя бы в одном стекле
-  const hasEmptyGlassField = draftConfig === 'unique' && uniqueGlasses.some(g => !g.name || !g.color || !g.thickness || !g.width || !g.height);
 
   return (
     <div className="calculator-form-root" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
@@ -1238,11 +1237,11 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                   <label htmlFor={`glass-height-${idx}`}>Высота (мм)</label>
                 </div>
               </div>
-              {uniqueGlassErrors[idx]?.name && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].name}</div>}
-              {uniqueGlassErrors[idx]?.color && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].color}</div>}
-              {uniqueGlassErrors[idx]?.thickness && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].thickness}</div>}
-              {uniqueGlassErrors[idx]?.width && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].width}</div>}
-              {uniqueGlassErrors[idx]?.height && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].height}</div>}
+              {isSubmitted && uniqueGlassErrors[idx]?.name && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].name}</div>}
+              {isSubmitted && uniqueGlassErrors[idx]?.color && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].color}</div>}
+              {isSubmitted && uniqueGlassErrors[idx]?.thickness && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].thickness}</div>}
+              {isSubmitted && uniqueGlassErrors[idx]?.width && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].width}</div>}
+              {isSubmitted && uniqueGlassErrors[idx]?.height && <div style={{ color: 'red', fontSize: 13 }}>{uniqueGlassErrors[idx].height}</div>}
             </div>
           ))}
           <button
@@ -1356,12 +1355,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           onClose={() => setShowAddHardwareDialog(false)}
           projectHardware={projectHardware}
         />
-      )}
-      {/* Сообщение о незаполненных полях стекла */}
-      {hasEmptyGlassField && (
-        <div style={{ color: 'red', fontWeight: 600, marginBottom: 8 }}>
-          Заполните все поля стекла
-        </div>
       )}
       <style>{`
         .calculator-form-root {

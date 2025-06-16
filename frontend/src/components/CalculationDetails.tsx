@@ -146,13 +146,15 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   if (settings && draft && draft.config) {
     // --- Уникальная конфигурация: расчет по каждому стеклу ---
     if (draft.config === 'unique' && Array.isArray(draft.uniqueGlasses) && draft.uniqueGlasses.length > 0) {
+      let totalArea = 0;
+      let totalPrice = 0;
       draft.uniqueGlasses.forEach(glass => {
         const width = Number(glass.width);
         const height = Number(glass.height);
         const area = !isNaN(width) && !isNaN(height) ? +(width * height / 1000000).toFixed(2) : 0;
+        totalArea += area;
+        // ищем цену за м² для этого стекла
         let glassPrice = 0;
-        let glassFound = false;
-        const label = `${glass.name}: ${glass.color} ${glass.thickness} мм: ${glass.width} х ${glass.height}`;
         if (settings.glassList) {
           const normalizeThickness = (val: string) => val.replace(/[^\d]/g, '');
           const glassItem = settings.glassList.find((g) => {
@@ -161,28 +163,16 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             const companyMatch = String(g.companyId) === String(companyId);
             return colorMatch && thicknessMatch && companyMatch;
           });
-          if (glassItem) {
-            glassPrice = glassItem.price;
-            glassFound = true;
-          }
+          if (glassItem) glassPrice = glassItem.price;
         }
-        if (glassFound) {
-          const glassTotal = +(glassPrice * area).toFixed(2);
-          positions.push({
-            label: `${label} (${area} м²)`,
-            price: glassPrice,
-            total: glassTotal,
-          });
-          total += glassTotal;
-        } else {
-          positions.push({
-            label: `${label} (нет цены)`,
-            price: 0,
-            total: 0,
-          });
-        }
+        totalPrice += +(glassPrice * area);
       });
-      // Дальнейшие позиции (фурнитура, доставка, монтаж, базовая стоимость) добавляются ниже по общему алгоритму, как для других конфигураций
+      positions.push({
+        label: `Общая площадь стекла: ${totalArea} м²`,
+        price: 0,
+        total: +totalPrice.toFixed(2),
+      });
+      total += +totalPrice.toFixed(2);
     } else {
       // --- Расчёт и отображение стекла по конфигурации ---
       if (
@@ -264,115 +254,169 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             });
           }
         }
-      }
-      // 2. Фурнитура/профили/система/труба
-      if (!draft.projectHardware || draft.projectHardware.length === 0) {
-        console.warn('Нет фурнитуры в проекте');
-      } else if (Array.isArray(draft.projectHardware)) {
-        draft.projectHardware.forEach(hw => {
-          let price = 0;
-          let foundPrice = false;
-          const labelBase = `${hw.name} (${hw.quantity} шт.)`;
-          if (settings.hardwareList) {
-            const found = settings.hardwareList.find(
-              (h) =>
-                h.name && normalizeName(h.name) === normalizeName(hw.name) &&
-                String(h.companyId) === String(companyId)
-            );
-            if (found !== undefined) {
-              price = found.price ?? 0;
-              foundPrice = true;
+      } else if (draft.config === 'corner' && draft.width && draft.length && draft.height) {
+        // Для угловой раздвижной: площадь = сумма площадей стационар1, дверь1, стационар2, дверь2
+        const width = Number(draft.width);
+        const length = Number(draft.length);
+        const height = Number(draft.height);
+        let area = 0;
+        if (!isNaN(width) && !isNaN(length) && !isNaN(height)) {
+          // (width/2)*height + (width/2)*height + (length/2)*height + (length/2)*height
+          area = (((width / 2) * height + (width / 2) * height + (length / 2) * height + (length / 2) * height) / 1_000_000);
+          area = +area.toFixed(2);
+        }
+        positions.push({
+          label: `Общая площадь стекла: ${area} м²`,
+          price: 0,
+          total: 0,
+        });
+        // Дальнейшие позиции (фурнитура, доставка, монтаж, базовая стоимость) добавляются ниже по общему алгоритму
+      } else {
+        // 2. Фурнитура/профили/система/труба
+        if (!draft.projectHardware || draft.projectHardware.length === 0) {
+          console.warn('Нет фурнитуры в проекте');
+        } else if (Array.isArray(draft.projectHardware)) {
+          draft.projectHardware.forEach(hw => {
+            let price = 0;
+            let foundPrice = false;
+            const labelBase = `${hw.name} (${hw.quantity} шт.)`;
+            if (settings.hardwareList) {
+              const found = settings.hardwareList.find(
+                (h) =>
+                  h.name && normalizeName(h.name) === normalizeName(hw.name) &&
+                  String(h.companyId) === String(companyId)
+              );
+              if (found !== undefined) {
+                price = found.price ?? 0;
+                foundPrice = true;
+              }
             }
-          }
-          if (!foundPrice && settings.baseCosts) {
-            const base = settings.baseCosts.find(
-              (b) =>
-                b.name && normalizeName(b.name) === normalizeName(hw.name)
-            );
-            if (base !== undefined) {
-              price = base.value ?? 0;
-              foundPrice = true;
+            if (!foundPrice && settings.baseCosts) {
+              const base = settings.baseCosts.find(
+                (b) =>
+                  b.name && normalizeName(b.name) === normalizeName(hw.name)
+              );
+              if (base !== undefined) {
+                price = base.value ?? 0;
+                foundPrice = true;
+              }
             }
-          }
-          const totalHw = +(price * hw.quantity).toFixed(2);
-          positions.push({
-            label: foundPrice ? labelBase : `${labelBase} (нет цены)` ,
-            price,
-            total: foundPrice ? totalHw : 0,
+            const totalHw = +(price * hw.quantity).toFixed(2);
+            positions.push({
+              label: foundPrice ? labelBase : `${labelBase} (нет цены)` ,
+              price,
+              total: foundPrice ? totalHw : 0,
+            });
+            if (foundPrice) total += totalHw;
           });
-          if (foundPrice) total += totalHw;
-        });
-      }
-      // 3. Доставка
-      const deliveryService = services.find(s => s.name.toLowerCase().includes('доставка'));
-      if (deliveryService) deliveryPrice = deliveryService.price;
-      else if (settings?.baseCosts) {
-        const deliveryCost = settings.baseCosts.find(b => b.id === 'delivery' || b.name.toLowerCase().includes('доставка'));
-        if (deliveryCost) deliveryPrice = deliveryCost.value;
-      }
-      if (typeof draft.delivery === 'boolean' && draft.delivery && deliveryPrice) {
-        positions.push({
-          label: `Доставка:`,
-          qty: '',
-          price: deliveryPrice,
-          total: deliveryPrice,
-        });
-        total += deliveryPrice;
-      }
-      // 4. Монтаж
-      const installService = services.find(
-        s => s.name.trim().toLowerCase() === 'монтаж' || s.name.trim().toLowerCase() === 'установка'
-      );
-      if (installService) installPrice = installService.price;
-      else if (settings?.baseCosts) {
-        const installCost = settings.baseCosts.find(b => b.id === 'installation' || b.name.toLowerCase() === 'монтаж');
-        if (installCost) installPrice = installCost.value;
-      }
-      if (typeof draft.installation === 'boolean' && draft.installation && installPrice) {
-        positions.push({
-          label: `Монтаж:`,
-          qty: '',
-          price: installPrice,
-          total: installPrice,
-        });
-        total += installPrice;
-      }
-      // 4.1 Демонтаж
-      const dismantleService = services.find(s => s.name.trim().toLowerCase() === 'демонтаж');
-      let dismantlePrice = 0;
-      if (dismantleService) dismantlePrice = dismantleService.price;
-      if (typeof draft.dismantling === 'boolean' && draft.dismantling && dismantlePrice) {
-        positions.push({
-          label: `Демонтаж:`,
-          qty: '',
-          price: dismantlePrice,
-          total: dismantlePrice,
-        });
-        total += dismantlePrice;
-      }
-      // 5. Базовая стоимость
-      let baseCost = settings.baseCosts.find(b => b.id === draft.config);
-      if (!baseCost) {
-        // Попробовать найти по name, если id не совпадает
-        baseCost = settings.baseCosts.find(b =>
-          normalizeName(b.name).includes('базовая стоимость') &&
-          (
-            (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
-            (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
-            (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
-            (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
-          )
+        }
+        // 3. Доставка
+        const deliveryService = services.find(s => s.name.toLowerCase().includes('доставка'));
+        if (deliveryService) deliveryPrice = deliveryService.price;
+        else if (settings?.baseCosts) {
+          const deliveryCost = settings.baseCosts.find(b => b.id === 'delivery' || b.name.toLowerCase().includes('доставка'));
+          if (deliveryCost) deliveryPrice = deliveryCost.value;
+        }
+        if (typeof draft.delivery === 'boolean' && draft.delivery && deliveryPrice) {
+          positions.push({
+            label: `Доставка:`,
+            qty: '',
+            price: deliveryPrice,
+            total: deliveryPrice,
+          });
+          total += deliveryPrice;
+        }
+        // 4. Монтаж
+        const installService = services.find(
+          s => s.name.trim().toLowerCase() === 'монтаж' || s.name.trim().toLowerCase() === 'установка'
         );
+        if (installService) installPrice = installService.price;
+        else if (settings?.baseCosts) {
+          const installCost = settings.baseCosts.find(b => b.id === 'installation' || b.name.toLowerCase() === 'монтаж');
+          if (installCost) installPrice = installCost.value;
+        }
+        if (typeof draft.installation === 'boolean' && draft.installation && installPrice) {
+          positions.push({
+            label: `Монтаж:`,
+            qty: '',
+            price: installPrice,
+            total: installPrice,
+          });
+          total += installPrice;
+        }
+        // 4.1 Демонтаж
+        const dismantleService = services.find(s => s.name.trim().toLowerCase() === 'демонтаж');
+        let dismantlePrice = 0;
+        if (dismantleService) dismantlePrice = dismantleService.price;
+        if (typeof draft.dismantling === 'boolean' && draft.dismantling && dismantlePrice) {
+          positions.push({
+            label: `Демонтаж:`,
+            qty: '',
+            price: dismantlePrice,
+            total: dismantlePrice,
+          });
+          total += dismantlePrice;
+        }
+        // 5. Базовая стоимость
+        let baseCost = settings.baseCosts.find(b => b.id === draft.config);
+        if (!baseCost) {
+          // Попробовать найти по name, если id не совпадает
+          baseCost = settings.baseCosts.find(b =>
+            normalizeName(b.name).includes('базовая стоимость') &&
+            (
+              (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
+              (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
+              (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
+              (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
+            )
+          );
+        }
+        if (baseCost) {
+          positions.push({
+            label: 'Базовая стоимость',
+            qty: '',
+            price: baseCost.value,
+            total: baseCost.value,
+          });
+          total += baseCost.value;
+        }
       }
-      if (baseCost) {
+    }
+    // Добавляем фурнитуру для всех конфигураций, если есть projectHardware
+    if (draft.projectHardware && Array.isArray(draft.projectHardware)) {
+      draft.projectHardware.forEach(hw => {
+        let price = 0;
+        let foundPrice = false;
+        const labelBase = `${hw.name} (${hw.quantity} шт.)`;
+        if (settings.hardwareList) {
+          const found = settings.hardwareList.find(
+            (h) =>
+              h.name && normalizeName(h.name) === normalizeName(hw.name) &&
+              String(h.companyId) === String(companyId)
+          );
+          if (found !== undefined) {
+            price = found.price ?? 0;
+            foundPrice = true;
+          }
+        }
+        if (!foundPrice && settings.baseCosts) {
+          const base = settings.baseCosts.find(
+            (b) =>
+              b.name && normalizeName(b.name) === normalizeName(hw.name)
+          );
+          if (base !== undefined) {
+            price = base.value ?? 0;
+            foundPrice = true;
+          }
+        }
+        const totalHw = +(price * hw.quantity).toFixed(2);
         positions.push({
-          label: 'Базовая стоимость',
-          qty: '',
-          price: baseCost.value,
-          total: baseCost.value,
+          label: foundPrice ? labelBase : `${labelBase} (нет цены)` ,
+          price,
+          total: foundPrice ? totalHw : 0,
         });
-        total += baseCost.value;
-      }
+        if (foundPrice) total += totalHw;
+      });
     }
   }
 
@@ -402,102 +446,17 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                 : configLabel}
             </div>
           )}
-          {/* Для уникальной конфигурации — выводим все стёкла с размерами и толщиной с мм */}
+          {/* Для уникальной конфигурации — список стёкол без цены */}
           {draft.config === 'unique' && Array.isArray(draft.uniqueGlasses) && draft.uniqueGlasses.length > 0 && (
-            <div style={{ marginBottom: 8 }}>
+            <div style={{ margin: '8px 0 0 0' }}>
               <b>Стёкла:</b>
               <ul style={{ margin: '6px 0 0 0', paddingLeft: 24 }}>
                 {draft.uniqueGlasses.map((glass, idx) => (
                   <li key={idx}>
-                    {glass.name}: {glass.color} {glass.thickness} мм: {glass.width} х {glass.height}
+                    {glass.name}: {glass.color} {glass.thickness} мм: {glass.width} × {glass.height}
                   </li>
                 ))}
               </ul>
-              {/* Визуальный разделитель */}
-              <hr style={{ margin: '18px 0 18px 0', border: 0, borderTop: '1px solid #e0e0e0' }} />
-              {/* Блок расчёта стоимости */}
-              <div style={{ marginBottom: 16 }}>
-                {/* Основные позиции (например, стекло) */}
-                {positions.map((pos, idx) => (
-                  <div key={idx} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{pos.label}:</span>
-                    <span><b>{pos.total} ₾</b></span>
-                  </div>
-                ))}
-                {/* Фурнитура */}
-                {draft.projectHardware && draft.projectHardware.length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <b>Фурнитура:</b>
-                    <ul style={{ margin: '6px 0 0 0', padding: 0, listStyle: 'none' }}>
-                      {draft.projectHardware.map(hw => {
-                        let price = 0;
-                        let foundPrice = false;
-                        if (settings && settings.hardwareList) {
-                          const found = settings.hardwareList.find(
-                            (h) =>
-                              h.name && normalizeName(h.name) === normalizeName(hw.name) &&
-                              String(h.companyId) === String(companyId)
-                          );
-                          if (found !== undefined) {
-                            price = found.price ?? 0;
-                            foundPrice = true;
-                          }
-                        }
-                        if (!foundPrice && settings && settings.baseCosts) {
-                          const base = settings.baseCosts.find(
-                            (b) =>
-                              b.name && normalizeName(b.name) === normalizeName(hw.name)
-                          );
-                          if (base !== undefined) {
-                            price = base.value ?? 0;
-                            foundPrice = true;
-                          }
-                        }
-                        const totalHw = +(price * hw.quantity).toFixed(2);
-                        return (
-                          <li key={hw.hardwareId} style={{ padding: '2px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span
-                              style={{ maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}
-                              title={`${hw.name} (${hw.quantity} шт)`}
-                            >
-                              {hw.name} ({hw.quantity} шт)
-                            </span>
-                            {foundPrice ? (
-                              <b style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>{totalHw} {settings ? settings.currency : 'GEL'}</b>
-                            ) : (
-                              <span style={{ color: '#b71c1c', fontSize: 14, marginLeft: 8, whiteSpace: 'nowrap' }}>нет цены</span>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
-                {/* Дополнительно */}
-                {positions.filter(
-                  pos =>
-                    pos.label.startsWith('Доставка') ||
-                    pos.label.startsWith('Монтаж') ||
-                    pos.label === 'Базовая стоимость'
-                ).length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <b>Дополнительно:</b>
-                    <ul style={{ margin: '6px 0 0 0', padding: 0, listStyle: 'none' }}>
-                      {positions.filter(
-                        pos =>
-                          pos.label.startsWith('Доставка') ||
-                          pos.label.startsWith('Монтаж') ||
-                          pos.label === 'Базовая стоимость'
-                      ).map((pos, idx) => (
-                        <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
-                          <span>{pos.label}</span>
-                          <b style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>{pos.total.toFixed(2)} {settings ? settings.currency : 'GEL'}</b>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
             </div>
           )}
           {/* Для остальных конфигураций — старый вывод */}

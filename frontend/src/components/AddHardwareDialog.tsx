@@ -99,7 +99,7 @@ interface AddHardwareDialogProps {
 const AddHardwareDialog: React.FC<AddHardwareDialogProps> = ({ hardwareList, onSave, onClose, projectHardware = [] }) => {
   const [selected, setSelected] = useState<HardwareDialogItem[]>([]);
   const [search, setSearch] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  // Количество убрано, всегда 1
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -124,10 +124,9 @@ const AddHardwareDialog: React.FC<AddHardwareDialogProps> = ({ hardwareList, onS
 
   const handleAdd = () => {
     const hw = hardwareList.find(h => h.name === search);
-    if (!hw || quantity < 1 || selected.some(sel => sel.hardwareId === hw._id) || projectHardware.some(sel => sel.hardwareId === hw._id)) return;
-    setSelected([...selected, { hardwareId: hw._id, name: hw.name, quantity }]);
+    if (!hw || selected.some(sel => sel.hardwareId === hw._id) || projectHardware.some(sel => sel.hardwareId === hw._id)) return;
+    setSelected([...selected, { hardwareId: hw._id, name: hw.name, quantity: 1 }]);
     setSearch('');
-    setQuantity(1);
     setDropdownOpen(false);
     setHighlighted(0);
   };
@@ -161,7 +160,6 @@ const AddHardwareDialog: React.FC<AddHardwareDialogProps> = ({ hardwareList, onS
   // Проверка, можно ли добавить
   const canAdd =
     !!hardwareList.find(h => h.name === search) &&
-    quantity > 0 &&
     !selected.some(sel => sel.name === search) &&
     !projectHardware.some(sel => sel.name === search);
 
@@ -172,7 +170,7 @@ const AddHardwareDialog: React.FC<AddHardwareDialogProps> = ({ hardwareList, onS
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }}>
-      <div style={{ background: '#fff', borderRadius: 12, padding: 24, minWidth: 340, maxWidth: 480, boxShadow: '0 2px 16px #0002', position: 'relative' }}>
+      <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: 480, boxShadow: '0 2px 16px #0002', position: 'relative' }}>
         <h3 style={{ marginTop: 0, marginBottom: 16 }}>Дополнительная фурнитура</h3>
         {/* Список выбранных */}
         {selected.length > 0 && (
@@ -212,7 +210,7 @@ const AddHardwareDialog: React.FC<AddHardwareDialogProps> = ({ hardwareList, onS
         )}
         {/* Форма добавления */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <div style={{ position: 'relative', flex: 2 }}>
+          <div style={{ position: 'relative', flex: 1 }}>
             <input
               ref={inputRef}
               type="text"
@@ -274,7 +272,6 @@ const AddHardwareDialog: React.FC<AddHardwareDialogProps> = ({ hardwareList, onS
               </div>
             )}
           </div>
-          <QuantityControl value={quantity} onChange={setQuantity} />
           <button
             onClick={handleAdd}
             disabled={!canAdd}
