@@ -171,6 +171,26 @@ const AddHardwareDialog: React.FC<AddHardwareDialogProps> = ({ hardwareList, onS
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }}>
       <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: 480, boxShadow: '0 2px 16px #0002', position: 'relative' }}>
+        {/* Кнопка закрытия */}
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            background: 'none',
+            border: 'none',
+            fontSize: 28,
+            color: '#888',
+            cursor: 'pointer',
+            padding: 0,
+            lineHeight: 1,
+            transition: 'color 0.15s',
+          }}
+          title="Закрыть"
+          onMouseOver={e => (e.currentTarget.style.color = '#e53935')}
+          onMouseOut={e => (e.currentTarget.style.color = '#888')}
+        >×</button>
         <h3 style={{ marginTop: 0, marginBottom: 16 }}>Дополнительная фурнитура</h3>
         {/* Список выбранных */}
         {selected.length > 0 && (

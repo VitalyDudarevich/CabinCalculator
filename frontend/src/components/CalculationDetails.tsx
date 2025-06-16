@@ -140,8 +140,48 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   const usdRate = settings?.usdRate ? parseFloat(settings.usdRate) : 0;
 
   if (settings && draft && draft.config) {
-    // --- Уникальная конфигурация: расчет по каждому стеклу ---
-    if (draft.config === 'unique' && Array.isArray(draft.uniqueGlasses) && draft.uniqueGlasses.length > 0) {
+    if (draft.config === 'corner' && draft.width && draft.length && draft.height) {
+      // Для угловой раздвижной: площадь = (ширина + длина) * высота
+      const width = Number(draft.width);
+      const length = Number(draft.length);
+      const height = Number(draft.height);
+      let area = 0;
+      let glassPrice = 0;
+      if (!isNaN(width) && !isNaN(length) && !isNaN(height)) {
+        area = ((width + length) * height) / 1_000_000;
+        area = +area.toFixed(2);
+      }
+      // Найти цену за м² для выбранного стекла (аналогично прямой раздвижной)
+      if (settings.glassList && draft.glassColor && draft.glassThickness) {
+        const normalizeThickness = (val: string) => val.replace(/[^\d]/g, '');
+        const glassItem = settings.glassList.find((g) => {
+          const colorMatch = g.color.trim().toLowerCase() === draft.glassColor!.trim().toLowerCase();
+          const thicknessMatch = !g.thickness || normalizeThickness(g.thickness) === normalizeThickness(String(draft.glassThickness));
+          const companyMatch = String(g.companyId) === String(companyId);
+          return colorMatch && thicknessMatch && companyMatch;
+        });
+        if (glassItem) {
+          glassPrice = glassItem.price;
+        }
+      }
+      // 2. Стекло с ценой или сообщением об отсутствии цены
+      if (glassPrice) {
+        const glassTotal = +(glassPrice * area).toFixed(2);
+        positions.push({
+          label: `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`,
+          price: glassPrice,
+          total: glassTotal,
+        });
+        total += glassTotal;
+      } else {
+        positions.push({
+          label: `Нет цены для выбранного стекла`,
+          price: 0,
+          total: 0,
+        });
+      }
+      // Дальнейшие позиции (фурнитура, доставка, монтаж, базовая стоимость) добавляются ниже по общему алгоритму
+    } else if (draft.config === 'unique' && Array.isArray(draft.uniqueGlasses) && draft.uniqueGlasses.length > 0) {
       let totalArea = 0;
       let totalPrice = 0;
       draft.uniqueGlasses.forEach(glass => {
@@ -216,9 +256,10 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           area = +(widthM * heightM).toFixed(2);
           label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
         }
-        if (label) {
+        if (draft.config === 'corner') {
+          // Пропускаем общий расчёт для угловой раздвижной, чтобы не было дубля
+        } else if (label) {
           let glassPrice = 0;
-          let glassFound = false;
           if (settings.glassList) {
             const normalizeThickness = (val: string) => val.replace(/[^\d]/g, '');
             console.log('glass search input:', draft.glassColor, draft.glassThickness);
@@ -231,10 +272,9 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             });
             if (glassItem) {
               glassPrice = glassItem.price;
-              glassFound = true;
             }
           }
-          if (glassFound) {
+          if (glassPrice) {
             const glassTotal = +(glassPrice * area).toFixed(2);
             positions.push({
               label,
@@ -251,21 +291,45 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           }
         }
       } else if (draft.config === 'corner' && draft.width && draft.length && draft.height) {
-        // Для угловой раздвижной: площадь = сумма площадей стационар1, дверь1, стационар2, дверь2
+        // Для угловой раздвижной: площадь = (ширина + длина) * высота
         const width = Number(draft.width);
         const length = Number(draft.length);
         const height = Number(draft.height);
         let area = 0;
+        let glassPrice = 0;
         if (!isNaN(width) && !isNaN(length) && !isNaN(height)) {
-          // (width/2)*height + (width/2)*height + (length/2)*height + (length/2)*height
-          area = (((width / 2) * height + (width / 2) * height + (length / 2) * height + (length / 2) * height) / 1_000_000);
+          area = ((width + length) * height) / 1_000_000;
           area = +area.toFixed(2);
         }
-        positions.push({
-          label: `Общая площадь стекла: ${area} м²`,
-          price: 0,
-          total: 0,
-        });
+        // Найти цену за м² для выбранного стекла
+        if (settings.glassList && draft.glassColor && draft.glassThickness) {
+          const normalizeThickness = (val: string) => val.replace(/[^\d]/g, '');
+          const glassItem = settings.glassList.find((g) => {
+            const colorMatch = g.color.trim().toLowerCase() === draft.glassColor!.trim().toLowerCase();
+            const thicknessMatch = !g.thickness || normalizeThickness(g.thickness) === normalizeThickness(String(draft.glassThickness));
+            const companyMatch = String(g.companyId) === String(companyId);
+            return colorMatch && thicknessMatch && companyMatch;
+          });
+          if (glassItem) {
+            glassPrice = glassItem.price;
+          }
+        }
+        // 2. Стекло с ценой или сообщением об отсутствии цены
+        if (glassPrice) {
+          const glassTotal = +(glassPrice * area).toFixed(2);
+          positions.push({
+            label: `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`,
+            price: glassPrice,
+            total: glassTotal,
+          });
+          total += glassTotal;
+        } else {
+          positions.push({
+            label: `Нет цены для выбранного стекла`,
+            price: 0,
+            total: 0,
+          });
+        }
         // Дальнейшие позиции (фурнитура, доставка, монтаж, базовая стоимость) добавляются ниже по общему алгоритму
       } else {
         // 2. Фурнитура/профили/система/труба
