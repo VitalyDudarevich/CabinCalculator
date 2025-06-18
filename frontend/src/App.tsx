@@ -164,7 +164,17 @@ export default function App() {
             )}
             {/* /calculator доступен для всех ролей */}
             {user && ['superadmin', 'admin', 'user'].includes(user.role) && (
-              <Route path="/calculator" element={<CalculatorPageWrapper user={user} selectedCompanyId={selectedCompanyId} />} />
+              <Route
+                path="/calculator"
+                element={
+                  (user.role === 'admin' || user.role === 'user')
+                    ? (selectedCompanyId
+                        ? <CalculatorPageWrapper user={user} selectedCompanyId={selectedCompanyId} />
+                        : <div>Загрузка данных компании...</div>
+                      )
+                    : <CalculatorPageWrapper user={user} selectedCompanyId={selectedCompanyId} />
+                }
+              />
             )}
             <Route path="/" element={
               user

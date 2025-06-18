@@ -84,27 +84,35 @@ const normalizeName = (name: string) =>
 
 const API_URL = `${BASE_API_URL}/api`;
 
+console.log('CalculationDetails: компонент монтируется');
+
 const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyId, onTotalChange, exactHeight, onExactHeightChange }) => {
-  console.log('draft:', draft);
+  console.log('CalculationDetails: companyId проп:', companyId);
+  console.log('CalculationDetails: draft:', draft);
   const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => {
-    if (!companyId) return;
-
+    console.log('CalculationDetails useEffect: companyId =', companyId);
+    if (!companyId) {
+      console.log('CalculationDetails useEffect: companyId отсутствует, fetch не выполняется');
+      return;
+    }
     const fetchAll = async () => {
       try {
+        console.log('CalculationDetails: начинаю fetch настроек, стекла, фурнитуры для companyId =', companyId);
         const [settingsRes, glassRes, hardwareRes] = await Promise.all([
           fetch(`${API_URL}/settings?companyId=${companyId}`),
           fetch(`${API_URL}/glass?companyId=${companyId}`),
           fetch(`${API_URL}/hardware?companyId=${companyId}`),
         ]);
-
         const [settingsData, glassList, hardwareList] = await Promise.all([
           settingsRes.json(),
           glassRes.json(),
           hardwareRes.json(),
         ]);
-
+        console.log('CalculationDetails: settingsData:', settingsData);
+        console.log('CalculationDetails: glassList:', glassList);
+        console.log('CalculationDetails: hardwareList:', hardwareList);
         if (Array.isArray(settingsData) && settingsData.length > 0) {
           const combinedSettings: Settings = {
             ...settingsData[0],
@@ -112,15 +120,16 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             hardwareList,
           };
           setSettings(combinedSettings);
+          console.log('CalculationDetails: combinedSettings:', combinedSettings);
         } else {
           setSettings(null);
+          console.log('CalculationDetails: settingsData пустой массив или не массив');
         }
       } catch (e) {
         console.error('Ошибка загрузки настроек:', e);
         setSettings(null);
       }
     };
-
     fetchAll();
   }, [companyId]);
 

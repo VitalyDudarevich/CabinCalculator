@@ -73,6 +73,10 @@ exports.updateUser = async (req, res) => {
       delete update.password;
       delete update.passwordHash;
     }
+    // Если companyId пустая строка — не обновлять это поле
+    if (update.companyId === '') {
+      delete update.companyId;
+    }
     const user = await User.findByIdAndUpdate(req.params.id, update, {
       new: true,
       runValidators: true,
