@@ -62,6 +62,30 @@ export default function App() {
     }
   }, [token]);
 
+  // Автоматическое восстановление accessToken через refreshToken при rememberMe
+  useEffect(() => {
+    const rememberMe = localStorage.getItem('rememberMe') === 'true';
+    const refreshToken = localStorage.getItem('refreshToken');
+    const token = localStorage.getItem('token');
+    if (!token && rememberMe && refreshToken) {
+      fetch(`${API_URL}/api/auth/refresh-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.accessToken) {
+            localStorage.setItem('token', data.accessToken);
+            setToken(data.accessToken);
+          } else {
+            setUser(null);
+            setToken('');
+          }
+        });
+    }
+  }, []);
+
   // Загрузка компаний для суперадмина и админа
   useEffect(() => {
     setError('');

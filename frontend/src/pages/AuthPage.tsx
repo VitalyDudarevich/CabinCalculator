@@ -48,8 +48,10 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
       setMessage('Успешный вход!');
       if (rememberMe) {
         localStorage.setItem('token', data.accessToken);
+        if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
       } else {
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
       }
     } else {
       setMessage(data.error || 'Ошибка входа');
