@@ -1477,10 +1477,27 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         }
         @media (max-width: 600px) {
           .calculator-form-root {
-            padding: 8px !important;
-            max-width: 100% !important;
-            border-radius: 8px !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            position: fixed !important;
+            top: 56px; /* если есть шапка, иначе 0 */
+            bottom: 0;
+            min-height: calc(100vh - 56px); /* если есть шапка, иначе 100vh */
+            height: auto !important;
+            overflow-y: auto;
+            box-shadow: none !important;
+            padding-bottom: 32px !important;
+          }
+          body, html {
+            width: 100vw;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            background: #fff;
           }
           .form-actions {
             order: 99;
@@ -1500,6 +1517,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           border-radius: 8px;
           background: #fff;
           transition: border-color 0.2s;
+          color: #222 !important;
         }
         .form-group select {
           appearance: none;
@@ -1518,7 +1536,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           position: absolute;
           top: 50%;
           left: 12px;
-          color: #888;
+          color: #888 !important;
           background: #fff;
           padding: 0 4px;
           font-size: 15px;
