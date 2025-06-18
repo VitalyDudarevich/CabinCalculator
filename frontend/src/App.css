@@ -40,3 +40,43 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Гарантированно тёмный текст и белый фон для всех форм, даже на iOS/Safari */
+.form-group input,
+.form-group select,
+.form-group textarea,
+.form-group option {
+  color: #222 !important;
+  background: #fff !important;
+  caret-color: #222 !important;
+}
+
+.form-group label {
+  color: #888 !important;
+  background: #fff !important;
+}
+
+label {
+  color: #222 !important;
+}
+
+.form-group option {
+  color: #222 !important;
+  background: #fff !important;
+}
+
+input:-webkit-autofill,
+select:-webkit-autofill,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: #222 !important;
+  box-shadow: 0 0 0 1000px #fff inset !important;
+  background-color: #fff !important;
+  caret-color: #222 !important;
+}
+
+input, select, textarea {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #fff !important;
+  color-scheme: light;
+}
