@@ -10,6 +10,7 @@ interface HardwareDraftItem {
 
 interface DraftProjectData {
   projectName?: string;
+  customer?: string;
   config?: string;
   glassColor?: string;
   glassThickness?: string;
@@ -417,31 +418,9 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           });
           total += dismantlePrice;
         }
-        // 5. Базовая стоимость
-        let baseCost = settings.baseCosts.find(b => b.id === draft.config);
-        if (!baseCost) {
-          // Попробовать найти по name, если id не совпадает
-          baseCost = settings.baseCosts.find(b =>
-            normalizeName(b.name).includes('базовая стоимость') &&
-            (
-              (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
-              (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
-              (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
-              (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
-            )
-          );
-        }
-        if (baseCost) {
-          positions.push({
-            label: 'Базовая стоимость',
-            qty: '',
-            price: baseCost.value,
-            total: baseCost.value,
-          });
-          total += baseCost.value;
-        }
       }
     }
+
     // Добавляем фурнитуру для всех конфигураций, если есть projectHardware
     if (draft.projectHardware && Array.isArray(draft.projectHardware)) {
       draft.projectHardware.forEach(hw => {
@@ -478,6 +457,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         if (foundPrice) total += totalHw;
       });
     }
+
     // После расчёта позиций (positions) и total, добавляю:
     if (draft.projectServices && Array.isArray(draft.projectServices)) {
       const seen = new Set();
@@ -497,6 +477,30 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         total += price;
       });
     }
+
+    // 5. Базовая стоимость - теперь вне условий конфигурации
+    let baseCost = settings.baseCosts.find(b => b.id === draft.config);
+    if (!baseCost) {
+      // Попробовать найти по name, если id не совпадает
+      baseCost = settings.baseCosts.find(b =>
+        normalizeName(b.name).includes('базовая стоимость') &&
+        (
+          (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
+          (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
+          (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
+          (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
+        )
+      );
+    }
+    if (baseCost) {
+      positions.push({
+        label: 'Базовая стоимость',
+        qty: '',
+        price: baseCost.value,
+        total: baseCost.value,
+      });
+      total += baseCost.value;
+    }
   }
 
   // --- Новый useEffect для передачи total наружу ---
@@ -514,8 +518,18 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   console.log('positions:', positions);
 
   return (
-    <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, minWidth: 320, flex: 1 }}>
-      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 16 }}>Детали расчёта</h2>
+    <div style={{ 
+      background: '#fff', 
+      borderRadius: 12, 
+      boxShadow: '0 1px 4px #0001', 
+      padding: 24, 
+      minWidth: 320, 
+      flex: 1,
+      color: '#000',
+      overflowX: 'hidden',
+      maxWidth: '100%'
+    }}>
+      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 16, color: '#000' }}>Детали расчёта</h2>
       {draft && Object.keys(draft).length > 0 ? (
         <div style={{ color: '#222', fontSize: 16 }}>
           {(draft.projectName || draft.config) && (
@@ -523,6 +537,11 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
               <b>Название:</b> {draft.projectName
                 ? `${draft.projectName} (${configLabel})`
                 : configLabel}
+            </div>
+          )}
+          {draft.customer && (
+            <div style={{ marginTop: 8 }}>
+              <b>Заказчик:</b> {draft.customer}
             </div>
           )}
           {/* Для уникальной конфигурации — список стёкол без цены */}
@@ -614,13 +633,19 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           )}
           {/* Универсальная разбивка стоимости */}
           {positions && positions.length > 0 && (
-            <div style={{ margin: '18px 0 0 0' }}>
-              <b>Разбивка стоимости:</b>
+            <div style={{ margin: '18px 0 0 0', color: '#000' }}>
+              <b style={{ color: '#000' }}>Разбивка стоимости:</b>
               <ul style={{ margin: '6px 0 0 0', paddingLeft: 0, listStyle: 'none' }}>
                 {positions.map((pos, idx) => (
-                  <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
-                    <span>{pos.label}</span>
-                    <span><b>{pos.total} GEL</b></span>
+                  <li key={idx} style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '2px 0',
+                    color: '#000'
+                  }}>
+                    <span style={{ color: '#000' }}>{pos.label}</span>
+                    <span><b style={{ color: '#000' }}>{pos.total} GEL</b></span>
                   </li>
                 ))}
               </ul>

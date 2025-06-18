@@ -21,6 +21,7 @@ const projectSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   data: { type: Object, required: true }, // все данные калькулятора/проекта
   name: { type: String }, // название проекта (опционально)
+  customer: { type: String }, // имя заказчика (опционально)
   status: { type: String, default: 'Рассчет' }, // статус проекта
   price: { type: Number, default: 0 }, // итоговая сумма
   priceHistory: { type: [priceHistorySchema], default: [] },

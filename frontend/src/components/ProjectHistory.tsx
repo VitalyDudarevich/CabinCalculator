@@ -5,6 +5,7 @@ import type { DraftProjectData } from './CalculationDetails';
 export interface Project {
   _id: string;
   name: string;
+  customer?: string;
   createdAt: string;
   status?: string;
   price?: number;

@@ -44,6 +44,7 @@ const STATUS_OPTIONS = [
 
 const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, selectedCompanyId = '', onChangeDraft, selectedProject, onNewProject, totalPrice }) => {
   const [projectName, setProjectName] = useState('');
+  const [customer, setCustomer] = useState('');
   const [config, setConfig] = useState('');
   const [draftConfig, setDraftConfig] = useState(config);
   const [glassColors, setGlassColors] = useState<string[]>([]);
@@ -86,6 +87,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   useEffect(() => {
     if (selectedProject) {
       setProjectName(selectedProject.name || '');
+      setCustomer(selectedProject.customer || '');
       setConfig(selectedProject.data?.config === 'straight-opening' || selectedProject.data?.config === 'straight-glass' ? 'straight' : (selectedProject.data?.config || ''));
       setDraftConfig(selectedProject.data?.config || '');
       setGlassColor(selectedProject.data?.glassColor || '');
@@ -208,6 +210,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     if (!selectedProject) return;
     const fields = [
       ['name', projectName, selectedProject.name || ''],
+      ['customer', customer, selectedProject.customer || ''],
       ['config', config, selectedProject.data?.config || ''],
       ['glassColor', glassColor, selectedProject.data?.glassColor || ''],
       ['glassThickness', glassThickness, selectedProject.data?.glassThickness || '8'],
@@ -227,11 +230,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       if (val !== orig) changed.add(key as string);
     });
     setChangedFields(changed);
-  }, [projectName, config, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, dismantling, status, manualPrice, selectedProject]);
+  }, [projectName, customer, config, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, dismantling, status, manualPrice, selectedProject]);
 
   // 1. Универсальный сброс всех полей к дефолтным значениям
   const resetAllFields = (preserveName = false) => {
     if (!preserveName) setProjectName('');
+    setCustomer('');
     setConfig('');
     setDraftConfig('');
     setGlassColor(glassColors[0] || '');
@@ -356,6 +360,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
     if (!projectName.trim()) newErrors.projectName = 'Укажите имя проекта';
+    if (!customer.trim()) newErrors.customer = 'Укажите заказчика';
     if (!config) newErrors.config = 'Выберите конфигурацию';
     if (!glassColor) newErrors.glassColor = 'Выберите цвет стекла';
     if (!glassThickness) newErrors.glassThickness = 'Выберите толщину стекла';
@@ -421,6 +426,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     // Собираем данные проекта
     const projectData = {
       name: projectName,
+      customer,
       data: {
         config,
         glassColor,
@@ -470,6 +476,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         setChangedFields(new Set());
         if (savedProject) {
           setProjectName(savedProject.name || '');
+          setCustomer(savedProject.customer || '');
           setConfig(savedProject.data?.config === 'straight-opening' || savedProject.data?.config === 'straight-glass' ? 'straight' : (savedProject.data?.config || ''));
           setDraftConfig(savedProject.data?.config || '');
           setGlassColor(savedProject.data?.glassColor || '');
@@ -622,6 +629,25 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           />
           <label htmlFor="project-name" style={{ left: 12 }}>Название проекта *</label>
           {errors.projectName && <div style={{ color: 'red', fontSize: 13 }}>{errors.projectName}</div>}
+        </div>
+        {/* Заказчик */}
+        <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
+          <input
+            type="text"
+            id="customer"
+            autoComplete="off"
+            placeholder=" "
+            value={customer}
+            onChange={e => {
+              setCustomer(e.target.value);
+              const rest = { ...errors };
+              delete rest.customer;
+              setErrors(rest);
+            }}
+            style={{ width: '100%', paddingRight: 12, background: changedFields.has('customer') ? '#fffbe6' : undefined }}
+          />
+          <label htmlFor="customer" style={{ left: 12 }}>Заказчик</label>
+          {errors.customer && <div style={{ color: 'red', fontSize: 13 }}>{errors.customer}</div>}
         </div>
         {/* Конфигурация */}
         <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
