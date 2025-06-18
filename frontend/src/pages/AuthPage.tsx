@@ -19,7 +19,10 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
   const [message, setMessage] = useState('');
   const [localToken, setLocalToken] = useState('');
   const [localUser, setLocalUser] = useState<User | null>(null);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    const stored = localStorage.getItem('rememberMe');
+    return stored === 'true';
+  });
   const [showPassword, setShowPassword] = useState(false);
 
   const AUTH_API_URL = `${API_URL}/api/auth`;
@@ -77,21 +80,23 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
         <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Вход в систему</h2>
         {!localUser && (
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <input
-              name="emailOrUsername"
-              placeholder="Email или имя пользователя"
-              onChange={handleChange}
-              required
-              style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16 }}
-            />
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                name="emailOrUsername"
+                placeholder="Email или имя пользователя"
+                onChange={handleChange}
+                required
+                style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ position: 'relative', width: '100%' }}>
               <input
                 name="password"
                 placeholder="Пароль"
                 type={showPassword ? 'text' : 'password'}
                 onChange={handleChange}
                 required
-                style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, width: '100%' }}
+                style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, width: '100%', boxSizing: 'border-box' }}
               />
               <button
                 type="button"
@@ -104,21 +109,34 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: 16,
-                  color: '#646cff',
-                  padding: 0
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 24,
+                  width: 32,
+                  outline: 'none',
                 }}
                 tabIndex={-1}
                 aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                onMouseDown={e => e.preventDefault()}
               >
-                {showPassword ? '🙈' : '👁️'}
+                <img
+                  src={showPassword ? '/eye.png' : '/eye-off.png'}
+                  alt={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  style={{ width: 24, height: 24, outline: 'none', boxShadow: 'none' }}
+                  draggable={false}
+                />
               </button>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, cursor: 'pointer', userSelect: 'none' }}>
               <input
                 type="checkbox"
                 checked={rememberMe}
-                onChange={e => setRememberMe(e.target.checked)}
+                onChange={e => {
+                  setRememberMe(e.target.checked);
+                  localStorage.setItem('rememberMe', String(e.target.checked));
+                }}
                 style={{ accentColor: '#646cff' }}
               />
               Запомнить меня
