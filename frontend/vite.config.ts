@@ -9,4 +9,7 @@ export default defineConfig({
       '/api': 'http://localhost:5000', // если backend на 5000 порту
     },
   },
+  build: {
+    outDir: 'dist',
+  },
 });
