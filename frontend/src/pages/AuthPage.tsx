@@ -19,6 +19,8 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
   const [message, setMessage] = useState('');
   const [localToken, setLocalToken] = useState('');
   const [localUser, setLocalUser] = useState<User | null>(null);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const AUTH_API_URL = `${API_URL}/api/auth`;
 
@@ -41,7 +43,11 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
       setUser(data.user);
       setToken(data.accessToken);
       setMessage('Успешный вход!');
-      localStorage.setItem('token', data.accessToken);
+      if (rememberMe) {
+        localStorage.setItem('token', data.accessToken);
+      } else {
+        localStorage.removeItem('token');
+      }
     } else {
       setMessage(data.error || 'Ошибка входа');
     }
@@ -78,14 +84,45 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
               required
               style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16 }}
             />
-            <input
-              name="password"
-              placeholder="Пароль"
-              type="password"
-              onChange={handleChange}
-              required
-              style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16 }}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                name="password"
+                placeholder="Пароль"
+                type={showPassword ? 'text' : 'password'}
+                onChange={handleChange}
+                required
+                style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, width: '100%' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                style={{
+                  position: 'absolute',
+                  right: 10,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  color: '#646cff',
+                  padding: 0
+                }}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={e => setRememberMe(e.target.checked)}
+                style={{ accentColor: '#646cff' }}
+              />
+              Запомнить меня
+            </label>
             <button
               type="submit"
               style={{ padding: 12, borderRadius: 8, background: '#646cff', color: '#fff', fontWeight: 600, fontSize: 16, border: 'none', cursor: 'pointer' }}
