@@ -113,6 +113,46 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         ]);
       }
       setUniqueGlassErrors({});
+      // Загружаем услуги проекта
+      if (selectedProject.data?.projectServices && Array.isArray(selectedProject.data.projectServices)) {
+        setSelectedServices(selectedProject.data.projectServices);
+      } else {
+        // Если у проекта нет услуг, добавляем дефолтные доставку и установку
+        if (serviceList.length > 0) {
+          const defaultServices: DialogServiceItem[] = [];
+          
+          // Ищем доставку
+          const deliveryService = serviceList.find(s => 
+            s.name.toLowerCase().includes('доставка') || 
+            s.name.toLowerCase().includes('delivery')
+          );
+          if (deliveryService) {
+            defaultServices.push({
+              serviceId: deliveryService.serviceId,
+              name: deliveryService.name,
+              price: deliveryService.price
+            });
+          }
+          
+          // Ищем установку
+          const installationService = serviceList.find(s => 
+            s.name.toLowerCase().includes('установка') || 
+            s.name.toLowerCase().includes('монтаж') || 
+            s.name.toLowerCase().includes('installation')
+          );
+          if (installationService) {
+            defaultServices.push({
+              serviceId: installationService.serviceId,
+              name: installationService.name,
+              price: installationService.price
+            });
+          }
+          
+          setSelectedServices(defaultServices);
+        } else {
+          setSelectedServices([]);
+        }
+      }
       // Сначала выставляем showGlassSizes, затем подставляем размеры через setTimeout
       setShowGlassSizes(selectedProject.data?.showGlassSizes || false);
       setTimeout(() => {
@@ -127,7 +167,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         setChangedFields(new Set());
       }, 0);
     }
-  }, [selectedProject]);
+  }, [selectedProject, serviceList]);
 
   useEffect(() => {
     if (!effectiveCompanyId) return;
@@ -168,9 +208,45 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           price: s.price
         }));
         setServiceList(list);
+        
+        // Автоматически добавляем доставку и установку только для новых проектов
+        if (!selectedProject && list.length > 0) {
+          const defaultServices: DialogServiceItem[] = [];
+          
+          // Ищем доставку
+          const deliveryService = list.find(s => 
+            s.name.toLowerCase().includes('доставка') || 
+            s.name.toLowerCase().includes('delivery')
+          );
+          if (deliveryService) {
+            defaultServices.push({
+              serviceId: deliveryService.serviceId,
+              name: deliveryService.name,
+              price: deliveryService.price
+            });
+          }
+          
+          // Ищем установку
+          const installationService = list.find(s => 
+            s.name.toLowerCase().includes('установка') || 
+            s.name.toLowerCase().includes('монтаж') || 
+            s.name.toLowerCase().includes('installation')
+          );
+          if (installationService) {
+            defaultServices.push({
+              serviceId: installationService.serviceId,
+              name: installationService.name,
+              price: installationService.price
+            });
+          }
+          
+          if (defaultServices.length > 0) {
+            setSelectedServices(defaultServices);
+          }
+        }
       })
       .catch(() => setServiceList([]));
-  }, [effectiveCompanyId]);
+  }, [effectiveCompanyId, selectedProject]);
 
   // Хелпер для обновления draft
   const updateDraft = React.useCallback(() => {
@@ -264,6 +340,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     ]);
     setUniqueGlassErrors({});
     setDismantling(false);
+    setSelectedServices([]); // Сбрасываем услуги
   };
 
   // 2. При смене конфигурации — сброс всех полей, кроме projectName
@@ -272,7 +349,41 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setConfig(value);
     setDraftConfig(value);
     setChangedFields(fields => new Set(fields).add('config'));
-    setSelectedServices([]);
+    
+    // Автоматически добавляем доставку и установку при смене конфигурации для новых проектов
+    if (!selectedProject && serviceList.length > 0) {
+      const defaultServices: DialogServiceItem[] = [];
+      
+      // Ищем доставку
+      const deliveryService = serviceList.find(s => 
+        s.name.toLowerCase().includes('доставка') || 
+        s.name.toLowerCase().includes('delivery')
+      );
+      if (deliveryService) {
+        defaultServices.push({
+          serviceId: deliveryService.serviceId,
+          name: deliveryService.name,
+          price: deliveryService.price
+        });
+      }
+      
+      // Ищем установку
+      const installationService = serviceList.find(s => 
+        s.name.toLowerCase().includes('установка') || 
+        s.name.toLowerCase().includes('монтаж') || 
+        s.name.toLowerCase().includes('installation')
+      );
+      if (installationService) {
+        defaultServices.push({
+          serviceId: installationService.serviceId,
+          name: installationService.name,
+          price: installationService.price
+        });
+      }
+      
+      setSelectedServices(defaultServices);
+    }
+    
     // Дефолтная фурнитура для каждой конфигурации
     if (value === 'glass') {
       setProjectHardware([
@@ -294,6 +405,11 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         { hardwareId: '', name: 'Профильная труба (рельса)', quantity: 1 },
         { hardwareId: '', name: 'уголок турба-труба прямоугольное', quantity: 1 },
         { hardwareId: '', name: 'Уплотнитель F', quantity: 4 }
+      ]);
+    } else if (value === 'unique') {
+      setProjectHardware([
+        { hardwareId: '', name: 'Профиль', quantity: 1 },
+        { hardwareId: '', name: 'Крепеж', quantity: 1 }
       ]);
     } else {
       setProjectHardware([]);
@@ -350,6 +466,43 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const handleNewProject = () => {
     resetAllFields();
     setGlassColor(glassColors[0] || '');
+    
+    // Автоматически добавляем доставку и установку для нового проекта
+    setTimeout(() => {
+      if (serviceList.length > 0) {
+        const defaultServices: DialogServiceItem[] = [];
+        
+        // Ищем доставку
+        const deliveryService = serviceList.find(s => 
+          s.name.toLowerCase().includes('доставка') || 
+          s.name.toLowerCase().includes('delivery')
+        );
+        if (deliveryService) {
+          defaultServices.push({
+            serviceId: deliveryService.serviceId,
+            name: deliveryService.name,
+            price: deliveryService.price
+          });
+        }
+        
+        // Ищем установку
+        const installationService = serviceList.find(s => 
+          s.name.toLowerCase().includes('установка') || 
+          s.name.toLowerCase().includes('монтаж') || 
+          s.name.toLowerCase().includes('installation')
+        );
+        if (installationService) {
+          defaultServices.push({
+            serviceId: installationService.serviceId,
+            name: installationService.name,
+            price: installationService.price
+          });
+        }
+        
+        setSelectedServices(defaultServices);
+      }
+    }, 0);
+    
     if (onChangeDraft) onChangeDraft({});
     if (onNewProject) onNewProject();
     setExactHeight(false);
@@ -471,7 +624,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         if (typeof onNewProject === 'function') onNewProject(savedProject);
         // Сбросить все поля к дефолтным значениям, как при создании нового проекта
         resetAllFields();
-        setSelectedServices([]);
         setSaveStatus('success');
         setChangedFields(new Set());
         if (savedProject) {
@@ -518,7 +670,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         savedProject = await res.json();
         if (typeof onNewProject === 'function') onNewProject(savedProject);
         resetAllFields();
-        setSelectedServices([]);
         setSaveStatus('success');
       }
     } catch (e) {
@@ -531,7 +682,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     resetAllFields();
     setSaveStatus('success');
     setChangedFields(new Set());
-    setProjectHardware([]); // Сбросить фурнитуру после сохранения
   };
 
   const handleAddGlass = () => {
@@ -1333,6 +1483,44 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               disabled={false}
             />
           </div>
+          {projectHardware.length > 0 && (
+            <div style={{ marginTop: 12, marginBottom: 8 }}>
+              {projectHardware.map((hw, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                    <QuantityControl
+                      value={hw.quantity}
+                      onChange={v => setProjectHardware(list => list.map((item, i) => i === idx ? { ...item, quantity: v } : item))}
+                    />
+                    <button
+                      onClick={() => setProjectHardware(list => list.filter((_, i) => i !== idx))}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        border: 'none',
+                        borderRadius: '50%',
+                        background: 'none',
+                        color: '#e53935',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 22,
+                        transition: 'color 0.15s',
+                        margin: 0,
+                      }}
+                      title="Удалить"
+                      onMouseOver={e => (e.currentTarget.style.color = '#b71c1c')}
+                      onMouseOut={e => (e.currentTarget.style.color = '#e53935')}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
       {config && (

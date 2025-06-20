@@ -12,37 +12,57 @@ exports.login = async (req, res) => {
     if (!emailOrUsername || !password) {
       return res.status(400).json({ error: 'Требуются email/username и пароль' });
     }
+
     const user = await User.findOne({
       $or: [{ email: emailOrUsername }, { username: emailOrUsername }],
     });
+
     if (!user) {
       return res.status(400).json({ error: 'Пользователь не найден' });
     }
+
     if (!user.isEmailVerified) {
       return res.status(403).json({ error: 'Email не подтверждён. Проверьте почту.' });
     }
+
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
       return res.status(400).json({ error: 'Неверный пароль' });
     }
+
+    // Удаляем старые refresh токены для данного пользователя
+    await RefreshToken.deleteMany({ userId: user._id });
+
     const accessToken = jwt.sign(
       { userId: user._id, role: user.role, companyId: user.companyId },
       process.env.JWT_SECRET,
       { expiresIn: '15m' },
     );
+
     const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: '30d',
     });
+
     // Сохраняем refreshToken в БД
     await RefreshToken.create({
       userId: user._id,
       token: refreshToken,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 дней
     });
+
+    // Устанавливаем httpOnly cookie с refresh токеном
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
+    });
+
     res.json({
       accessToken,
-      refreshToken,
+      refreshToken, // Также отправляем в response для localStorage если нужно
       user: {
+        _id: user._id,
         id: user._id,
         username: user.username,
         email: user.email,
@@ -51,39 +71,67 @@ exports.login = async (req, res) => {
       },
     });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    // Пытаемся получить refresh token из cookie или из body
+    let refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
     if (!refreshToken) {
       return res.status(400).json({ error: 'Refresh token обязателен' });
     }
+
     // Проверяем наличие токена в БД
     const tokenDoc = await RefreshToken.findOne({ token: refreshToken });
     if (!tokenDoc) {
       return res.status(401).json({ error: 'Refresh token не найден или отозван' });
     }
+
+    // Проверяем, не истек ли токен в БД
+    if (tokenDoc.expiresAt < new Date()) {
+      await RefreshToken.deleteOne({ token: refreshToken });
+      return res.status(401).json({ error: 'Refresh token истек' });
+    }
+
     let payload;
     try {
       payload = jwt.verify(refreshToken, process.env.JWT_SECRET);
     } catch (err) {
+      // Если токен невалидный, удаляем его из БД
       await RefreshToken.deleteOne({ token: refreshToken });
       return res.status(401).json({ error: 'Невалидный refresh token' });
     }
+
     const user = await User.findById(payload.userId);
     if (!user) {
+      await RefreshToken.deleteOne({ token: refreshToken });
       return res.status(401).json({ error: 'Пользователь не найден' });
     }
+
+    // Генерируем новый access token
     const accessToken = jwt.sign(
       { userId: user._id, role: user.role, companyId: user.companyId },
       process.env.JWT_SECRET,
       { expiresIn: '15m' },
     );
-    res.json({ accessToken });
+
+    res.json({
+      accessToken,
+      user: {
+        _id: user._id,
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        companyId: user.companyId,
+      },
+    });
   } catch (err) {
+    console.error('Refresh token error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -166,13 +214,24 @@ exports.me = [
 
 exports.logout = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({ error: 'Refresh token обязателен' });
+    // Пытаемся получить refresh token из cookie или из body
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
+    if (refreshToken) {
+      // Удаляем refresh token из БД
+      await RefreshToken.deleteOne({ token: refreshToken });
     }
-    await RefreshToken.deleteOne({ token: refreshToken });
-    res.json({ message: 'Выход выполнен, refresh token удалён' });
+
+    // Очищаем cookie с refresh токеном
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+
+    res.json({ message: 'Выход выполнен успешно' });
   } catch (err) {
+    console.error('Logout error:', err);
     res.status(500).json({ error: err.message });
   }
 };

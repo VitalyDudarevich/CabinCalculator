@@ -33,7 +33,7 @@ interface DraftProjectData {
   stationaryWidth?: string;
   doorWidth?: string;
   uniqueGlasses?: Array<{ name: string; color: string; thickness: string; width: string; height: string }>;
-  projectServices?: { name: string; price: number }[];
+  projectServices?: { serviceId: string; name: string; price: number }[];
 }
 
 interface Settings {

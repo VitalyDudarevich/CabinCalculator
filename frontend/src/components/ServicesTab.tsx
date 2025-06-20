@@ -37,6 +37,9 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
   const [editList, setEditList] = useState<ServiceItem[]>([]);
   const [originalList, setOriginalList] = useState<ServiceItem[]>([]);
   const [error, setError] = useState('');
+  const [addName, setAddName] = useState('');
+  const [addPrice, setAddPrice] = useState<number | ''>('');
+  const [addError, setAddError] = useState('');
 
   const companyName = selectedCompanyId === 'all'
     ? 'Все компании'
@@ -69,6 +72,25 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
   }, [selectedCompanyId, company?._id]);
 
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
+
+  const handleAdd = () => {
+    if (!addName.trim()) return;
+    const exists = editList.some(s => s.name.trim().toLowerCase() === addName.trim().toLowerCase());
+    if (exists) {
+      setAddError('Такая услуга уже существует');
+      return;
+    }
+    setEditList(prev => ([
+      ...prev,
+      {
+        name: addName.trim(),
+        price: addPrice === '' || addPrice == null ? null : Number(addPrice),
+      }
+    ]));
+    setAddName('');
+    setAddPrice('');
+    setAddError('');
+  };
 
   const handleDeleteItem = (idx: number) => {
     setEditList(list => list.filter((_, i) => i !== idx));
@@ -104,6 +126,9 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
     setEditList(originalList);
     setEditMode(false);
     setError('');
+    setAddName('');
+    setAddPrice('');
+    setAddError('');
   };
 
   return (
@@ -179,6 +204,28 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
           </div>
         );
       })}
+      {editMode && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+            <input
+              type="text"
+              value={addName}
+              onChange={e => setAddName(e.target.value)}
+              placeholder="Название услуги"
+              style={{ flex: 1, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
+            />
+            <input
+              type="number"
+              value={addPrice}
+              onChange={e => setAddPrice(e.target.value === '' ? '' : Number(e.target.value))}
+              placeholder="Цена"
+              style={{ width: 120, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
+            />
+            <button type="button" onClick={handleAdd} style={{ padding: '8px 14px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}>Добавить</button>
+          </div>
+          {addError && <div style={{ color: 'crimson', marginTop: 6 }}>{addError}</div>}
+        </>
+      )}
       <style>{`
         @media (max-width: 600px) {
           .services-tab-root {
