@@ -26,6 +26,8 @@ interface Settings {
   baseIsPercent: boolean;
   basePercentValue: number;
   customColorSurcharge: number; // Надбавка за нестандартный цвет в процентах
+  baseCostMode: 'fixed' | 'percentage'; // Режим расчета базовой стоимости
+  baseCostPercentage: number; // Процент от стоимости стекла и фурнитуры
 }
 
 interface SettingsTabProps {
@@ -56,6 +58,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     baseIsPercent: false,
     basePercentValue: 0,
     customColorSurcharge: 0,
+    baseCostMode: 'fixed',
+    baseCostPercentage: 0,
   });
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
@@ -85,6 +89,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
             baseIsPercent: s.baseIsPercent ?? false,
             basePercentValue: s.basePercentValue ?? 0,
             customColorSurcharge: s.customColorSurcharge ?? 0,
+            baseCostMode: s.baseCostMode ?? 'fixed',
+            baseCostPercentage: s.baseCostPercentage ?? 0,
           });
           setSettingsId(s._id);
         } else {
@@ -94,6 +100,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
             baseIsPercent: false,
             basePercentValue: 0,
             customColorSurcharge: 0,
+            baseCostMode: 'fixed',
+            baseCostPercentage: 0,
           });
           setSettingsId(null);
         }
@@ -122,6 +130,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         baseIsPercent: settings.baseIsPercent,
         basePercentValue: settings.basePercentValue,
         customColorSurcharge: settings.customColorSurcharge,
+        baseCostMode: settings.baseCostMode,
+        baseCostPercentage: settings.baseCostPercentage,
       };
       let res;
       if (settingsId) {
@@ -150,6 +160,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         baseIsPercent: data.baseIsPercent ?? false,
         basePercentValue: data.basePercentValue ?? 0,
         customColorSurcharge: data.customColorSurcharge ?? 0,
+        baseCostMode: data.baseCostMode ?? 'fixed',
+        baseCostPercentage: data.baseCostPercentage ?? 0,
       });
       setSaveSuccess(true);
       setEditMode(false);
@@ -297,6 +309,57 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                 Надбавка к стоимости фурнитуры для нестандартных цветов (автоматически выбирается для золотой, крашеный)
               </span>
             </label>
+          </div>
+
+          {/* Секция 3: Дополнительная стоимость проекта */}
+          <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, marginBottom: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 18 }}>Дополнительная стоимость проекта</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="baseCostMode"
+                  value="fixed"
+                  checked={settings.baseCostMode === 'fixed'}
+                  onChange={e => setSettings(prev => ({ ...prev, baseCostMode: e.target.value as 'fixed' | 'percentage' }))}
+                  style={{ width: 18, height: 18 }}
+                  disabled={!editMode}
+                />
+                <span style={{ fontSize: 16 }}>Базовая стоимость</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="baseCostMode"
+                  value="percentage"
+                  checked={settings.baseCostMode === 'percentage'}
+                  onChange={e => setSettings(prev => ({ ...prev, baseCostMode: e.target.value as 'fixed' | 'percentage' }))}
+                  style={{ width: 18, height: 18 }}
+                  disabled={!editMode}
+                />
+                <span style={{ fontSize: 16 }}>Процент от стоимости</span>
+              </label>
+              
+              {settings.baseCostMode === 'percentage' && (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginLeft: 26 }}>
+                  Процент (%):
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={settings.baseCostPercentage || ''}
+                    onChange={e => setSettings(prev => ({ ...prev, baseCostPercentage: parseFloat(e.target.value) || 0 }))}
+                    style={{ width: 180, padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, marginTop: 4 }}
+                    disabled={!editMode}
+                    placeholder="0"
+                  />
+                  <span style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
+                    Процент добавляется к стоимости стекла и фурнитуры (без услуг)
+                  </span>
+                </label>
+              )}
+            </div>
           </div>
 
           {settingsError && <div style={{ color: 'crimson', fontSize: 14 }}>{settingsError}</div>}

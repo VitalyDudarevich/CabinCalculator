@@ -47,6 +47,8 @@ interface Settings {
   baseIsPercent: boolean;
   basePercentValue: number;
   customColorSurcharge?: number; // Надбавка за нестандартный цвет в процентах
+  baseCostMode?: 'fixed' | 'percentage'; // Режим расчета базовой стоимости
+  baseCostPercentage?: number; // Процент от стоимости стекла и фурнитуры
   glassList?: { color: string; thickness?: string; thickness_mm?: number; price: number; companyId: string }[];
   hardwareList?: { name: string; price: number; companyId?: string }[];
 }
@@ -450,28 +452,59 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
       });
     }
 
-    // 5. Базовая стоимость - теперь вне условий конфигурации
-    let baseCost = settings.baseCosts.find(b => b.id === draft.config);
-    if (!baseCost) {
-      // Попробовать найти по name, если id не совпадает
-      baseCost = settings.baseCosts.find(b =>
-        normalizeName(b.name).includes('базовая стоимость') &&
-        (
-          (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
-          (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
-          (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
-          (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
-        )
-      );
-    }
-    if (baseCost) {
-      positions.push({
-        label: 'Базовая стоимость',
-        qty: '',
-        price: baseCost.value,
-        total: baseCost.value,
-      });
-      total += baseCost.value;
+    // 5. Базовая стоимость - режим зависит от настроек
+    const baseCostMode = settings.baseCostMode || 'fixed';
+    
+    if (baseCostMode === 'fixed') {
+      // Режим фиксированной базовой стоимости (как раньше)
+      let baseCost = settings.baseCosts.find(b => b.id === draft.config);
+      if (!baseCost) {
+        // Попробовать найти по name, если id не совпадает
+        baseCost = settings.baseCosts.find(b =>
+          normalizeName(b.name).includes('базовая стоимость') &&
+          (
+            (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
+            (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
+            (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
+            (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
+          )
+        );
+      }
+      if (baseCost) {
+        positions.push({
+          label: 'Базовая стоимость',
+          qty: '',
+          price: baseCost.value,
+          total: baseCost.value,
+        });
+        total += baseCost.value;
+      }
+    } else if (baseCostMode === 'percentage') {
+      // Режим процента от стоимости стекла и фурнитуры
+      const percentage = settings.baseCostPercentage || 0;
+      if (percentage > 0) {
+        // Считаем стоимость стекла и фурнитуры (без услуг)
+        let glassAndHardwareTotal = 0;
+        
+        positions.forEach(pos => {
+          // Проверяем что это стекло или фурнитура (не услуга)
+          if (pos.label.toLowerCase().includes('стекло') || 
+              pos.label.toLowerCase().includes('шт.') ||
+              pos.label.toLowerCase().includes('площадь')) {
+            glassAndHardwareTotal += pos.total;
+          }
+        });
+        
+        const percentageAmount = +(glassAndHardwareTotal * percentage / 100).toFixed(2);
+        
+        positions.push({
+          label: `Базовая стоимость ${percentage}%`,
+          qty: '',
+          price: 0,
+          total: percentageAmount,
+        });
+        total += percentageAmount;
+      }
     }
   }
 
