@@ -25,6 +25,7 @@ interface Settings {
   baseCosts: BaseCostItem[];
   baseIsPercent: boolean;
   basePercentValue: number;
+  customColorSurcharge: number; // Надбавка за нестандартный цвет в процентах
 }
 
 interface SettingsTabProps {
@@ -54,6 +55,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     baseCosts: DEFAULT_BASE_COSTS,
     baseIsPercent: false,
     basePercentValue: 0,
+    customColorSurcharge: 0,
   });
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
@@ -82,6 +84,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
             baseCosts: Array.isArray(s.baseCosts) && s.baseCosts.length > 0 ? s.baseCosts : DEFAULT_BASE_COSTS,
             baseIsPercent: s.baseIsPercent ?? false,
             basePercentValue: s.basePercentValue ?? 0,
+            customColorSurcharge: s.customColorSurcharge ?? 0,
           });
           setSettingsId(s._id);
         } else {
@@ -90,6 +93,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
             baseCosts: DEFAULT_BASE_COSTS,
             baseIsPercent: false,
             basePercentValue: 0,
+            customColorSurcharge: 0,
           });
           setSettingsId(null);
         }
@@ -117,6 +121,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         baseCosts: settings.baseCosts,
         baseIsPercent: settings.baseIsPercent,
         basePercentValue: settings.basePercentValue,
+        customColorSurcharge: settings.customColorSurcharge,
       };
       let res;
       if (settingsId) {
@@ -144,6 +149,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         baseCosts: Array.isArray(data.baseCosts) && data.baseCosts.length > 0 ? data.baseCosts : DEFAULT_BASE_COSTS,
         baseIsPercent: data.baseIsPercent ?? false,
         basePercentValue: data.basePercentValue ?? 0,
+        customColorSurcharge: data.customColorSurcharge ?? 0,
       });
       setSaveSuccess(true);
       setEditMode(false);
@@ -270,6 +276,29 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
               </label>
             </div>
           </div>
+
+          {/* Секция 2: Нестандартный цвет */}
+          <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, marginBottom: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 18 }}>Надбавки</div>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              Нестандартный цвет (%):
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={settings.customColorSurcharge || ''}
+                onChange={e => setSettings(prev => ({ ...prev, customColorSurcharge: parseFloat(e.target.value) || 0 }))}
+                style={{ width: 180, padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, marginTop: 4 }}
+                disabled={!editMode}
+                placeholder="0"
+              />
+              <span style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
+                Надбавка к стоимости фурнитуры для нестандартных цветов (автоматически выбирается для золотой, крашеный)
+              </span>
+            </label>
+          </div>
+
           {settingsError && <div style={{ color: 'crimson', fontSize: 14 }}>{settingsError}</div>}
           {saveSuccess && <div style={{ color: 'green', marginTop: 16, textAlign: 'right' }}>Сохранено!</div>}
         </form>

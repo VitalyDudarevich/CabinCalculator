@@ -80,6 +80,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const [showAddServiceDialog, setShowAddServiceDialog] = useState(false);
   const [selectedServices, setSelectedServices] = useState<DialogServiceItem[]>([]);
   const [serviceList, setServiceList] = useState<DialogServiceItem[]>([]);
+  const [customColor, setCustomColor] = useState(false);
   // resolvedCompanyId больше не нужен, используем selectedCompanyId
   const effectiveCompanyId = user?.role === 'superadmin' ? selectedCompanyId : (companyId || localStorage.getItem('companyId') || '');
 
@@ -100,6 +101,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       setDismantling(selectedProject.data?.dismantling || false);
       setProjectHardware(Array.isArray(selectedProject.data?.projectHardware) ? selectedProject.data.projectHardware : []);
       setStatus(selectedProject.status || 'Рассчет');
+      setCustomColor(selectedProject.data?.customColor || false);
       setStationarySize(selectedProject.data?.stationarySize || '');
       setDoorSize(selectedProject.data?.doorSize || '');
       setExactHeight(selectedProject.data?.exactHeight || false);
@@ -117,41 +119,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       if (selectedProject.data?.projectServices && Array.isArray(selectedProject.data.projectServices)) {
         setSelectedServices(selectedProject.data.projectServices);
       } else {
-        // Если у проекта нет услуг, добавляем дефолтные доставку и установку
-        if (serviceList.length > 0) {
-          const defaultServices: DialogServiceItem[] = [];
-          
-          // Ищем доставку
-          const deliveryService = serviceList.find(s => 
-            s.name.toLowerCase().includes('доставка') || 
-            s.name.toLowerCase().includes('delivery')
-          );
-          if (deliveryService) {
-            defaultServices.push({
-              serviceId: deliveryService.serviceId,
-              name: deliveryService.name,
-              price: deliveryService.price
-            });
-          }
-          
-          // Ищем установку
-          const installationService = serviceList.find(s => 
-            s.name.toLowerCase().includes('установка') || 
-            s.name.toLowerCase().includes('монтаж') || 
-            s.name.toLowerCase().includes('installation')
-          );
-          if (installationService) {
-            defaultServices.push({
-              serviceId: installationService.serviceId,
-              name: installationService.name,
-              price: installationService.price
-            });
-          }
-          
-          setSelectedServices(defaultServices);
-        } else {
-          setSelectedServices([]);
-        }
+        // Если у проекта нет услуг, оставляем пустой список
+        setSelectedServices([]);
       }
       // Сначала выставляем showGlassSizes, затем подставляем размеры через setTimeout
       setShowGlassSizes(selectedProject.data?.showGlassSizes || false);
@@ -209,41 +178,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         }));
         setServiceList(list);
         
-        // Автоматически добавляем доставку и установку только для новых проектов
-        if (!selectedProject && list.length > 0) {
-          const defaultServices: DialogServiceItem[] = [];
-          
-          // Ищем доставку
-          const deliveryService = list.find(s => 
-            s.name.toLowerCase().includes('доставка') || 
-            s.name.toLowerCase().includes('delivery')
-          );
-          if (deliveryService) {
-            defaultServices.push({
-              serviceId: deliveryService.serviceId,
-              name: deliveryService.name,
-              price: deliveryService.price
-            });
-          }
-          
-          // Ищем установку
-          const installationService = list.find(s => 
-            s.name.toLowerCase().includes('установка') || 
-            s.name.toLowerCase().includes('монтаж') || 
-            s.name.toLowerCase().includes('installation')
-          );
-          if (installationService) {
-            defaultServices.push({
-              serviceId: installationService.serviceId,
-              name: installationService.name,
-              price: installationService.price
-            });
-          }
-          
-          if (defaultServices.length > 0) {
-            setSelectedServices(defaultServices);
-          }
-        }
+        // При загрузке списка услуг НЕ добавляем автоматически никакие услуги
+        // Пользователь должен выбрать их сам через кнопку "Добавить услугу"
       })
       .catch(() => setServiceList([]));
   }, [effectiveCompanyId, selectedProject]);
@@ -273,9 +209,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         exactHeight,
         uniqueGlasses: draftConfig === 'unique' ? uniqueGlasses : undefined,
         projectServices: selectedServices,
+        customColor,
       });
     }
-  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, dismantling, projectHardware, showGlassSizes, stationarySize, doorSize, stationaryWidth, doorWidth, exactHeight, uniqueGlasses, selectedServices]);
+  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, dismantling, projectHardware, showGlassSizes, stationarySize, doorSize, stationaryWidth, doorWidth, exactHeight, uniqueGlasses, selectedServices, customColor]);
 
   // useEffect для синхронизации draft
   React.useEffect(() => {
@@ -340,7 +277,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     ]);
     setUniqueGlassErrors({});
     setDismantling(false);
-    setSelectedServices([]); // Сбрасываем услуги
+    setSelectedServices([]); // Сбрасываем услуги полностью
+    setCustomColor(false);
   };
 
   // 2. При смене конфигурации — сброс всех полей, кроме projectName
@@ -350,39 +288,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setDraftConfig(value);
     setChangedFields(fields => new Set(fields).add('config'));
     
-    // Автоматически добавляем доставку и установку при смене конфигурации для новых проектов
-    if (!selectedProject && serviceList.length > 0) {
-      const defaultServices: DialogServiceItem[] = [];
-      
-      // Ищем доставку
-      const deliveryService = serviceList.find(s => 
-        s.name.toLowerCase().includes('доставка') || 
-        s.name.toLowerCase().includes('delivery')
-      );
-      if (deliveryService) {
-        defaultServices.push({
-          serviceId: deliveryService.serviceId,
-          name: deliveryService.name,
-          price: deliveryService.price
-        });
-      }
-      
-      // Ищем установку
-      const installationService = serviceList.find(s => 
-        s.name.toLowerCase().includes('установка') || 
-        s.name.toLowerCase().includes('монтаж') || 
-        s.name.toLowerCase().includes('installation')
-      );
-      if (installationService) {
-        defaultServices.push({
-          serviceId: installationService.serviceId,
-          name: installationService.name,
-          price: installationService.price
-        });
-      }
-      
-      setSelectedServices(defaultServices);
-    }
+    // При смене конфигурации НЕ добавляем автоматически услуги
+    // Пользователь должен выбрать их сам
     
     // Дефолтная фурнитура для каждой конфигурации
     if (value === 'glass') {
@@ -467,41 +374,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     resetAllFields();
     setGlassColor(glassColors[0] || '');
     
-    // Автоматически добавляем доставку и установку для нового проекта
-    setTimeout(() => {
-      if (serviceList.length > 0) {
-        const defaultServices: DialogServiceItem[] = [];
-        
-        // Ищем доставку
-        const deliveryService = serviceList.find(s => 
-          s.name.toLowerCase().includes('доставка') || 
-          s.name.toLowerCase().includes('delivery')
-        );
-        if (deliveryService) {
-          defaultServices.push({
-            serviceId: deliveryService.serviceId,
-            name: deliveryService.name,
-            price: deliveryService.price
-          });
-        }
-        
-        // Ищем установку
-        const installationService = serviceList.find(s => 
-          s.name.toLowerCase().includes('установка') || 
-          s.name.toLowerCase().includes('монтаж') || 
-          s.name.toLowerCase().includes('installation')
-        );
-        if (installationService) {
-          defaultServices.push({
-            serviceId: installationService.serviceId,
-            name: installationService.name,
-            price: installationService.price
-          });
-        }
-        
-        setSelectedServices(defaultServices);
-      }
-    }, 0);
+    // При новом проекте НЕ добавляем автоматически никакие услуги
+    // Пользователь должен выбрать их сам через диалог добавления услуг
     
     if (onChangeDraft) onChangeDraft({});
     if (onNewProject) onNewProject();
@@ -601,6 +475,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         exactHeight,
         uniqueGlasses: config === 'unique' ? uniqueGlasses : undefined,
         projectServices: selectedServices,
+        customColor,
       },
       companyId: effectiveCompanyId,
       status,
@@ -658,6 +533,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             ]);
           }
           setUniqueGlassErrors({});
+          setCustomColor(savedProject.data?.customColor || false);
         }
       } else {
         // Новый проект: POST
@@ -714,6 +590,21 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       }
       return newErrs;
     });
+  };
+
+  // Обработчик изменения цвета фурнитуры
+  const handleHardwareColorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newColor = e.target.value;
+    setHardwareColor(newColor);
+    
+    // Автоматически включаем чекбокс для золотого и крашеного цвета
+    if (newColor === 'gold' || newColor === 'painted') {
+      setCustomColor(true);
+    }
+    
+    const rest = { ...errors };
+    delete rest.hardwareColor;
+    setErrors(rest);
   };
 
   return (
@@ -908,28 +799,37 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               {errors.height && <div style={{ color: 'red', fontSize: 13 }}>{errors.height}</div>}
             </div>
           </div>
-          {/* Цвет фурнитуры */}
+          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <div className="form-group" style={{ width: '100%', marginBottom: 0 }}>
-              <select
-                id="hardware-color"
-                className={hardwareColor ? 'filled' : ''}
-                value={hardwareColor}
-                onChange={e => {
-                  setHardwareColor(e.target.value);
-                  const rest = { ...errors };
-                  delete rest.hardwareColor;
-                  setErrors(rest);
-                }}
-                required
-                style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
-              >
-                {HARDWARE_COLORS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-              <label htmlFor="hardware-color">Цвет фурнитуры *</label>
-              {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <select
+                  id="hardware-color"
+                  className={hardwareColor ? 'filled' : ''}
+                  value={hardwareColor}
+                  onChange={handleHardwareColorChange}
+                  required
+                  style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
+                >
+                  {HARDWARE_COLORS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <label htmlFor="hardware-color">Цвет фурнитуры *</label>
+                {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
+              </div>
+              {/* Чекбокс нестандартного цвета в той же строке */}
+              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={customColor}
+                    onChange={e => setCustomColor(e.target.checked)}
+                    style={{ width: 14, height: 14 }}
+                  />
+                  <span>Нестандартный цвет</span>
+                </label>
+              </div>
             </div>
             <div style={{ marginTop: 0, marginBottom: 0 }}>
               <AddHardwareButton onClick={() => setShowAddHardwareDialog(true)} />
@@ -1129,28 +1029,37 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               </div>
             </div>
           )}
-          {/* Цвет фурнитуры */}
+          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <div className="form-group" style={{ width: '100%', marginBottom: 0 }}>
-              <select
-                id="hardware-color"
-                className={hardwareColor ? 'filled' : ''}
-                value={hardwareColor}
-                onChange={e => {
-                  setHardwareColor(e.target.value);
-                  const rest = { ...errors };
-                  delete rest.hardwareColor;
-                  setErrors(rest);
-                }}
-                required
-                style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
-              >
-                {HARDWARE_COLORS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-              <label htmlFor="hardware-color">Цвет фурнитуры *</label>
-              {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <select
+                  id="hardware-color"
+                  className={hardwareColor ? 'filled' : ''}
+                  value={hardwareColor}
+                  onChange={handleHardwareColorChange}
+                  required
+                  style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
+                >
+                  {HARDWARE_COLORS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <label htmlFor="hardware-color">Цвет фурнитуры *</label>
+                {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
+              </div>
+              {/* Чекбокс нестандартного цвета в той же строке */}
+              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={customColor}
+                    onChange={e => setCustomColor(e.target.checked)}
+                    style={{ width: 14, height: 14 }}
+                  />
+                  <span>Нестандартный цвет</span>
+                </label>
+              </div>
             </div>
             <div style={{ marginTop: 0, marginBottom: 0 }}>
               <AddHardwareButton onClick={() => setShowAddHardwareDialog(true)} />
@@ -1300,28 +1209,37 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               {errors.glassThickness && <div style={{ color: 'red', fontSize: 13 }}>{errors.glassThickness}</div>}
             </div>
           </div>
-          {/* Цвет фурнитуры */}
+          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <div className="form-group" style={{ width: '100%', marginBottom: 0 }}>
-              <select
-                id="hardware-color"
-                className={hardwareColor ? 'filled' : ''}
-                value={hardwareColor}
-                onChange={e => {
-                  setHardwareColor(e.target.value);
-                  const rest = { ...errors };
-                  delete rest.hardwareColor;
-                  setErrors(rest);
-                }}
-                required
-                style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
-              >
-                {HARDWARE_COLORS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-              <label htmlFor="hardware-color">Цвет фурнитуры *</label>
-              {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <select
+                  id="hardware-color"
+                  className={hardwareColor ? 'filled' : ''}
+                  value={hardwareColor}
+                  onChange={handleHardwareColorChange}
+                  required
+                  style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
+                >
+                  {HARDWARE_COLORS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <label htmlFor="hardware-color">Цвет фурнитуры *</label>
+                {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
+              </div>
+              {/* Чекбокс нестандартного цвета в той же строке */}
+              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={customColor}
+                    onChange={e => setCustomColor(e.target.checked)}
+                    style={{ width: 14, height: 14 }}
+                  />
+                  <span>Нестандартный цвет</span>
+                </label>
+              </div>
             </div>
             <div style={{ marginTop: 0, marginBottom: 0 }}>
               <AddHardwareButton onClick={() => setShowAddHardwareDialog(true)} />
@@ -1477,11 +1395,45 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               )
             }
           >ДОБАВИТЬ СТЕКЛО</button>
-          <div style={{ marginTop: 20 }}>
-            <AddHardwareButton
-              onClick={() => setShowAddHardwareDialog(true)}
-              disabled={false}
-            />
+          
+          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginTop: 20 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <select
+                  id="hardware-color"
+                  className={hardwareColor ? 'filled' : ''}
+                  value={hardwareColor}
+                  onChange={handleHardwareColorChange}
+                  required
+                  style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
+                >
+                  {HARDWARE_COLORS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <label htmlFor="hardware-color">Цвет фурнитуры *</label>
+                {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
+              </div>
+              {/* Чекбокс нестандартного цвета в той же строке */}
+              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={customColor}
+                    onChange={e => setCustomColor(e.target.checked)}
+                    style={{ width: 14, height: 14 }}
+                  />
+                  <span>Нестандартный цвет</span>
+                </label>
+              </div>
+            </div>
+            <div style={{ marginTop: 0, marginBottom: 0 }}>
+              <AddHardwareButton
+                onClick={() => setShowAddHardwareDialog(true)}
+                disabled={false}
+              />
+            </div>
           </div>
           {projectHardware.length > 0 && (
             <div style={{ marginTop: 12, marginBottom: 8 }}>
@@ -1595,6 +1547,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           style={{ width: '105%', minHeight: 60, resize: 'vertical', borderRadius: 8, border: '1px solid #ccc', padding: 8, fontSize: 15, marginTop: 8 }}
         />
       </div>
+
       {/* Кнопки действий */}
       <div className="form-actions" style={{ display: 'flex', gap: 16, margin: '12px 0 0 0' }}>
         <button style={{ flex: 1, padding: '10px 0', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={handleNewProject}>НОВЫЙ ПРОЕКТ</button>

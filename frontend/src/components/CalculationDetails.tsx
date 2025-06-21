@@ -34,6 +34,7 @@ interface DraftProjectData {
   doorWidth?: string;
   uniqueGlasses?: Array<{ name: string; color: string; thickness: string; width: string; height: string }>;
   projectServices?: { serviceId: string; name: string; price: number }[];
+  customColor?: boolean; // Флаг нестандартного цвета фурнитуры
 }
 
 interface Settings {
@@ -45,6 +46,7 @@ interface Settings {
   baseCosts: { id: string; name: string; value: number }[];
   baseIsPercent: boolean;
   basePercentValue: number;
+  customColorSurcharge?: number; // Надбавка за нестандартный цвет в процентах
   glassList?: { color: string; thickness?: string; thickness_mm?: number; price: number; companyId: string }[];
   hardwareList?: { name: string; price: number; companyId?: string }[];
 }
@@ -145,8 +147,6 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   type Position = { label: string; price: number; total: number; qty?: string };
   const positions: Position[] = [];
   let total = 0;
-  let deliveryPrice = 0;
-  let installPrice = 0;
   const usdRate = settings?.usdRate ? parseFloat(settings.usdRate) : 0;
 
   if (settings && draft && draft.config) {
@@ -380,58 +380,15 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             if (foundPrice) total += totalHw;
           });
         }
-        // 3. Доставка
-        const deliveryService = settings.hardwareList && settings.hardwareList.find(s => s.name.toLowerCase().includes('доставка'));
-        if (deliveryService) deliveryPrice = deliveryService.price;
-        else if (settings?.baseCosts) {
-          const deliveryCost = settings.baseCosts.find(b => b.id === 'delivery' || b.name.toLowerCase().includes('доставка'));
-          if (deliveryCost) deliveryPrice = deliveryCost.value;
-        }
-        if (typeof draft.delivery === 'boolean' && draft.delivery && deliveryPrice) {
-          positions.push({
-            label: `Доставка:`,
-            qty: '',
-            price: deliveryPrice,
-            total: deliveryPrice,
-          });
-          total += deliveryPrice;
-        }
-        // 4. Монтаж
-        const installService = settings.hardwareList && settings.hardwareList.find(
-          s => s.name.trim().toLowerCase() === 'монтаж' || s.name.trim().toLowerCase() === 'установка'
-        );
-        if (installService) installPrice = installService.price;
-        else if (settings?.baseCosts) {
-          const installCost = settings.baseCosts.find(b => b.id === 'installation' || b.name.toLowerCase() === 'монтаж');
-          if (installCost) installPrice = installCost.value;
-        }
-        if (typeof draft.installation === 'boolean' && draft.installation && installPrice) {
-          positions.push({
-            label: `Монтаж:`,
-            qty: '',
-            price: installPrice,
-            total: installPrice,
-          });
-          total += installPrice;
-        }
-        // 4.1 Демонтаж
-        const dismantleService = settings.hardwareList && settings.hardwareList.find(s => s.name.trim().toLowerCase() === 'демонтаж');
-        let dismantlePrice = 0;
-        if (dismantleService) dismantlePrice = dismantleService.price;
-        if (typeof draft.dismantling === 'boolean' && draft.dismantling && dismantlePrice) {
-          positions.push({
-            label: `Демонтаж:`,
-            qty: '',
-            price: dismantlePrice,
-            total: dismantlePrice,
-          });
-          total += dismantlePrice;
-        }
+        // Доставка, монтаж и демонтаж теперь добавляются только через выбранные услуги (projectServices)
+        // Старая логика с draft.delivery, draft.installation, draft.dismantling удалена
       }
     }
 
     // Добавляем фурнитуру для всех конфигураций, если есть projectHardware
     if (draft.projectHardware && Array.isArray(draft.projectHardware)) {
+      const customColorSurcharge = settings.customColorSurcharge || 0;
+      
       draft.projectHardware.forEach(hw => {
         let price = 0;
         let foundPrice = false;
@@ -457,6 +414,12 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             foundPrice = true;
           }
         }
+        
+        // Применяем надбавку за нестандартный цвет, если чекбокс включен
+        if (draft.customColor && foundPrice && customColorSurcharge > 0) {
+          price = price * (1 + customColorSurcharge / 100);
+        }
+        
         const totalHw = +(price * hw.quantity).toFixed(2);
         positions.push({
           label: foundPrice ? labelBase : `${labelBase} (нет цены)` ,
@@ -515,9 +478,9 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   // --- Новый useEffect для передачи total наружу ---
   useEffect(() => {
     if (typeof onTotalChange === 'function') {
-      onTotalChange(total, deliveryPrice, installPrice);
+      onTotalChange(total, 0, 0); // delivery и install цены теперь включены в общий total через services
     }
-  }, [total, deliveryPrice, installPrice, onTotalChange]);
+  }, [total, onTotalChange]);
 
   const configLabel = configLabels[String(draft.config ?? '')] || '';
 

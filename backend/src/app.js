@@ -24,6 +24,7 @@ app.use(
       'http://127.0.0.1:3000',
       'http://localhost:5173',
       'http://127.0.0.1:5173',
+      'https://glass-calculator-bg.vercel.app', // Добавляем продакшен домен
     ], // Добавляем порт Vite
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -39,6 +40,7 @@ app.use((req, res, next) => {
     'http://127.0.0.1:3000',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'https://glass-calculator-bg.vercel.app', // Добавляем продакшен домен
   ];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {

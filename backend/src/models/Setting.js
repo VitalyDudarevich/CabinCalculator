@@ -22,6 +22,7 @@ const settingSchema = new mongoose.Schema({
   ],
   baseIsPercent: { type: Boolean, default: false },
   basePercentValue: { type: Number, default: 0 },
+  customColorSurcharge: { type: Number, default: 0 }, // Надбавка за нестандартный цвет в процентах
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

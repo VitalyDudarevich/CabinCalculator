@@ -36,6 +36,7 @@ exports.createSetting = async (req, res) => {
         baseCosts: req.body.baseCosts || [],
         baseIsPercent: req.body.baseIsPercent ?? false,
         basePercentValue: req.body.basePercentValue ?? 0,
+        customColorSurcharge: req.body.customColorSurcharge ?? 0,
       });
       await setting.save();
       res.status(200).json(setting);
@@ -46,6 +47,7 @@ exports.createSetting = async (req, res) => {
         baseCosts: req.body.baseCosts || [],
         baseIsPercent: req.body.baseIsPercent ?? false,
         basePercentValue: req.body.basePercentValue ?? 0,
+        customColorSurcharge: req.body.customColorSurcharge ?? 0,
       });
       await setting.save();
       res.status(201).json(setting);
@@ -63,6 +65,7 @@ exports.updateSetting = async (req, res) => {
     if (!('baseCosts' in update)) update.baseCosts = [];
     if (!('baseIsPercent' in update)) update.baseIsPercent = false;
     if (!('basePercentValue' in update)) update.basePercentValue = 0;
+    if (!('customColorSurcharge' in update)) update.customColorSurcharge = 0;
     const setting = await Setting.findByIdAndUpdate(req.params.id, update, {
       new: true,
       runValidators: true,
