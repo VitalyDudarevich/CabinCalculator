@@ -9,6 +9,23 @@ import type { DraftProjectData } from '../components/CalculationDetails';
 import { fetchWithAuth } from '../utils/auth';
 import { API_URL } from '../utils/api';
 
+// Добавляем интерфейсы для данных
+interface Settings {
+  currency: string;
+  usdRate: string;
+  rrRate: string;
+  showUSD: boolean;
+  showRR: boolean;
+  baseCosts: { id: string; name: string; value: number }[];
+  baseIsPercent: boolean;
+  basePercentValue: number;
+  customColorSurcharge?: number;
+  baseCostMode?: 'fixed' | 'percentage';
+  baseCostPercentage?: number;
+  glassList?: { color: string; thickness?: string; thickness_mm?: number; price: number; companyId: string }[];
+  hardwareList?: { _id?: string; name: string; price: number; companyId?: string }[];
+}
+
 const CalculatorPage: React.FC<{
   companyId?: string;
   user?: User | null;
@@ -19,6 +36,10 @@ const CalculatorPage: React.FC<{
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [totalPrice, setTotalPrice] = useState<number>(0);
 
+  // Добавляем состояния для данных
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+
   // --- ДОБАВЛЕНО: определяем companyId и selectedCompanyId для admin/user ---
   let effectiveCompanyId = companyId;
   let effectiveSelectedCompanyId = selectedCompanyId;
@@ -28,15 +49,62 @@ const CalculatorPage: React.FC<{
     effectiveSelectedCompanyId = id;
   }
 
+  // Загрузка проектов
   useEffect(() => {
     if (!effectiveSelectedCompanyId) {
       setProjects([]);
       return;
     }
-    fetchWithAuth(`${API_URL}/api/projects?companyId=${effectiveSelectedCompanyId}`)
+    fetchWithAuth(`${API_URL}/projects?companyId=${effectiveSelectedCompanyId}`)
       .then(res => res.json())
       .then(data => setProjects(Array.isArray(data) ? data : []))
       .catch(() => setProjects([]));
+  }, [effectiveSelectedCompanyId]);
+
+  // Загрузка данных для калькулятора (settings, glass, hardware)
+  useEffect(() => {
+    if (!effectiveSelectedCompanyId) {
+      setSettings(null);
+      return;
+    }
+
+    const loadCalculatorData = async () => {
+      setIsLoadingData(true);
+      try {
+        console.log('CalculatorPage: загружаю данные для companyId =', effectiveSelectedCompanyId);
+        const [settingsRes, glassRes, hardwareRes] = await Promise.all([
+          fetch(`${API_URL}/settings?companyId=${effectiveSelectedCompanyId}`),
+          fetch(`${API_URL}/glass?companyId=${effectiveSelectedCompanyId}`),
+          fetch(`${API_URL}/hardware?companyId=${effectiveSelectedCompanyId}`),
+        ]);
+        
+        const [settingsData, glassList, hardwareList] = await Promise.all([
+          settingsRes.json(),
+          glassRes.json(),
+          hardwareRes.json(),
+        ]);
+        
+        console.log('CalculatorPage: данные загружены', { settingsData, glassList, hardwareList });
+        
+        if (Array.isArray(settingsData) && settingsData.length > 0) {
+          const combinedSettings: Settings = {
+            ...settingsData[0],
+            glassList,
+            hardwareList,
+          };
+          setSettings(combinedSettings);
+        } else {
+          setSettings(null);
+        }
+      } catch (e) {
+        console.error('CalculatorPage: ошибка загрузки данных:', e);
+        setSettings(null);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    loadCalculatorData();
   }, [effectiveSelectedCompanyId]);
 
   const handleEditProject = (project: Project) => {
@@ -50,7 +118,7 @@ const CalculatorPage: React.FC<{
 
   const handleDeleteProject = async (project: Project) => {
     if (!window.confirm('Удалить проект?')) return;
-    await fetchWithAuth(`${API_URL}/api/projects/${project._id}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API_URL}/projects/${project._id}`, { method: 'DELETE' });
     setProjects(prev => prev.filter(p => p._id !== project._id));
     if (selectedProject && selectedProject._id === project._id) {
       setSelectedProject(null);
@@ -79,6 +147,7 @@ const CalculatorPage: React.FC<{
           <CalculationDetails
             draft={selectedProject ? { ...selectedProject.data, projectName: selectedProject.name, price: selectedProject.price, priceHistory: selectedProject.priceHistory } : draftProjectData}
             companyId={effectiveSelectedCompanyId}
+            settings={settings} // Передаем загруженные данные
             exactHeight={draftProjectData.exactHeight ?? false}
             onExactHeightChange={checked => {
               setDraftProjectData(draft => ({ ...draft, exactHeight: checked }));
@@ -92,6 +161,8 @@ const CalculatorPage: React.FC<{
               companyId={effectiveCompanyId}
               user={user}
               selectedCompanyId={effectiveSelectedCompanyId}
+              settings={settings} // Передаем загруженные данные
+              isLoadingData={isLoadingData} // Передаем состояние загрузки
               onChangeDraft={setDraftProjectData}
               selectedProject={selectedProject ?? undefined}
               onNewProject={project => {

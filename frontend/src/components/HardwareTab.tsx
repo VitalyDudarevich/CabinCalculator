@@ -28,13 +28,14 @@ interface HardwareTabProps {
   onCalculator?: () => void;
   activeSubTab?: string;
   onChangeSubTab?: (sub: string) => void;
+  onRefreshHardware?: (companyId: string) => Promise<void>;
 }
 
 const MAIN_SECTIONS = ['Профили', 'Крепления'];
 const COLUMNS = 3;
-const API_URL = `${BASE_API_URL}/api`;
+const API_URL = BASE_API_URL;
 
-const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, hardwareByCompany, user, onLogout, onCalculator, activeSubTab, onChangeSubTab }) => {
+const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, hardwareByCompany, user, onLogout, onCalculator, activeSubTab, onChangeSubTab, onRefreshHardware }) => {
   const company = companies.find(c => c._id === selectedCompanyId);
   const [editList, setEditList] = useState<HardwareItem[]>(hardwareByCompany[selectedCompanyId] || []);
   const [showAdd, setShowAdd] = useState(false);
@@ -137,9 +138,9 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
         return;
       }
       // После успешного добавления — обновить список
-      const updated = await fetch(`${API_URL}/hardware?companyId=${company._id}`);
-      const updatedList = await updated.json();
-      setEditList(Array.isArray(updatedList) ? updatedList : []);
+      if (onRefreshHardware) {
+        await onRefreshHardware(company._id);
+      }
       setAddSection(allSections[0] || '');
       setAddNewSection('');
       setAddName('');
@@ -163,9 +164,9 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
       });
       if (!res.ok) throw new Error('Ошибка удаления');
       // После успешного удаления — обновить hardware из базы
-      const updated = await fetch(`${API_URL}/hardware?companyId=${company._id}`);
-      const updatedList = await updated.json();
-      setEditList(Array.isArray(updatedList) ? updatedList : []);
+      if (onRefreshHardware) {
+        await onRefreshHardware(company._id);
+      }
     } catch {
       setError('Ошибка удаления');
     } finally {
@@ -189,6 +190,10 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
       setEditMode(false);
+      // Обновляем данные после сохранения
+      if (onRefreshHardware) {
+        await onRefreshHardware(company._id);
+      }
     } catch {
       setError('Ошибка сохранения');
     } finally {
@@ -237,7 +242,11 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   ];
 
   return (
-    <div style={{ padding: '0 48px' }}>
+    <div style={{ 
+      padding: '0 48px',
+      minHeight: 600,
+      width: '100%'
+    }}>
       {/* Табы и кнопки в одной строке */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 24, borderBottom: '2px solid #e0e7ef' }}>
         <div style={{ display: 'flex', gap: 0 }}>

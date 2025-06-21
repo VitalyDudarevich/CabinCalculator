@@ -1,7 +1,7 @@
 // import type { User } from '../pages/AdminPanel';
 import React, { useState, useEffect } from 'react';
 import { API_URL as BASE_API_URL } from '../utils/api';
-const API_URL = `${BASE_API_URL}/api`;
+const API_URL = BASE_API_URL;
 // ... существующий код ...
 // Здесь будет содержимое вкладки 'Настройки', вынесенное из AdminPanel.tsx 
 
@@ -41,6 +41,7 @@ const DEFAULT_BASE_COSTS: BaseCostItem[] = [
   { id: 'straight', name: 'Базовая стоимость прямой раздвижной', value: 0 },
   { id: 'corner', name: 'Базовая стоимость угловой раздвижной', value: 0 },
   { id: 'unique', name: 'Базовая стоимость уникальной конфигурации', value: 0 },
+  { id: 'partition', name: 'Базовая стоимость перегородки', value: 0 },
 ];
 
 const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -176,7 +177,16 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   return (
-    <div className="settings-tab-root" style={{ maxWidth: 540, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24 }}>
+    <div className="settings-tab-root" style={{ 
+      maxWidth: 540, 
+      margin: '0 auto', 
+      background: '#fff', 
+      borderRadius: 12, 
+      boxShadow: '0 1px 4px #0001', 
+      padding: 24,
+      minHeight: 400,
+      width: '100%'
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>
           Настройки {companyName}

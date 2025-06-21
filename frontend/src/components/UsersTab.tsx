@@ -8,14 +8,14 @@ interface Company {
 }
 interface UsersTabProps {
   users: User[];
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   companies: Company[];
   selectedCompanyId: string | null;
   userRole: string;
   fetchWithAuth: (input: RequestInfo, init?: RequestInit, retry?: boolean) => Promise<Response>;
+  onRefreshUsers?: () => Promise<void>;
 }
 
-const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selectedCompanyId, userRole, fetchWithAuth }) => {
+const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId, userRole, fetchWithAuth, onRefreshUsers }) => {
   const [showAddUser, setShowAddUser] = React.useState(false);
   const [userForm, setUserForm] = React.useState({ username: '', email: '', password: '', role: 'user', phone: '' });
   const [userFormError, setUserFormError] = React.useState('');
@@ -56,7 +56,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
       body.companyId = selectedCompanyId;
     }
     try {
-      const res = await fetchWithAuth('/api/users', {
+      const res = await fetchWithAuth('/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -74,13 +74,9 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
       setUserForm({ username: '', email: '', password: '', role: 'user', phone: '' });
       setUserFormError('');
       // Обновляем список пользователей
-      let url = '/api/users';
-      if (selectedCompanyId && selectedCompanyId !== 'all') {
-        url += `?companyId=${selectedCompanyId}`;
+      if (onRefreshUsers) {
+        onRefreshUsers();
       }
-      fetchWithAuth(url)
-        .then(res => res.json())
-        .then(data => setUsers(Array.isArray(data) ? data : []));
     } catch {
       setUserFormError('Ошибка сети');
     }
@@ -120,7 +116,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
       body.companyId = selectedCompanyId;
     }
     try {
-      const res = await fetchWithAuth(`/api/users/${editUser._id}`, {
+      const res = await fetchWithAuth(`/users/${editUser._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -135,13 +131,9 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
       setUserForm({ username: '', email: '', password: '', role: 'user', phone: '' });
       setUserFormError('');
       // Обновляем список пользователей
-      let url = '/api/users';
-      if (selectedCompanyId && selectedCompanyId !== 'all') {
-        url += `?companyId=${selectedCompanyId}`;
+      if (onRefreshUsers) {
+        onRefreshUsers();
       }
-      fetchWithAuth(url)
-        .then(res => res.json())
-        .then(data => setUsers(Array.isArray(data) ? data : []));
     } catch {
       setUserFormError('Ошибка сети');
     }
@@ -150,23 +142,22 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, companies, selecte
   const handleDeleteUser = async (user: User) => {
     if (!window.confirm('Удалить пользователя?')) return;
     try {
-      const res = await fetchWithAuth(`/api/users/${user._id}`, { method: 'DELETE' });
+      const res = await fetchWithAuth(`/users/${user._id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Ошибка удаления');
       // Обновляем список пользователей
-      let url = '/api/users';
-      if (selectedCompanyId && selectedCompanyId !== 'all') {
-        url += `?companyId=${selectedCompanyId}`;
+      if (onRefreshUsers) {
+        onRefreshUsers();
       }
-      fetchWithAuth(url)
-        .then(res => res.json())
-        .then(data => setUsers(Array.isArray(data) ? data : []));
     } catch {
       alert('Ошибка удаления пользователя');
     }
   };
 
   return (
-    <div>
+    <div style={{
+      minHeight: 500,
+      width: '100%'
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>
           Пользователи {companyName}

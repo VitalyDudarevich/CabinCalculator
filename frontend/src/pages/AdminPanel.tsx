@@ -43,7 +43,7 @@ async function fetchWithAuth(input: RequestInfo, init?: RequestInit, retry = tru
 
   if ((res.status === 401 || res.status === 400) && retry) {
     // Попытка обновить токен
-    const refreshRes = await fetch(`${API_URL}/api/auth/refresh`, { method: 'POST', credentials: 'include' });
+            const refreshRes = await fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
     if (refreshRes.ok) {
       const { token: newToken } = await refreshRes.json();
       if (newToken) {
@@ -70,9 +70,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   onLogout,
 }) => {
   const [section, setSection] = useState('companies');
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [hardwareByCompany, setHardwareByCompany] = useState<Record<string, HardwareItem[]>>({});
   const [showAddCompany, setShowAddCompany] = useState(false);
+  
+  // Состояния для отслеживания загрузки данных
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  
+  // Debounce для предотвращения быстрых переключений
+  const [debounceTimer, setDebounceTimer] = useState<number | null>(null);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -94,53 +102,138 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     effectiveCompanyId = selectedCompanyId;
   }
 
-  // --- Синхронизация секции и подвкладки с query-параметрами ---
+  // --- Синхронизация секции с query-параметрами ---
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const sectionParam = params.get('section');
-    const subParam = params.get('sub');
-    if (sectionParam && sectionParam !== section) {
+    const sectionParam = params.get('section') || 'companies';
+    if (sectionParam !== section) {
       setSection(sectionParam);
     }
-    // Экспортируем управление секцией и подвкладкой для Header
+  }, [location.search]);
+
+  // --- Экспорт функций управления для Header (отдельный useEffect) ---
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const subParam = params.get('sub');
+    
     window.adminSetSection = (key: string) => {
-      setSection(key);
-      if (key === 'companies') {
-        navigate('/admin');
-      } else {
-        navigate(`/admin?section=${key}`);
+      if (key === section || isTransitioning) return; // Предотвращаем лишние обновления
+      
+      // Очищаем предыдущий таймер
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
       }
+      
+      setIsTransitioning(true);
+      const timer = window.setTimeout(() => {
+        setSection(key);
+        setIsTransitioning(false);
+        setDebounceTimer(null);
+        if (key === 'companies') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate(`/admin?section=${key}`, { replace: true });
+        }
+      }, 100); // Небольшая задержка для плавности
+      
+      setDebounceTimer(timer);
     };
     window.adminCurrentSection = section;
+    
     // Для подвкладок hardware
     window.adminSetSubTab = (sub: string) => {
       const params = new URLSearchParams(location.search);
       params.set('section', 'hardware');
       params.set('sub', sub);
-      navigate(`/admin?${params.toString()}`);
+      navigate(`/admin?${params.toString()}`, { replace: true });
     };
     window.adminCurrentSubTab = subParam;
-  }, [location, section, navigate]);
+  }, [section, navigate, location.search]);
 
-  useEffect(() => {
-    if (section !== 'users') return;
-    let url = '/api/users';
-    if (effectiveCompanyId && effectiveCompanyId !== 'all') {
-      url += `?companyId=${effectiveCompanyId}`;
+  // Функция для загрузки всех данных админ-панели
+  const loadAllAdminData = async () => {
+    if (isLoadingData || isDataLoaded) return;
+    
+    setIsLoadingData(true);
+    try {
+      // Загружаем пользователей
+      let usersUrl = '/users';
+      if (effectiveCompanyId && effectiveCompanyId !== 'all') {
+        usersUrl += `?companyId=${effectiveCompanyId}`;
+      }
+      
+      const usersPromise = fetchWithAuth(usersUrl, undefined, true, onLogout)
+        .then((res: unknown) => (res as Response).json())
+        .then((data: unknown) => {
+          if (Array.isArray(data)) {
+            setUsers(data);
+          }
+        })
+        .catch(() => setUsers([]));
+
+      // Загружаем фурнитуру для всех компаний
+      const hardwarePromises = companies.map(async (company) => {
+        try {
+          const res = await fetchWithAuth(`/hardware?companyId=${company._id}`, undefined, true, onLogout);
+          const data = await res.json();
+          return { companyId: company._id, data: Array.isArray(data) ? data : [] };
+        } catch {
+          return { companyId: company._id, data: [] };
+        }
+      });
+
+      // Ждем завершения всех запросов
+      await Promise.all([usersPromise, ...hardwarePromises.map(async (promise) => {
+        const result = await promise;
+        setHardwareByCompany(prev => ({ ...prev, [result.companyId]: result.data }));
+      })]);
+
+      setIsDataLoaded(true);
+    } catch (error) {
+      console.error('Ошибка загрузки данных админ-панели:', error);
+    } finally {
+      setIsLoadingData(false);
     }
-    fetchWithAuth(url, undefined, true, onLogout)
-      .then((res: unknown) => (res as Response).json())
-      .then((data: unknown) => setUsers(Array.isArray(data) ? data : []));
-  }, [section, effectiveCompanyId, onLogout]);
+  };
 
+  // Загружаем данные один раз при монтировании или изменении effectiveCompanyId
   useEffect(() => {
-    if (!effectiveCompanyId || effectiveCompanyId === 'all') return;
-    if (!effectiveCompanyId) return;
-    fetchWithAuth(`/api/hardware?companyId=${effectiveCompanyId}`, undefined, true, onLogout)
-      .then((res: unknown) => (res as Response).json())
-      .then((data: unknown) => setHardwareByCompany(prev => ({ ...prev, [effectiveCompanyId]: Array.isArray(data) ? data : [] })))
-      .catch(() => setHardwareByCompany(prev => ({ ...prev, [effectiveCompanyId]: [] })));
-  }, [effectiveCompanyId, onLogout]);
+    if (effectiveCompanyId && companies.length > 0) {
+      loadAllAdminData();
+    }
+  }, [effectiveCompanyId, companies.length]);
+
+  // Функции для обновления данных при необходимости
+  const refreshUsers = async () => {
+    let usersUrl = '/users';
+    if (effectiveCompanyId && effectiveCompanyId !== 'all') {
+      usersUrl += `?companyId=${effectiveCompanyId}`;
+    }
+    try {
+      const res = await fetchWithAuth(usersUrl, undefined, true, onLogout);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Ошибка обновления пользователей:', error);
+    }
+  };
+
+  const refreshHardware = async (companyId: string) => {
+    try {
+      const res = await fetchWithAuth(`/hardware?companyId=${companyId}`, undefined, true, onLogout);
+      const data = await res.json();
+      setHardwareByCompany(prev => ({ 
+        ...prev, 
+        [companyId]: Array.isArray(data) ? data : [] 
+      }));
+    } catch (error) {
+      console.error('Ошибка обновления фурнитуры:', error);
+    }
+  };
+
+
 
   // --- Принудительно открываем вкладку 'Компании', если компаний нет и superadmin ---
   useEffect(() => {
@@ -153,6 +246,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       navigate('/admin?section=companies');
     }
   }, [user, companies, section, navigate]);
+
+  // --- Cleanup таймеров при размонтировании ---
+  useEffect(() => {
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+    };
+  }, [debounceTimer]);
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return <div style={{ padding: 32, textAlign: 'center', color: 'crimson', fontSize: 20 }}>Нет доступа к админ-панели</div>;
@@ -179,15 +281,39 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       <div style={{ display: 'flex', marginTop: 56, minHeight: 'calc(100vh - 56px)' }}>
         {/* Sidebar */}
         {!isMobile && (
-          <nav className="admin-sidebar" style={{ minWidth: 200, background: '#fff', borderRight: '1px solid #eee', padding: '24px 0', height: '100%' }}>
+          <nav className="admin-sidebar" style={{ 
+            width: 200, 
+            minWidth: 200, 
+            maxWidth: 200,
+            background: '#fff', 
+            borderRight: '1px solid #eee', 
+            padding: '24px 0', 
+            height: 'calc(100vh - 56px)',
+            overflow: 'auto',
+            position: 'relative',
+            flexShrink: 0
+          }}>
             {sections.map((s) => (
               <div
                 key={s.key}
                 onClick={() => {
+                  if (s.key === section || isTransitioning) return; // Предотвращаем клик на уже активную вкладку или во время перехода
                   if (window.adminSetSection) {
                     window.adminSetSection(s.key);
                   } else {
-                    setSection(s.key);
+                    // Очищаем предыдущий таймер
+                    if (debounceTimer) {
+                      clearTimeout(debounceTimer);
+                    }
+                    
+                    setIsTransitioning(true);
+                    const timer = window.setTimeout(() => {
+                      setSection(s.key);
+                      setIsTransitioning(false);
+                      setDebounceTimer(null);
+                    }, 100);
+                    
+                    setDebounceTimer(timer);
                   }
                 }}
                 style={{
@@ -209,10 +335,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           </nav>
         )}
         {/* Content */}
-        <div className="admin-content" style={{ flex: 1, padding: isMobile ? 0 : 32, background: isMobile ? '#fff' : '#f6f8fa', minHeight: 'calc(100vh - 56px)' }}>
+        <div className="admin-content" style={{ 
+          flex: 1, 
+          padding: isMobile ? 0 : 32, 
+          background: isMobile ? '#fff' : '#f6f8fa', 
+          minHeight: 'calc(100vh - 56px)',
+          height: 'calc(100vh - 56px)',
+          overflow: 'auto',
+          position: 'relative',
+          opacity: isTransitioning ? 0.7 : 1,
+          transition: 'opacity 0.1s ease-in-out'
+        }}>
           {/* Загрузка компаний */}
-          {companies == null ? (
-            <div style={{ padding: 32 }}>Загрузка...</div>
+          {companies == null || isLoadingData ? (
+            <div style={{ padding: 32 }}>
+              {companies == null ? 'Загрузка компаний...' : 'Загрузка данных админ-панели...'}
+            </div>
           ) : section === 'companies' ? (
             <>
               {user.role === 'superadmin' && companies.length === 0 && (
@@ -248,11 +386,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           ) : section === 'users' ? (
             <UsersTab
               users={users}
-              setUsers={setUsers}
               companies={companies}
               selectedCompanyId={selectedCompanyId}
               userRole={user.role}
               fetchWithAuth={fetchWithAuth}
+              onRefreshUsers={refreshUsers}
             />
           ) : section === 'hardware' ? (
             <HardwareTab
@@ -268,6 +406,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 params.set('sub', sub);
                 navigate(`/admin?${params.toString()}`);
               }}
+              onRefreshHardware={refreshHardware}
             />
           ) : section === 'settings' ? (
             <SettingsTab
@@ -278,6 +417,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       </div>
       <style>{`
+        /* Предотвращение дрожания при переключении вкладок */
+        .admin-content {
+          transform: translateZ(0);
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+        
+        .admin-content > * {
+          transform: translateZ(0);
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+        
+        /* Фиксированные размеры для стабильности */
+        .admin-sidebar, .admin-content {
+          will-change: auto;
+        }
+        
+        /* Предотвращение мигания компонентов */
+        .admin-sidebar div {
+          transform: translateZ(0);
+        }
+        
         @media (max-width: 600px) {
           .admin-content {
             padding: 0 !important;
@@ -285,6 +447,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             overflow-x: auto !important;
             width: 100vw !important;
             min-width: 0 !important;
+            height: calc(100vh - 56px) !important;
           }
           .admin-sidebar {
             display: none !important;

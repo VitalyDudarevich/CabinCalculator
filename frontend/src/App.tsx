@@ -42,7 +42,7 @@ export default function App() {
       
       if (token) {
         try {
-          const res = await fetchWithAuth(`${API_URL}/api/auth/me`, {
+          const res = await fetchWithAuth(`${API_URL}/auth/me`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           
@@ -101,7 +101,7 @@ export default function App() {
   // Загрузка компаний для суперадмина
   useEffect(() => {
     if (user?.role === 'superadmin') {
-      fetchWithAuth(`${API_URL}/api/companies`)
+      fetchWithAuth(`${API_URL}/companies`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {

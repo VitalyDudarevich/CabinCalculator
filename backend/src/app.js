@@ -24,6 +24,10 @@ app.use(
       'http://127.0.0.1:3000',
       'http://localhost:5173',
       'http://127.0.0.1:5173',
+      'http://localhost:5174', // Добавляем порт 5174
+      'http://127.0.0.1:5174',
+      'http://localhost:5175', // Добавляем порт 5175
+      'http://127.0.0.1:5175',
       'https://glass-calculator-bg.vercel.app', // Добавляем продакшен домен
     ], // Добавляем порт Vite
     credentials: true,
@@ -40,6 +44,10 @@ app.use((req, res, next) => {
     'http://127.0.0.1:3000',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://localhost:5174', // Добавляем порт 5174
+    'http://127.0.0.1:5174',
+    'http://localhost:5175', // Добавляем порт 5175
+    'http://127.0.0.1:5175',
     'https://glass-calculator-bg.vercel.app', // Добавляем продакшен домен
   ];
   const origin = req.headers.origin;

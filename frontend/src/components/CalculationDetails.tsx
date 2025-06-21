@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { API_URL as BASE_API_URL } from '../utils/api';
+import React, { useEffect } from 'react';
 
 interface HardwareDraftItem {
   hardwareId: string;
@@ -50,12 +49,13 @@ interface Settings {
   baseCostMode?: 'fixed' | 'percentage'; // Режим расчета базовой стоимости
   baseCostPercentage?: number; // Процент от стоимости стекла и фурнитуры
   glassList?: { color: string; thickness?: string; thickness_mm?: number; price: number; companyId: string }[];
-  hardwareList?: { name: string; price: number; companyId?: string }[];
+  hardwareList?: { _id?: string; name: string; price: number; companyId?: string }[];
 }
 
 interface CalculationDetailsProps {
   draft: DraftProjectData;
   companyId?: string;
+  settings?: Settings | null; // Добавляем проп для передачи данных
   onTotalChange?: (total: number, deliveryPrice: number, installPrice: number) => void;
   exactHeight?: boolean;
   onExactHeightChange?: (checked: boolean) => void;
@@ -68,6 +68,7 @@ const configLabels: Record<string, string> = {
   'straight-glass': 'Прямая раздвижная',
   corner: 'Угловая раздвижная',
   unique: 'Уникальная конфигурация',
+  partition: 'Перегородка',
 };
 
 const hardwareColorLabels: Record<string, string> = {
@@ -86,56 +87,17 @@ const normalizeName = (name: string) =>
       .trim()
       .toLowerCase();
 
-const API_URL = `${BASE_API_URL}/api`;
+
 
 console.log('CalculationDetails: компонент монтируется');
 
-const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyId, onTotalChange, exactHeight, onExactHeightChange }) => {
+const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyId, settings: propsSettings, onTotalChange, exactHeight, onExactHeightChange }) => {
   console.log('CalculationDetails: companyId проп:', companyId);
   console.log('CalculationDetails: draft:', draft);
-  const [settings, setSettings] = useState<Settings | null>(null);
-
-  useEffect(() => {
-    console.log('CalculationDetails useEffect: companyId =', companyId);
-    if (!companyId) {
-      console.log('CalculationDetails useEffect: companyId отсутствует, fetch не выполняется');
-      return;
-    }
-    const fetchAll = async () => {
-      try {
-        console.log('CalculationDetails: начинаю fetch настроек, стекла, фурнитуры для companyId =', companyId);
-        const [settingsRes, glassRes, hardwareRes] = await Promise.all([
-          fetch(`${API_URL}/settings?companyId=${companyId}`),
-          fetch(`${API_URL}/glass?companyId=${companyId}`),
-          fetch(`${API_URL}/hardware?companyId=${companyId}`),
-        ]);
-        const [settingsData, glassList, hardwareList] = await Promise.all([
-          settingsRes.json(),
-          glassRes.json(),
-          hardwareRes.json(),
-        ]);
-        console.log('CalculationDetails: settingsData:', settingsData);
-        console.log('CalculationDetails: glassList:', glassList);
-        console.log('CalculationDetails: hardwareList:', hardwareList);
-        if (Array.isArray(settingsData) && settingsData.length > 0) {
-          const combinedSettings: Settings = {
-            ...settingsData[0],
-            glassList,
-            hardwareList,
-          };
-          setSettings(combinedSettings);
-          console.log('CalculationDetails: combinedSettings:', combinedSettings);
-        } else {
-          setSettings(null);
-          console.log('CalculationDetails: settingsData пустой массив или не массив');
-        }
-      } catch (e) {
-        console.error('Ошибка загрузки настроек:', e);
-        setSettings(null);
-      }
-    };
-    fetchAll();
-  }, [companyId]);
+  console.log('CalculationDetails: propsSettings:', propsSettings);
+  
+  // Используем переданные данные вместо локального состояния
+  const settings = propsSettings;
 
   // Логирование для диагностики companyId
   console.log('CalculationDetails companyId:', companyId);
@@ -262,7 +224,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
           }
         } else if (draft.width && draft.height) {
-          // Остальные конфигурации — по width × height
+          // Остальные конфигурации — по width × height (включая partition)
           widthM = Number(draft.width) / 1000;
           heightM = Number(draft.height) / 1000;
           area = +(widthM * heightM).toFixed(2);
@@ -466,7 +428,8 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
             (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
             (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
-            (draft.config === 'unique' && normalizeName(b.name).includes('уник'))
+            (draft.config === 'unique' && normalizeName(b.name).includes('уник')) ||
+            (draft.config === 'partition' && normalizeName(b.name).includes('перегородк'))
           )
         );
       }

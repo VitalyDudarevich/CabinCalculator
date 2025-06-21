@@ -1,7 +1,7 @@
 // auth.ts — утилиты для работы с access/refresh токенами
 
 import { API_URL as BASE_API_URL } from './api';
-const API_URL = `${BASE_API_URL}/api/auth`;
+const API_URL = `${BASE_API_URL}/auth`;
 
 export async function refreshAccessToken() {
   try {

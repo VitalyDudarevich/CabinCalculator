@@ -22,10 +22,28 @@ const GLASS_THICKNESS = [
   { value: '10', label: '10 мм' },
 ];
 
+interface Settings {
+  currency: string;
+  usdRate: string;
+  rrRate: string;
+  showUSD: boolean;
+  showRR: boolean;
+  baseCosts: { id: string; name: string; value: number }[];
+  baseIsPercent: boolean;
+  basePercentValue: number;
+  customColorSurcharge?: number;
+  baseCostMode?: 'fixed' | 'percentage';
+  baseCostPercentage?: number;
+  glassList?: { color: string; thickness?: string; thickness_mm?: number; price: number; companyId: string }[];
+  hardwareList?: { _id?: string; name: string; price: number; companyId?: string }[];
+}
+
 interface CalculatorFormProps {
   companyId?: string;
   user?: User | null;
   selectedCompanyId?: string;
+  settings?: Settings | null; // Добавляем проп для передачи данных
+  isLoadingData?: boolean; // Добавляем состояние загрузки
   onChangeDraft?: (draft: DraftProjectData) => void;
   selectedProject?: Project;
   onNewProject?: (project?: Project) => void;
@@ -42,14 +60,14 @@ const STATUS_OPTIONS = [
   'Оплачено',
 ];
 
-const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, selectedCompanyId = '', onChangeDraft, selectedProject, onNewProject, totalPrice }) => {
+const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, selectedCompanyId = '', settings: propsSettings, isLoadingData, onChangeDraft, selectedProject, onNewProject, totalPrice }) => {
   const [projectName, setProjectName] = useState('');
   const [customer, setCustomer] = useState('');
   const [config, setConfig] = useState('');
   const [draftConfig, setDraftConfig] = useState(config);
   const [glassColors, setGlassColors] = useState<string[]>([]);
   const [glassColor, setGlassColor] = useState('');
-  const [glassThickness, setGlassThickness] = useState('8');
+  const [glassThickness, setGlassThickness] = useState('10');
   const [hardwareColor, setHardwareColor] = useState('');
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
@@ -138,37 +156,36 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     }
   }, [selectedProject, serviceList]);
 
+  // Используем переданные данные вместо загрузки
   useEffect(() => {
-    if (!effectiveCompanyId) return;
-    const fetchAll = async () => {
-      try {
-        const [, glassRes, hardwareRes] = await Promise.all([
-          fetch(`${BASE_API_URL}/api/settings?companyId=${effectiveCompanyId}`),
-          fetch(`${BASE_API_URL}/api/glass?companyId=${effectiveCompanyId}`),
-          fetch(`${BASE_API_URL}/api/hardware?companyId=${effectiveCompanyId}`),
-        ]);
-        const [glassListData, hardwareListData] = await Promise.all([
-          glassRes.json(),
-          hardwareRes.json(),
-        ]);
-        setHardwareList(Array.isArray(hardwareListData) ? hardwareListData : []);
-        // Собираем уникальные цвета стекла для выпадающего списка
-        const uniqueColors = Array.from(new Set((Array.isArray(glassListData) ? glassListData : []).map((g: unknown) => (g as { color?: string }).color).filter((c: unknown): c is string => Boolean(c))));
-        setGlassColors(uniqueColors);
-        setGlassColor(uniqueColors[0] || '');
-      } catch {
-        setHardwareList([]);
-        setGlassColors([]);
-        setGlassColor('');
-      }
-    };
-    fetchAll();
-  }, [effectiveCompanyId]);
+    if (propsSettings) {
+      console.log('CalculatorForm: используем переданные данные', propsSettings);
+      // Преобразуем данные hardwareList чтобы добавить _id если его нет
+      const hardwareData = Array.isArray(propsSettings.hardwareList) 
+        ? propsSettings.hardwareList.map((item, index) => ({
+            _id: item._id || `temp-${index}`,
+            name: item.name,
+            price: item.price,
+            companyId: item.companyId
+          }))
+        : [];
+      setHardwareList(hardwareData);
+      // Собираем уникальные цвета стекла для выпадающего списка
+      const uniqueColors = Array.from(new Set((Array.isArray(propsSettings.glassList) ? propsSettings.glassList : []).map((g: unknown) => (g as { color?: string }).color).filter((c: unknown): c is string => Boolean(c))));
+      setGlassColors(uniqueColors);
+      setGlassColor(uniqueColors[0] || '');
+    } else {
+      console.log('CalculatorForm: данные еще не загружены');
+      setHardwareList([]);
+      setGlassColors([]);
+      setGlassColor('');
+    }
+  }, [propsSettings]);
 
   // Получение списка услуг для компании
   useEffect(() => {
     if (!effectiveCompanyId) return;
-    fetch(`${BASE_API_URL}/api/services?companyId=${effectiveCompanyId}`)
+    fetch(`${BASE_API_URL}/services?companyId=${effectiveCompanyId}`)
       .then(res => res.json())
       .then(data => {
         const list: DialogServiceItem[] = (Array.isArray(data) ? data : []).map((s: { serviceId?: string; name: string; price: number }) => ({
@@ -288,6 +305,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setDraftConfig(value);
     setChangedFields(fields => new Set(fields).add('config'));
     
+    // Установить дефолтные значения для конфигурации "Перегородка"
+    if (value === 'partition') {
+      setGlassColor('прозрачный');
+      setGlassThickness('10');
+    }
+    
     // При смене конфигурации НЕ добавляем автоматически услуги
     // Пользователь должен выбрать их сам
     
@@ -318,6 +341,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         { hardwareId: '', name: 'Профиль', quantity: 1 },
         { hardwareId: '', name: 'Крепеж', quantity: 1 }
       ]);
+    } else if (value === 'partition') {
+      setProjectHardware([]);
     } else {
       setProjectHardware([]);
     }
@@ -392,7 +417,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     if (!glassColor) newErrors.glassColor = 'Выберите цвет стекла';
     if (!glassThickness) newErrors.glassThickness = 'Выберите толщину стекла';
     // Размеры
-    if (config === 'glass' || config === 'unique' || config === 'corner') {
+    if (config === 'glass' || config === 'unique' || config === 'corner' || config === 'partition') {
       if (!width) newErrors.width = 'Укажите ширину';
       if (!height) newErrors.height = 'Укажите высоту';
     }
@@ -489,7 +514,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     try {
       if (selectedProject && selectedProject._id) {
         // Редактирование: PUT
-        res = await fetch(`${BASE_API_URL}/api/projects/${selectedProject._id}`, {
+        res = await fetch(`${BASE_API_URL}/projects/${selectedProject._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(projectData),
@@ -537,7 +562,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         }
       } else {
         // Новый проект: POST
-        res = await fetch(`${BASE_API_URL}/api/projects`, {
+        res = await fetch(`${BASE_API_URL}/projects`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(projectData),
@@ -606,6 +631,17 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     delete rest.hardwareColor;
     setErrors(rest);
   };
+
+  // Показываем индикатор загрузки если данные еще не загружены
+  if (isLoadingData) {
+    return (
+      <div className="calculator-form-root" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
+        <div style={{ textAlign: 'center', padding: '40px 0', color: '#666' }}>
+          <div>Загрузка данных...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="calculator-form-root" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
@@ -705,6 +741,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             <option value="straight">Прямая раздвижная</option>
             <option value="corner">Угловая раздвижная</option>
             <option value="unique">Уникальная конфигурация</option>
+            <option value="partition">Перегородка</option>
           </select>
           <label htmlFor="config">Конфигурация *</label>
           {errors.config && <div style={{ color: 'red', fontSize: 13 }}>{errors.config}</div>}
@@ -1473,6 +1510,173 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               ))}
             </div>
           )}
+        </>
+      )}
+      {config === 'partition' && (
+        <>
+          {/* Цвет стекла и толщина стекла */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <select
+                id="glass-color"
+                className={glassColor ? 'filled' : ''}
+                value={glassColor}
+                onChange={e => {
+                  setGlassColor(e.target.value);
+                  const rest = { ...errors };
+                  delete rest.glassColor;
+                  setErrors(rest);
+                }}
+                required
+                style={{ width: '100%', background: changedFields.has('glassColor') ? '#fffbe6' : undefined }}
+              >
+                {glassColors.length > 0 && glassColors.map(color => (
+                  <option key={color} value={color}>{color}</option>
+                ))}
+              </select>
+              <label htmlFor="glass-color">Цвет стекла *</label>
+              {errors.glassColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.glassColor}</div>}
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <select
+                id="glass-thickness"
+                className={glassThickness ? 'filled' : ''}
+                value={glassThickness}
+                onChange={e => {
+                  setGlassThickness(e.target.value);
+                  const rest = { ...errors };
+                  delete rest.glassThickness;
+                  setErrors(rest);
+                }}
+                required
+                style={{ width: '100%', background: changedFields.has('glassThickness') ? '#fffbe6' : undefined }}
+              >
+                {GLASS_THICKNESS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <label htmlFor="glass-thickness">Толщина стекла *</label>
+              {errors.glassThickness && <div style={{ color: 'red', fontSize: 13 }}>{errors.glassThickness}</div>}
+            </div>
+          </div>
+          
+          {/* Ширина и высота */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 0, width: '100%' }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <input
+                type="number"
+                id="width"
+                className={`glass-size-input ${width ? 'filled' : ''}`}
+                placeholder=" "
+                value={width}
+                onChange={e => {
+                  setWidth(e.target.value);
+                  const rest = { ...errors };
+                  delete rest.width;
+                  setErrors(rest);
+                }}
+                required
+                style={{ width: '100%', background: changedFields.has('width') ? '#fffbe6' : undefined }}
+              />
+              <label htmlFor="width">Ширина (мм) *</label>
+              {errors.width && <div style={{ color: 'red', fontSize: 13 }}>{errors.width}</div>}
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <input
+                type="number"
+                id="height"
+                className={`glass-size-input ${height ? 'filled' : ''}`}
+                placeholder=" "
+                value={height}
+                onChange={e => {
+                  setHeight(e.target.value);
+                  const rest = { ...errors };
+                  delete rest.height;
+                  setErrors(rest);
+                }}
+                required
+                style={{ width: '100%', background: changedFields.has('height') ? '#fffbe6' : undefined }}
+              />
+              <label htmlFor="height">Высота (мм) *</label>
+              {errors.height && <div style={{ color: 'red', fontSize: 13 }}>{errors.height}</div>}
+            </div>
+          </div>
+          
+          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <select
+                  id="hardware-color"
+                  className={hardwareColor ? 'filled' : ''}
+                  value={hardwareColor}
+                  onChange={handleHardwareColorChange}
+                  required
+                  style={{ width: '100%', background: changedFields.has('hardwareColor') ? '#fffbe6' : undefined }}
+                >
+                  {HARDWARE_COLORS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <label htmlFor="hardware-color">Цвет фурнитуры *</label>
+                {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
+              </div>
+              {/* Чекбокс нестандартного цвета в той же строке */}
+              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={customColor}
+                    onChange={e => setCustomColor(e.target.checked)}
+                    style={{ width: 14, height: 14 }}
+                  />
+                  <span>Нестандартный цвет</span>
+                </label>
+              </div>
+            </div>
+            <div style={{ marginTop: 0, marginBottom: 0 }}>
+              <AddHardwareButton onClick={() => setShowAddHardwareDialog(true)} />
+            </div>
+            {projectHardware.length > 0 && (
+              <div style={{ marginTop: 12, marginBottom: 8 }}>
+                {projectHardware.map((hw, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
+                    <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                      <QuantityControl
+                        value={hw.quantity}
+                        onChange={v => setProjectHardware(list => list.map((item, i) => i === idx ? { ...item, quantity: v } : item))}
+                      />
+                      <button
+                        onClick={() => setProjectHardware(list => list.filter((_, i) => i !== idx))}
+                        style={{
+                          width: 32,
+                          height: 32,
+                          border: 'none',
+                          borderRadius: '50%',
+                          background: 'none',
+                          color: '#e53935',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 22,
+                          transition: 'color 0.15s',
+                          margin: 0,
+                        }}
+                        title="Удалить"
+                        onMouseOver={e => (e.currentTarget.style.color = '#b71c1c')}
+                        onMouseOut={e => (e.currentTarget.style.color = '#e53935')}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {errors.projectHardware && <div style={{ color: 'red', fontSize: 13 }}>{errors.projectHardware}</div>}
+          </div>
         </>
       )}
       {config && (

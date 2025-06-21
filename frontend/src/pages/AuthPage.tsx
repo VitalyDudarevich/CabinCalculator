@@ -27,7 +27,7 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const AUTH_API_URL = `${API_URL}/api/auth`;
+  const AUTH_API_URL = `${API_URL}/auth`;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });

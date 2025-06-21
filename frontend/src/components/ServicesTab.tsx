@@ -24,7 +24,7 @@ export interface ServicesTabProps {
   onCalculator?: () => void;
 }
 
-const API_URL = `${BASE_API_URL}/api`;
+const API_URL = BASE_API_URL;
 
 const ServicesTab: React.FC<ServicesTabProps> = ({
   company,

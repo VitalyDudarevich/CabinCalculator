@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL as BASE_API_URL } from '../utils/api';
-const API_URL = `${BASE_API_URL}/api`;
+const API_URL = BASE_API_URL;
 
 interface Company {
   _id: string;

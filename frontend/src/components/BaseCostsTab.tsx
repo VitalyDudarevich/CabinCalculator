@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL as BASE_API_URL } from '../utils/api';
-const API_URL = `${BASE_API_URL}/api`;
+const API_URL = BASE_API_URL;
 
 interface Company {
   _id: string;
@@ -22,6 +22,7 @@ const DEFAULT_BASE_COSTS: BaseCostItem[] = [
   { id: 'straight', name: 'Базовая стоимость прямой раздвижной', value: 0 },
   { id: 'corner', name: 'Базовая стоимость угловой раздвижной', value: 0 },
   { id: 'unique', name: 'Базовая стоимость уникальной конфигурации', value: 0 },
+  { id: 'partition', name: 'Базовая стоимость перегородки', value: 0 },
 ];
 
 const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
