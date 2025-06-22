@@ -41,6 +41,16 @@ const STATUS_COLORS: Record<string, string> = {
   'Оплачено': '#388e3c',
 };
 
+const configLabels: Record<string, string> = {
+  glass: 'Стационарное стекло',
+  straight: 'Прямая раздвижная',
+  'straight-opening': 'Прямая раздвижная',
+  'straight-glass': 'Прямая раздвижная',
+  corner: 'Угловая раздвижная',
+  unique: 'Уникальная конфигурация',
+  partition: 'Перегородка',
+};
+
 const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], onEdit, onDelete }) => {
   const [search, setSearch] = useState('');
   if (!user) {
@@ -49,7 +59,7 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
         <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 12, color: '#000' }}>История проектов</div>
         <input
           type="text"
-          placeholder="Поиск по имени..."
+          placeholder="Поиск по имени, заказчику или конфигурации..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="auth-search-input"
@@ -105,7 +115,16 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
   }
 
   const filtered = search.trim()
-    ? projects.filter(p => p.name && p.name.toLowerCase().includes(search.trim().toLowerCase()))
+    ? projects.filter(p => {
+        const searchTerm = search.trim().toLowerCase();
+        const nameMatch = p.name && p.name.toLowerCase().includes(searchTerm);
+        const customerMatch = p.customer && p.customer.toLowerCase().includes(searchTerm);
+        const configMatch = p.data?.config && (
+          p.data.config.toLowerCase().includes(searchTerm) ||
+          (configLabels[p.data.config] && configLabels[p.data.config].toLowerCase().includes(searchTerm))
+        );
+        return nameMatch || customerMatch || configMatch;
+      })
     : projects;
 
   return (
@@ -113,7 +132,7 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
       <h2 style={{ margin: '0 0 16px 0', fontSize: 24, fontWeight: 700, color: '#000' }}>История проектов</h2>
       <input
         type="text"
-        placeholder="Поиск по имени..."
+        placeholder="Поиск по имени, заказчику или конфигурации..."
         value={search}
         onChange={e => setSearch(e.target.value)}
         className="project-search-input"
@@ -149,7 +168,19 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
                     </span>
                   </span>
                 </div>
-                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8, wordBreak: 'break-word', color: '#000' }}>{project.name}</div>
+                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8, wordBreak: 'break-word', color: '#000' }}>
+                  {project.name}
+                  {project.data?.config && (
+                    <span style={{ color: '#666', fontWeight: 400, fontSize: 16 }}>
+                      {' '}({configLabels[project.data.config] || project.data.config})
+                    </span>
+                  )}
+                </div>
+                {project.customer && (
+                  <div style={{ color: '#666', fontSize: 14, marginBottom: 8, fontStyle: 'italic' }}>
+                    <strong>Заказчик:</strong> {project.customer}
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <span style={{ color: '#222', fontWeight: 700, fontSize: 16 }}>Сумма:</span>
                   <span style={{ color: '#222', fontWeight: 700, fontSize: 16 }}>{typeof project.price === 'number' ? project.price.toLocaleString('ru-RU') : 0} GEL</span>

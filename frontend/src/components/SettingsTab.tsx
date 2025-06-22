@@ -10,19 +10,12 @@ interface Company {
   name: string;
 }
 
-interface BaseCostItem {
-  id: string;
-  name: string;
-  value: number;
-}
-
 interface Settings {
   currency: string;
   usdRate: string;
   rrRate: string;
   showUSD: boolean;
   showRR: boolean;
-  baseCosts: BaseCostItem[];
   baseIsPercent: boolean;
   basePercentValue: number;
   customColorSurcharge: number; // Надбавка за нестандартный цвет в процентах
@@ -36,13 +29,7 @@ interface SettingsTabProps {
   onAdd?: () => void;
 }
 
-const DEFAULT_BASE_COSTS: BaseCostItem[] = [
-  { id: 'glass', name: 'Базовая стоимость стекляшки', value: 0 },
-  { id: 'straight', name: 'Базовая стоимость прямой раздвижной', value: 0 },
-  { id: 'corner', name: 'Базовая стоимость угловой раздвижной', value: 0 },
-  { id: 'unique', name: 'Базовая стоимость уникальной конфигурации', value: 0 },
-  { id: 'partition', name: 'Базовая стоимость перегородки', value: 0 },
-];
+
 
 const SettingsTab: React.FC<SettingsTabProps> = ({
   currencyOptions,
@@ -55,7 +42,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     rrRate: '0',
     showUSD: true,
     showRR: false,
-    baseCosts: DEFAULT_BASE_COSTS,
     baseIsPercent: false,
     basePercentValue: 0,
     customColorSurcharge: 0,
@@ -86,7 +72,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
             rrRate: s.rrRate !== undefined && s.rrRate !== null ? String(s.rrRate) : '0',
             showUSD: s.showUSD ?? true,
             showRR: s.showRR ?? false,
-            baseCosts: Array.isArray(s.baseCosts) && s.baseCosts.length > 0 ? s.baseCosts : DEFAULT_BASE_COSTS,
             baseIsPercent: s.baseIsPercent ?? false,
             basePercentValue: s.basePercentValue ?? 0,
             customColorSurcharge: s.customColorSurcharge ?? 0,
@@ -97,7 +82,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         } else {
           setSettings({
             currency: 'GEL', usdRate: '0', rrRate: '0', showUSD: true, showRR: false,
-            baseCosts: DEFAULT_BASE_COSTS,
             baseIsPercent: false,
             basePercentValue: 0,
             customColorSurcharge: 0,
@@ -127,7 +111,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         rrRate: settings.rrRate === '' ? 0 : Math.round(parseFloat(settings.rrRate) * 100) / 100,
         showUSD: settings.showUSD,
         showRR: settings.showRR,
-        baseCosts: settings.baseCosts,
         baseIsPercent: settings.baseIsPercent,
         basePercentValue: settings.basePercentValue,
         customColorSurcharge: settings.customColorSurcharge,
@@ -157,7 +140,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         rrRate: data.rrRate !== undefined && data.rrRate !== null ? String(data.rrRate) : '0',
         showUSD: data.showUSD,
         showRR: data.showRR,
-        baseCosts: Array.isArray(data.baseCosts) && data.baseCosts.length > 0 ? data.baseCosts : DEFAULT_BASE_COSTS,
         baseIsPercent: data.baseIsPercent ?? false,
         basePercentValue: data.basePercentValue ?? 0,
         customColorSurcharge: data.customColorSurcharge ?? 0,

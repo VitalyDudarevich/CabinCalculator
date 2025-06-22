@@ -169,8 +169,33 @@ const AddHardwareDialog: React.FC<AddHardwareDialogProps> = ({ hardwareList, onS
   };
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }}>
-      <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: 480, boxShadow: '0 2px 16px #0002', position: 'relative' }}>
+    <div style={{ 
+      position: 'fixed', 
+      top: 0, 
+      left: 0, 
+      right: 0,
+      bottom: 0,
+      background: '#0008', 
+      zIndex: 9999, 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      padding: '20px',
+      boxSizing: 'border-box'
+    }}>
+      <div style={{ 
+        background: '#fff', 
+        borderRadius: 12, 
+        padding: 24, 
+        width: 480, 
+        maxWidth: '90vw',
+        maxHeight: '90vh',
+        boxShadow: '0 2px 16px #0002', 
+        position: 'relative',
+        boxSizing: 'border-box',
+        overflowY: 'auto',
+        margin: 'auto'
+      }}>
         {/* Кнопка закрытия */}
         <button
           onClick={onClose}

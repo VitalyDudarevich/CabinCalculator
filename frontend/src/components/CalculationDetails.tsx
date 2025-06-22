@@ -34,6 +34,9 @@ interface DraftProjectData {
   uniqueGlasses?: Array<{ name: string; color: string; thickness: string; width: string; height: string }>;
   projectServices?: { serviceId: string; name: string; price: number }[];
   customColor?: boolean; // Флаг нестандартного цвета фурнитуры
+  selectedTemplate?: any; // Данные выбранного шаблона
+  templateFields?: { [key: string]: string }; // Поля шаблона
+  templateGlasses?: { [glassIndex: number]: { width: string; height: string; hasThreshold?: boolean } }; // Данные стекол из шаблона
 }
 
 interface Settings {
@@ -62,7 +65,7 @@ interface CalculationDetailsProps {
 }
 
 const configLabels: Record<string, string> = {
-  glass: 'Стекляшка',
+      glass: 'Стационарное стекло',
   straight: 'Прямая раздвижная',
   'straight-opening': 'Прямая раздвижная',
   'straight-glass': 'Прямая раздвижная',
@@ -183,6 +186,72 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         total: +totalPrice.toFixed(2),
       });
       total += +totalPrice.toFixed(2);
+    } else if (draft.config && draft.config.startsWith('template-') && draft.selectedTemplate && draft.templateGlasses) {
+      // Обработка стекол из шаблона
+      let totalArea = 0;
+      let totalPrice = 0;
+      const normalizeThickness = (val: string) => val.replace(/[^\d]/g, '');
+      
+      // Получаем общий цвет и толщину стекла из полей формы
+      const templateGlassColor = draft.glassColor;
+      const templateGlassThickness = draft.glassThickness;
+      
+      // Проходим по каждому стеклу из конфигурации шаблона
+      if (draft.selectedTemplate.glassConfig && Array.isArray(draft.selectedTemplate.glassConfig)) {
+        draft.selectedTemplate.glassConfig.forEach((glassConf: any, index: number) => {
+          const glassData = draft.templateGlasses![index];
+          if (glassData && glassData.width && glassData.height) {
+            const width = Number(glassData.width);
+            const height = Number(glassData.height);
+            let area = !isNaN(width) && !isNaN(height) ? +(width * height / 1000000).toFixed(2) : 0;
+            
+            // Применяем корректировки размеров для распашных дверей
+            if (glassConf.type === 'swing_door' && draft.selectedTemplate.sizeAdjustments) {
+              const doorHeightReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
+              const thresholdReduction = draft.selectedTemplate.sizeAdjustments.thresholdReduction || 15;
+              const exactHeightReduction = draft.exactHeight ? 3 : 0; // Вычитаем 3 мм при нестандартной высоте
+              
+              let correctedHeight = height - doorHeightReduction - exactHeightReduction;
+              if (glassData.hasThreshold) {
+                correctedHeight -= thresholdReduction;
+              }
+              area = +(width * correctedHeight / 1000000).toFixed(2);
+            } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate.sizeAdjustments) {
+              const doorHeightReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
+              const exactHeightReduction = draft.exactHeight ? 3 : 0; // Вычитаем 3 мм при нестандартной высоте
+              const correctedHeight = height - doorHeightReduction - exactHeightReduction;
+              area = +(width * correctedHeight / 1000000).toFixed(2);
+            } else {
+              // Для стационарных стекол также вычитаем 3 мм при нестандартной высоте
+              const exactHeightReduction = draft.exactHeight ? 3 : 0;
+              const correctedHeight = height - exactHeightReduction;
+              area = +(width * correctedHeight / 1000000).toFixed(2);
+            }
+            
+            totalArea += area;
+            
+            // Ищем цену за м² для этого стекла
+            let glassPrice = 0;
+            if (settings.glassList && templateGlassColor && templateGlassThickness) {
+              const glassItem = settings.glassList.find((g) => {
+                const colorMatch = g.color.trim().toLowerCase() === templateGlassColor.trim().toLowerCase();
+                const thicknessMatch = !g.thickness || normalizeThickness(g.thickness) === normalizeThickness(String(templateGlassThickness));
+                const companyMatch = String(g.companyId) === String(companyId);
+                return colorMatch && thicknessMatch && companyMatch;
+              });
+              if (glassItem) glassPrice = glassItem.price;
+            }
+            totalPrice += +(glassPrice * area);
+          }
+        });
+      }
+      
+      positions.push({
+        label: `Общая площадь стекла: ${totalArea.toFixed(2)} м²`,
+        price: 0,
+        total: +totalPrice.toFixed(2),
+      });
+      total += +totalPrice.toFixed(2);
     } else {
       // --- Расчёт и отображение стекла по конфигурации ---
       if (
@@ -195,9 +264,11 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         let area = 0;
         let label = '';
         if (draft.config === 'glass' && draft.width && draft.height) {
-          // Стекляшка: всегда width × height
+          // Стационарное стекло: всегда width × height
           widthM = Number(draft.width) / 1000;
-          heightM = Number(draft.height) / 1000;
+          // Если нестандартная высота, вычитаем 3 мм
+          const heightValue = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+          heightM = heightValue / 1000;
           area = +(widthM * heightM).toFixed(2);
           label = `Стекло ${draft.glassColor} ${draft.glassThickness} мм (${area} м²)`;
         } else if (["straight", "straight-glass", "straight-opening"].includes(String(draft.config))) {
@@ -425,7 +496,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         baseCost = settings.baseCosts.find(b =>
           normalizeName(b.name).includes('базовая стоимость') &&
           (
-            (draft.config === 'glass' && normalizeName(b.name).includes('стекляшка')) ||
+            (draft.config === 'glass' && normalizeName(b.name).includes('стационарного стекла')) ||
             (['straight', 'straight-glass', 'straight-opening'].includes(draft.config || '') && normalizeName(b.name).includes('раздвижн')) ||
             (draft.config === 'corner' && normalizeName(b.name).includes('углов')) ||
             (draft.config === 'unique' && normalizeName(b.name).includes('уник')) ||
@@ -512,6 +583,26 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
               <b>Заказчик:</b> {draft.customer}
             </div>
           )}
+          {/* Для шаблонов показываем конфигурацию ПЕРЕД списком стекол */}
+          {draft.config && draft.config.startsWith('template-') && draft.glassColor && (
+            <div style={{ marginTop: 8 }}><b>Цвет стекла:</b> {draft.glassColor}</div>
+          )}
+          {draft.config && draft.config.startsWith('template-') && draft.glassThickness && (
+            <div><b>Толщина стекла:</b> {draft.glassThickness} мм</div>
+          )}
+          {/* Чекбокс нестандартной высоты для шаблонов */}
+          {draft.config && draft.config.startsWith('template-') && draft.selectedTemplate?.exactHeightOption && (
+            <div style={{ margin: '8px 0' }}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!exactHeight}
+                  onChange={e => onExactHeightChange?.(e.target.checked)}
+                />{' '}
+                Нестандартная высота
+              </label>
+            </div>
+          )}
           {/* Для уникальной конфигурации — список стёкол без цены */}
           {draft.config === 'unique' && Array.isArray(draft.uniqueGlasses) && draft.uniqueGlasses.length > 0 && (
             <div style={{ margin: '8px 0 0 0' }}>
@@ -525,17 +616,102 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
               </ul>
             </div>
           )}
+          {/* Чекбокс нестандартной высоты для уникальной конфигурации */}
+          {draft.config === 'unique' && (
+            <div style={{ margin: '8px 0' }}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!exactHeight}
+                  onChange={e => onExactHeightChange?.(e.target.checked)}
+                />{' '}
+                Нестандартная высота
+              </label>
+            </div>
+          )}
+          {/* Для шаблонов — список стёкол с размерами */}
+          {draft.config && draft.config.startsWith('template-') && draft.selectedTemplate && draft.templateGlasses && (
+            <div style={{ margin: '8px 0 0 0' }}>
+              <b>Стёкла:</b>
+              <ul style={{ margin: '6px 0 0 0', paddingLeft: 24 }}>
+                {draft.selectedTemplate.glassConfig && Array.isArray(draft.selectedTemplate.glassConfig) && 
+                  draft.selectedTemplate.glassConfig.map((glassConf: any, idx: number) => {
+                    const glassData = draft.templateGlasses![idx];
+                    if (!glassData || !glassData.width || !glassData.height) return null;
+                    
+                    const typeLabels: { [key: string]: string } = {
+                      'stationary': 'Стационар',
+                      'swing_door': 'Распашная дверь',
+                      'sliding_door': 'Раздвижная дверь'
+                    };
+                    
+                    const typeLabel = typeLabels[glassConf.type] || glassConf.type;
+                    let sizeInfo = `${glassData.width} × ${glassData.height}`;
+                    
+                    // Добавляем информацию о корректировках для дверей
+                    if (glassConf.type === 'swing_door' && draft.selectedTemplate.sizeAdjustments) {
+                      const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
+                      const thresholdReduction = draft.selectedTemplate.sizeAdjustments.thresholdReduction || 15;
+                      const exactHeightReduction = draft.exactHeight ? 3 : 0; // Вычитаем 3 мм при нестандартной высоте
+                      const correctedHeight = Number(glassData.height) - doorReduction - (glassData.hasThreshold ? thresholdReduction : 0) - exactHeightReduction;
+                      sizeInfo += ` → ${glassData.width} × ${correctedHeight} мм`;
+                      if (glassData.hasThreshold) sizeInfo += ' (с порожком)';
+                      if (draft.exactHeight) sizeInfo += ' (нестандартная высота -3мм)';
+                    } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate.sizeAdjustments) {
+                      const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
+                      const exactHeightReduction = draft.exactHeight ? 3 : 0; // Вычитаем 3 мм при нестандартной высоте
+                      const correctedHeight = Number(glassData.height) - doorReduction - exactHeightReduction;
+                      sizeInfo += ` → ${glassData.width} × ${correctedHeight} мм`;
+                      if (draft.exactHeight) sizeInfo += ' (нестандартная высота -3мм)';
+                    } else {
+                      const exactHeightReduction = draft.exactHeight ? 3 : 0; // Вычитаем 3 мм при нестандартной высоте для стационара
+                      if (exactHeightReduction > 0) {
+                        const correctedHeight = Number(glassData.height) - exactHeightReduction;
+                        sizeInfo += ` → ${glassData.width} × ${correctedHeight} мм (нестандартная высота -3мм)`;
+                      } else {
+                        sizeInfo += ' мм';
+                      }
+                    }
+                    
+                    return (
+                      <li key={idx}>
+                        {glassConf.name} ({typeLabel}): {sizeInfo}
+                      </li>
+                    );
+                  })
+                }
+              </ul>
+            </div>
+          )}
           {/* Для остальных конфигураций — старый вывод */}
-          {draft.config !== 'unique' && draft.glassColor && (
+          {draft.config !== 'unique' && !draft.config?.startsWith('template-') && draft.glassColor && (
             <div><b>Цвет стекла:</b> {draft.glassColor}</div>
           )}
-          {draft.config !== 'unique' && draft.glassThickness && (
+          {draft.config !== 'unique' && !draft.config?.startsWith('template-') && draft.glassThickness && (
             <div><b>Толщина стекла:</b> {draft.glassThickness} мм</div>
           )}
           {draft.hardwareColor && <div><b>Цвет фурнитуры:</b> {hardwareColorLabels[draft.hardwareColor] || draft.hardwareColor}</div>}
+          {/* Для перегородки — размер стекла */}
+          {draft.config === 'partition' && draft.width && draft.height && (
+            <div><b>Размер стекла:</b> {draft.width} × {draft.height} мм</div>
+          )}
+
           {/* Для стекляшки — общий размер стекла */}
           {draft.config === 'glass' && draft.width && draft.height && (
-            <div><b>Размер стекла:</b> {draft.width} × {draft.height} мм</div>
+            <div><b>Размер стекла:</b> {draft.width} × {exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм</div>
+          )}
+          {/* Чекбокс нестандартной высоты для стекляшки */}
+          {draft.config === 'glass' && (
+            <div style={{ margin: '8px 0' }}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!exactHeight}
+                  onChange={e => onExactHeightChange?.(e.target.checked)}
+                />{' '}
+                Нестандартная высота
+              </label>
+            </div>
           )}
           {/* Размеры и формулы для обоих режимов */}
           {['straight', 'straight-glass', 'straight-opening'].includes(String(draft.config)) ? (

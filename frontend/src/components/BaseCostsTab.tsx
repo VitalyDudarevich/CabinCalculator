@@ -13,12 +13,19 @@ interface BaseCostItem {
   value: number | null;
 }
 
+interface BaseCostResponse {
+  _id: string;
+  name: string;
+  value: number;
+  companyId: string;
+}
+
 interface BaseCostsTabProps {
   company: Company;
 }
 
 const DEFAULT_BASE_COSTS: BaseCostItem[] = [
-  { id: 'glass', name: 'Базовая стоимость стекляшки', value: 0 },
+  { id: 'glass', name: 'Базовая стоимость стационарного стекла', value: 0 },
   { id: 'straight', name: 'Базовая стоимость прямой раздвижной', value: 0 },
   { id: 'corner', name: 'Базовая стоимость угловой раздвижной', value: 0 },
   { id: 'unique', name: 'Базовая стоимость уникальной конфигурации', value: 0 },
@@ -33,26 +40,69 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
   const [success, setSuccess] = useState(false);
   const [addBaseName, setAddBaseName] = useState('');
   const [addBaseValue, setAddBaseValue] = useState<number | ''>('');
-  const [settingsId, setSettingsId] = useState<string | null>(null);
+
   const [originalBaseCosts, setOriginalBaseCosts] = useState<BaseCostItem[]>(DEFAULT_BASE_COSTS);
   const [addError, setAddError] = useState('');
+
+  // Функция для создания базовых стоимостей по умолчанию
+  const createDefaultBaseCosts = async () => {
+    try {
+      const payload = DEFAULT_BASE_COSTS.map(item => ({
+        name: item.name,
+        value: item.value || 0
+      }));
+      
+      const res = await fetch(`${API_URL}/basecosts?companyId=${company._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        body: JSON.stringify(payload),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        console.error('Ошибка создания базовых стоимостей по умолчанию:', data.error);
+        setBaseCosts(DEFAULT_BASE_COSTS);
+        setOriginalBaseCosts(DEFAULT_BASE_COSTS);
+        return;
+      }
+      
+      // Обновляем состояние с созданными данными
+      const convertedBaseCosts = data.map((item: BaseCostResponse) => ({
+        id: item._id,
+        name: item.name,
+        value: item.value
+      }));
+      setBaseCosts(convertedBaseCosts);
+      setOriginalBaseCosts(convertedBaseCosts);
+      
+      console.log('✅ Базовые стоимости по умолчанию созданы для компании:', company.name);
+    } catch (error) {
+      console.error('Ошибка создания базовых стоимостей по умолчанию:', error);
+      setBaseCosts(DEFAULT_BASE_COSTS);
+      setOriginalBaseCosts(DEFAULT_BASE_COSTS);
+    }
+  };
 
   useEffect(() => {
     if (!company?._id) return;
     setLoading(true);
     setError('');
-    fetch(`${API_URL}/settings?companyId=${company._id}`)
+    fetch(`${API_URL}/basecosts?companyId=${company._id}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          const s = data[0];
-          setBaseCosts(Array.isArray(s.baseCosts) && s.baseCosts.length > 0 ? s.baseCosts : DEFAULT_BASE_COSTS);
-          setOriginalBaseCosts(Array.isArray(s.baseCosts) && s.baseCosts.length > 0 ? s.baseCosts : DEFAULT_BASE_COSTS);
-          setSettingsId(s._id);
+          // Преобразуем данные из нового формата
+          const convertedBaseCosts = data.map((item: BaseCostResponse) => ({
+            id: item._id,
+            name: item.name,
+            value: item.value
+          }));
+          setBaseCosts(convertedBaseCosts);
+          setOriginalBaseCosts(convertedBaseCosts);
         } else {
-          setBaseCosts(DEFAULT_BASE_COSTS);
-          setOriginalBaseCosts(DEFAULT_BASE_COSTS);
-          setSettingsId(null);
+          // Если нет данных, создаем базовые стоимости по умолчанию
+          console.log('Создаем базовые стоимости по умолчанию для компании:', company.name);
+          createDefaultBaseCosts();
         }
         setLoading(false);
       })
@@ -88,34 +138,32 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
     setError('');
     setSuccess(false);
     try {
-      const payload = {
-        companyId: company._id,
-        baseCosts: baseCosts.map(item => ({
-          ...item,
-          value: typeof item.value === 'number' ? item.value : (item.value === '' ? null : Number(item.value))
-        })),
-      };
-      let res;
-      if (settingsId) {
-        res = await fetch(`${API_URL}/settings/${settingsId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        res = await fetch(`${API_URL}/settings`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-          body: JSON.stringify(payload),
-        });
-      }
+      const payload = baseCosts.map(item => ({
+        name: item.name,
+        value: typeof item.value === 'number' ? item.value : (item.value === '' || item.value === null ? 0 : Number(item.value))
+      }));
+      
+      const res = await fetch(`${API_URL}/basecosts?companyId=${company._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        body: JSON.stringify(payload),
+      });
+      
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка сохранения');
-      setSettingsId(data._id);
+      
+      // Обновляем локальное состояние с новыми данными
+      const convertedBaseCosts = data.map((item: BaseCostResponse) => ({
+        id: item._id,
+        name: item.name,
+        value: item.value
+      }));
+      setBaseCosts(convertedBaseCosts);
+      setOriginalBaseCosts(convertedBaseCosts);
+      
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
       setEditMode(false);
-      setOriginalBaseCosts(baseCosts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка сохранения');
     } finally {

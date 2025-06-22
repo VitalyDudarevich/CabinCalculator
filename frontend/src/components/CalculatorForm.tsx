@@ -99,6 +99,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const [selectedServices, setSelectedServices] = useState<DialogServiceItem[]>([]);
   const [serviceList, setServiceList] = useState<DialogServiceItem[]>([]);
   const [customColor, setCustomColor] = useState(false);
+  const [templates, setTemplates] = useState<{ _id: string; name: string; type: string; description?: string; fields: any[]; glassCount: number; customColorOption: boolean; isSystem?: boolean }[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [templateFields, setTemplateFields] = useState<{ [key: string]: string }>({});
+  const [templateGlasses, setTemplateGlasses] = useState<{[glassIndex: number]: {width: string, height: string, hasThreshold?: boolean}}>({});
   // resolvedCompanyId больше не нужен, используем selectedCompanyId
   const effectiveCompanyId = user?.role === 'superadmin' ? selectedCompanyId : (companyId || localStorage.getItem('companyId') || '');
 
@@ -139,6 +143,46 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       } else {
         // Если у проекта нет услуг, оставляем пустой список
         setSelectedServices([]);
+      }
+      
+      // Загружаем данные шаблона если это шаблонная конфигурация
+      if (selectedProject.data?.templateFields && typeof selectedProject.data.templateFields === 'object') {
+        setTemplateFields(selectedProject.data.templateFields);
+      } else {
+        setTemplateFields({});
+      }
+      
+      if (selectedProject.data?.templateGlasses && typeof selectedProject.data.templateGlasses === 'object') {
+        setTemplateGlasses(selectedProject.data.templateGlasses);
+      } else {
+        setTemplateGlasses({});
+      }
+      
+      // Загружаем шаблон если конфигурация шаблонная
+      if (selectedProject.data?.config && selectedProject.data.config.startsWith('template-')) {
+        const templateId = selectedProject.data.config.replace('template-', '');
+        fetch(`${BASE_API_URL}/templates/${templateId}`)
+          .then(res => res.json())
+          .then(template => {
+            setSelectedTemplate(template);
+            
+            // Устанавливаем дефолтные значения если они еще не установлены
+            if (template.defaultGlassColor && !selectedProject.data?.glassColor) {
+              setGlassColor(template.defaultGlassColor);
+            }
+            if (template.defaultGlassThickness && !selectedProject.data?.glassThickness) {
+              setGlassThickness(template.defaultGlassThickness);
+            }
+            if (template.exactHeightOption && selectedProject.data?.exactHeight === undefined) {
+              setExactHeight(false); // Дефолтное значение для опции
+            }
+          })
+          .catch(() => {
+            console.error('Ошибка загрузки шаблона при редактировании проекта');
+            setSelectedTemplate(null);
+          });
+      } else {
+        setSelectedTemplate(null);
       }
       // Сначала выставляем showGlassSizes, затем подставляем размеры через setTimeout
       setShowGlassSizes(selectedProject.data?.showGlassSizes || false);
@@ -201,6 +245,17 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       .catch(() => setServiceList([]));
   }, [effectiveCompanyId, selectedProject]);
 
+  // Загрузка шаблонов конфигураций
+  useEffect(() => {
+    if (!effectiveCompanyId) return;
+    fetch(`${BASE_API_URL}/templates/active?companyId=${effectiveCompanyId}`)
+      .then(res => res.json())
+      .then(data => {
+        setTemplates(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setTemplates([]));
+  }, [effectiveCompanyId]);
+
   // Хелпер для обновления draft
   const updateDraft = React.useCallback(() => {
     if (onChangeDraft) {
@@ -227,9 +282,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         uniqueGlasses: draftConfig === 'unique' ? uniqueGlasses : undefined,
         projectServices: selectedServices,
         customColor,
+        selectedTemplate: draftConfig.startsWith('template-') ? selectedTemplate : undefined,
+        templateFields: draftConfig.startsWith('template-') ? templateFields : undefined,
+        templateGlasses: draftConfig.startsWith('template-') ? templateGlasses : undefined,
       });
     }
-  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, dismantling, projectHardware, showGlassSizes, stationarySize, doorSize, stationaryWidth, doorWidth, exactHeight, uniqueGlasses, selectedServices, customColor]);
+  }, [onChangeDraft, draftConfig, projectName, glassColor, glassThickness, hardwareColor, width, height, length, comment, delivery, installation, dismantling, projectHardware, showGlassSizes, stationarySize, doorSize, stationaryWidth, doorWidth, exactHeight, uniqueGlasses, selectedServices, customColor, selectedTemplate, templateFields, templateGlasses]);
 
   // useEffect для синхронизации draft
   React.useEffect(() => {
@@ -296,14 +354,234 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     setDismantling(false);
     setSelectedServices([]); // Сбрасываем услуги полностью
     setCustomColor(false);
+    setSelectedTemplate(null); // Сбрасываем выбранный шаблон
+    setTemplateFields({}); // Очищаем поля шаблона
+    setTemplateGlasses({}); // Очищаем данные стекол
   };
 
   // 2. При смене конфигурации — сброс всех полей, кроме projectName
+  // Функция загрузки дефолтов из системного шаблона
+  const loadSystemTemplateDefaults = async (configType: string) => {
+    // Сопоставляем типы конфигураций с типами шаблонов
+    const configTypeMapping: { [key: string]: string } = {
+      'glass': 'glass',
+      'straight': 'straight',
+      'straight-glass': 'straight',
+      'straight-opening': 'straight',
+      'corner': 'corner',
+      'unique': 'unique',
+      'partition': 'partition'
+    };
+
+    const templateType = configTypeMapping[configType];
+    if (!templateType || !effectiveCompanyId) {
+      // Если нет соответствующего типа шаблона, очищаем фурнитуру и услуги
+      setProjectHardware([]);
+      setSelectedServices([]);
+      return;
+    }
+
+    try {
+      // Получаем системные шаблоны для компании
+      const res = await fetch(`${BASE_API_URL}/templates/system?companyId=${effectiveCompanyId}`);
+      if (!res.ok) {
+        console.warn('Не удалось загрузить системные шаблоны');
+        setProjectHardware([]);
+        setSelectedServices([]);
+        return;
+      }
+
+      const systemTemplates = await res.json();
+      const systemTemplate = systemTemplates.find((t: { type: string }) => t.type === templateType);
+
+      if (systemTemplate) {
+        // Устанавливаем дефолтную фурнитуру
+        if (systemTemplate.defaultHardware && systemTemplate.defaultHardware.length > 0) {
+          const defaultHw = systemTemplate.defaultHardware.map((name: string) => ({
+            hardwareId: '',
+            name,
+            quantity: 1
+          }));
+          setProjectHardware(defaultHw);
+        } else {
+          setProjectHardware([]);
+        }
+
+        // Устанавливаем дефолтные услуги
+        if (systemTemplate.defaultServices && systemTemplate.defaultServices.length > 0) {
+          const defaultServices = systemTemplate.defaultServices.map((serviceName: string) => {
+            const foundService = serviceList.find(s => s.name === serviceName);
+            return foundService || {
+              serviceId: serviceName,
+              name: serviceName,
+              price: 0
+            };
+          });
+          setSelectedServices(defaultServices);
+        } else {
+          setSelectedServices([]);
+        }
+
+        // Устанавливаем дефолтные значения стекла
+        if (systemTemplate.defaultGlassColor) {
+          setGlassColor(systemTemplate.defaultGlassColor);
+        }
+        if (systemTemplate.defaultGlassThickness) {
+          setGlassThickness(systemTemplate.defaultGlassThickness);
+        }
+
+        // Устанавливаем опции
+        if (systemTemplate.customColorOption) {
+          setCustomColor(false); // Опция доступна, но не включена по умолчанию
+        }
+        if (systemTemplate.exactHeightOption) {
+          setExactHeight(false); // Опция доступна, но не включена по умолчанию
+        }
+      } else {
+        // Если системный шаблон не найден, используем дефолтные значения
+        // (для обратной совместимости)
+        const fallbackDefaults = getFallbackDefaults(configType);
+        setProjectHardware(fallbackDefaults.hardware);
+        setSelectedServices(fallbackDefaults.services);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки системного шаблона:', error);
+      // В случае ошибки используем дефолтные значения
+      const fallbackDefaults = getFallbackDefaults(configType);
+      setProjectHardware(fallbackDefaults.hardware);
+      setSelectedServices(fallbackDefaults.services);
+    }
+  };
+
+  // Фолбэк значения для обратной совместимости
+  const getFallbackDefaults = (configType: string) => {
+    const defaults = {
+      hardware: [] as Array<{ hardwareId: string; name: string; quantity: number }>,
+      services: [] as Array<{ serviceId: string; name: string; price: number }>
+    };
+
+    if (configType === 'glass') {
+      defaults.hardware = [
+        { hardwareId: '', name: 'Профиль', quantity: 1 },
+        { hardwareId: '', name: 'Палка стена-стекло прямоугольная', quantity: 1 }
+      ];
+    } else if (["straight", "straight-glass", "straight-opening"].includes(configType)) {
+      defaults.hardware = [
+        { hardwareId: '', name: 'Профиль', quantity: 1 },
+        { hardwareId: '', name: 'Раздвижная система', quantity: 1 },
+        { hardwareId: '', name: 'Профильная труба (рельса)', quantity: 1 },
+        { hardwareId: '', name: 'Уплотнитель F', quantity: 2 },
+        { hardwareId: '', name: 'Уплотнитель A', quantity: 1 }
+      ];
+    } else if (configType === 'corner') {
+      defaults.hardware = [
+        { hardwareId: '', name: 'Профиль', quantity: 2 },
+        { hardwareId: '', name: 'Раздвижная система', quantity: 2 },
+        { hardwareId: '', name: 'Профильная труба (рельса)', quantity: 1 },
+        { hardwareId: '', name: 'уголок турба-труба прямоугольное', quantity: 1 },
+        { hardwareId: '', name: 'Уплотнитель F', quantity: 4 }
+      ];
+    } else if (configType === 'unique') {
+      defaults.hardware = [
+        { hardwareId: '', name: 'Профиль', quantity: 1 },
+        { hardwareId: '', name: 'Крепеж', quantity: 1 }
+      ];
+    }
+
+    return defaults;
+  };
+
   const handleConfigChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
     setConfig(value);
     setDraftConfig(value);
     setChangedFields(fields => new Set(fields).add('config'));
+    
+    // Проверяем, выбран ли пользовательский шаблон
+    if (value.startsWith('template-')) {
+      const templateId = value.replace('template-', '');
+      const template = templates.find(t => t._id === templateId);
+      
+      if (template) {
+        setSelectedTemplate(template);
+        
+        // Загружаем полную информацию о шаблоне
+        fetch(`${BASE_API_URL}/templates/${templateId}`)
+          .then(res => res.json())
+          .then(fullTemplate => {
+            setSelectedTemplate(fullTemplate);
+            
+            // Устанавливаем дефолтные значения
+            if (fullTemplate.customColorOption) {
+              setCustomColor(false); // Пользователь может выбрать сам
+            }
+            if (fullTemplate.exactHeightOption) {
+              setExactHeight(false); // Пользователь может выбрать сам
+            }
+            
+            // Устанавливаем дефолтный цвет и толщину стекла
+            if (fullTemplate.defaultGlassColor) {
+              setGlassColor(fullTemplate.defaultGlassColor);
+            }
+            if (fullTemplate.defaultGlassThickness) {
+              setGlassThickness(fullTemplate.defaultGlassThickness);
+            }
+            
+            // Инициализируем поля шаблона
+            const initialFields: { [key: string]: string } = {};
+            fullTemplate.fields.forEach((field: { name: string }) => {
+              initialFields[field.name] = '';
+            });
+            setTemplateFields(initialFields);
+            
+            // Инициализируем данные стекол
+            const initialGlasses: {[glassIndex: number]: {width: string, height: string, hasThreshold?: boolean}} = {};
+            if (fullTemplate.glassConfig && Array.isArray(fullTemplate.glassConfig)) {
+              fullTemplate.glassConfig.forEach((_: any, index: number) => {
+                initialGlasses[index] = { width: '', height: '', hasThreshold: false };
+              });
+            }
+            setTemplateGlasses(initialGlasses);
+            
+            // Устанавливаем дефолтную фурнитуру если есть
+            if (fullTemplate.defaultHardware && fullTemplate.defaultHardware.length > 0) {
+              const defaultHw = fullTemplate.defaultHardware.map((name: string) => ({
+                hardwareId: '',
+                name,
+                quantity: 1
+              }));
+              setProjectHardware(defaultHw);
+            } else {
+              setProjectHardware([]);
+            }
+            
+            // Устанавливаем дефолтные услуги если есть
+            if (fullTemplate.defaultServices && fullTemplate.defaultServices.length > 0) {
+              const defaultServices = fullTemplate.defaultServices.map((serviceName: string) => {
+                // Ищем услугу в списке serviceList по имени
+                const foundService = serviceList.find(s => s.name === serviceName);
+                return foundService || {
+                  serviceId: serviceName,
+                  name: serviceName,
+                  price: 0 // Если не найдена, устанавливаем цену 0
+                };
+              });
+              setSelectedServices(defaultServices);
+            } else {
+              setSelectedServices([]);
+            }
+          })
+          .catch(() => {
+            console.error('Ошибка загрузки шаблона');
+            setSelectedTemplate(null);
+          });
+      }
+      return;
+    } else {
+      // Обычная конфигурация - сбрасываем шаблон
+      setSelectedTemplate(null);
+      setTemplateFields({});
+    }
     
     // Установить дефолтные значения для конфигурации "Перегородка"
     if (value === 'partition') {
@@ -314,38 +592,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     // При смене конфигурации НЕ добавляем автоматически услуги
     // Пользователь должен выбрать их сам
     
-    // Дефолтная фурнитура для каждой конфигурации
-    if (value === 'glass') {
-      setProjectHardware([
-        { hardwareId: '', name: 'Профиль', quantity: 1 },
-        { hardwareId: '', name: 'Палка стена-стекло прямоугольная', quantity: 1 }
-      ]);
-    } else if (["straight", "straight-glass", "straight-opening"].includes(value)) {
-      setProjectHardware([
-        { hardwareId: '', name: 'Профиль', quantity: 1 },
-        { hardwareId: '', name: 'Раздвижная система', quantity: 1 },
-        { hardwareId: '', name: 'Профильная труба (рельса)', quantity: 1 },
-        { hardwareId: '', name: 'Уплотнитель F', quantity: 2 },
-        { hardwareId: '', name: 'Уплотнитель A', quantity: 1 }
-      ]);
-    } else if (value === 'corner') {
-      setProjectHardware([
-        { hardwareId: '', name: 'Профиль', quantity: 2 },
-        { hardwareId: '', name: 'Раздвижная система', quantity: 2 },
-        { hardwareId: '', name: 'Профильная труба (рельса)', quantity: 1 },
-        { hardwareId: '', name: 'уголок турба-труба прямоугольное', quantity: 1 },
-        { hardwareId: '', name: 'Уплотнитель F', quantity: 4 }
-      ]);
-    } else if (value === 'unique') {
-      setProjectHardware([
-        { hardwareId: '', name: 'Профиль', quantity: 1 },
-        { hardwareId: '', name: 'Крепеж', quantity: 1 }
-      ]);
-    } else if (value === 'partition') {
-      setProjectHardware([]);
-    } else {
-      setProjectHardware([]);
-    }
+    // Загружаем дефолтную фурнитуру и услуги из системного шаблона
+    loadSystemTemplateDefaults(value);
   };
 
   // 3. При смене опции 'размеры проёма/размеры стекла' — сброс всех размеров
@@ -410,10 +658,10 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
 
   // Валидация формы
   const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!projectName.trim()) newErrors.projectName = 'Укажите имя проекта';
-    if (!customer.trim()) newErrors.customer = 'Укажите заказчика';
-    if (!config) newErrors.config = 'Выберите конфигурацию';
+          const newErrors: { [key: string]: string } = {};
+      if (!projectName.trim()) newErrors.projectName = 'Укажите имя проекта';
+      if (!customer.trim()) newErrors.customer = 'Укажите заказчика';
+      if (!config) newErrors.config = 'Выберите конфигурацию';
     if (!glassColor) newErrors.glassColor = 'Выберите цвет стекла';
     if (!glassThickness) newErrors.glassThickness = 'Выберите толщину стекла';
     // Размеры
@@ -432,6 +680,29 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       }
     }
     if (!hardwareColor) newErrors.hardwareColor = 'Выберите цвет фурнитуры';
+    
+    // Валидация полей шаблона
+    if (selectedTemplate && config.startsWith('template-')) {
+      selectedTemplate.fields?.forEach((field: any) => {
+        if (field.required && !templateFields[field.name]?.trim()) {
+          newErrors[`templateField_${field.name}`] = `${field.label} обязательно для заполнения`;
+        }
+      });
+      
+      // Валидация стекол шаблона
+      if (selectedTemplate.glassConfig && Array.isArray(selectedTemplate.glassConfig)) {
+        selectedTemplate.glassConfig.forEach((glassConf: any, glassIndex: number) => {
+          const glassData = templateGlasses[glassIndex];
+          if (!glassData?.width?.trim()) {
+            newErrors[`templateGlass_${glassIndex}_width`] = `Ширина для ${glassConf.name} обязательна`;
+          }
+          if (!glassData?.height?.trim()) {
+            newErrors[`templateGlass_${glassIndex}_height`] = `Высота для ${glassConf.name} обязательна`;
+          }
+        });
+      }
+    }
+    
     if (config === 'unique') {
       const glassErrs: { [idx: number]: { [field: string]: string } } = {};
       uniqueGlasses.forEach((glass, idx) => {
@@ -501,6 +772,9 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         uniqueGlasses: config === 'unique' ? uniqueGlasses : undefined,
         projectServices: selectedServices,
         customColor,
+        selectedTemplate: selectedTemplate,
+        templateFields: templateFields,
+        templateGlasses: templateGlasses,
       },
       companyId: effectiveCompanyId,
       status,
@@ -559,6 +833,33 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           }
           setUniqueGlassErrors({});
           setCustomColor(savedProject.data?.customColor || false);
+          
+          // Восстановление полей шаблона
+          if (savedProject.data?.selectedTemplate) {
+            setSelectedTemplate(savedProject.data.selectedTemplate);
+          } else {
+            setSelectedTemplate(null);
+          }
+          
+          if (savedProject.data?.templateFields && typeof savedProject.data.templateFields === 'object') {
+            setTemplateFields(savedProject.data.templateFields);
+          } else {
+            setTemplateFields({});
+          }
+          
+          // Восстановление выбранных услуг
+          if (Array.isArray(savedProject.data?.projectServices)) {
+            setSelectedServices(savedProject.data.projectServices);
+          } else {
+            setSelectedServices([]);
+          }
+          
+          // Восстановление данных стекол шаблона
+          if (savedProject.data?.templateGlasses && typeof savedProject.data.templateGlasses === 'object') {
+            setTemplateGlasses(savedProject.data.templateGlasses);
+          } else {
+            setTemplateGlasses({});
+          }
         }
       } else {
         // Новый проект: POST
@@ -706,7 +1007,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           />
           <label htmlFor="project-name" style={{ left: 12 }}>Название проекта *</label>
           {errors.projectName && <div style={{ color: 'red', fontSize: 13 }}>{errors.projectName}</div>}
-        </div>
+                  </div>
         {/* Заказчик */}
         <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
           <input
@@ -737,11 +1038,20 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             style={{ width: '100%', background: selectedProject && changedFields.has('config') ? '#fffbe6' : undefined }}
           >
             <option value="" disabled hidden></option>
-            <option value="glass">Стекляшка</option>
+            <option value="glass">Стационарное стекло</option>
             <option value="straight">Прямая раздвижная</option>
             <option value="corner">Угловая раздвижная</option>
             <option value="unique">Уникальная конфигурация</option>
             <option value="partition">Перегородка</option>
+            {templates.filter(template => !template.isSystem).length > 0 && (
+              <optgroup label="Пользовательские шаблоны">
+                {templates.filter(template => !template.isSystem).map(template => (
+                  <option key={template._id} value={`template-${template._id}`}>
+                    {template.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
           <label htmlFor="config">Конфигурация *</label>
           {errors.config && <div style={{ color: 'red', fontSize: 13 }}>{errors.config}</div>}
@@ -855,8 +1165,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 <label htmlFor="hardware-color">Цвет фурнитуры *</label>
                 {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
               </div>
-              {/* Чекбокс нестандартного цвета в той же строке */}
-              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+              {/* Чекбокс нестандартного цвета */}
+              <div style={{ display: 'flex', gap: 16, minWidth: 'fit-content', marginBottom: '16px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
                   <input
                     type="checkbox"
@@ -1066,7 +1376,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               </div>
             </div>
           )}
-          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
+          {/* Цвет фурнитуры и чекбоксы нестандартного цвета и высоты */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -1085,8 +1395,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 <label htmlFor="hardware-color">Цвет фурнитуры *</label>
                 {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
               </div>
-              {/* Чекбокс нестандартного цвета в той же строке */}
-              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+              {/* Чекбоксы нестандартного цвета и высоты в одной строке */}
+              <div style={{ display: 'flex', gap: 16, minWidth: 'fit-content', marginBottom: '16px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
                   <input
                     type="checkbox"
@@ -1246,7 +1556,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               {errors.glassThickness && <div style={{ color: 'red', fontSize: 13 }}>{errors.glassThickness}</div>}
             </div>
           </div>
-          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
+          {/* Цвет фурнитуры и чекбоксы нестандартного цвета и высоты */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -1265,8 +1575,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 <label htmlFor="hardware-color">Цвет фурнитуры *</label>
                 {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
               </div>
-              {/* Чекбокс нестандартного цвета в той же строке */}
-              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+              {/* Чекбокс нестандартного цвета */}
+              <div style={{ display: 'flex', gap: 16, minWidth: 'fit-content', marginBottom: '16px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
                   <input
                     type="checkbox"
@@ -1433,7 +1743,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             }
           >ДОБАВИТЬ СТЕКЛО</button>
           
-          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
+          {/* Цвет фурнитуры и чекбоксы нестандартного цвета и высоты */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginTop: 20 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -1452,8 +1762,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 <label htmlFor="hardware-color">Цвет фурнитуры *</label>
                 {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
               </div>
-              {/* Чекбокс нестандартного цвета в той же строке */}
-              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+              {/* Чекбокс нестандартного цвета */}
+              <div style={{ display: 'flex', gap: 16, minWidth: 'fit-content', marginBottom: '16px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
                   <input
                     type="checkbox"
@@ -1602,7 +1912,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             </div>
           </div>
           
-          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
+          {/* Цвет фурнитуры и чекбоксы нестандартного цвета и высоты */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -1621,8 +1931,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 <label htmlFor="hardware-color">Цвет фурнитуры *</label>
                 {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
               </div>
-              {/* Чекбокс нестандартного цвета в той же строке */}
-              <div style={{ minWidth: 'fit-content', marginBottom: '16px' }}>
+              {/* Чекбокс нестандартного цвета */}
+              <div style={{ display: 'flex', gap: 16, minWidth: 'fit-content', marginBottom: '16px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
                   <input
                     type="checkbox"
@@ -1676,6 +1986,326 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               </div>
             )}
             {errors.projectHardware && <div style={{ color: 'red', fontSize: 13 }}>{errors.projectHardware}</div>}
+          </div>
+        </>
+      )}
+      {/* Пользовательский шаблон */}
+      {selectedTemplate && config.startsWith('template-') && (
+        <>
+          {/* Цвет стекла и толщина для шаблона */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <select
+                id="template-glass-color"
+                className={glassColor ? 'filled' : ''}
+                value={glassColor}
+                onChange={e => {
+                  setGlassColor(e.target.value);
+                  const rest = { ...errors };
+                  delete rest.glassColor;
+                  setErrors(rest);
+                }}
+                required
+                style={{ width: '100%' }}
+              >
+                {glassColors.length > 0 && glassColors.map(color => (
+                  <option key={color} value={color}>{color}</option>
+                ))}
+              </select>
+              <label htmlFor="template-glass-color">Цвет стекла *</label>
+              {errors.glassColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.glassColor}</div>}
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <select
+                id="template-glass-thickness"
+                className={glassThickness ? 'filled' : ''}
+                value={glassThickness}
+                onChange={e => {
+                  setGlassThickness(e.target.value);
+                  const rest = { ...errors };
+                  delete rest.glassThickness;
+                  setErrors(rest);
+                }}
+                required
+                style={{ width: '100%' }}
+              >
+                {GLASS_THICKNESS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <label htmlFor="template-glass-thickness">Толщина стекла *</label>
+              {errors.glassThickness && <div style={{ color: 'red', fontSize: 13 }}>{errors.glassThickness}</div>}
+            </div>
+          </div>
+          
+          {/* Поля шаблона, сгруппированные по стеклам */}
+          {selectedTemplate.fields && selectedTemplate.glassConfig && (() => {
+            // Группируем поля по стеклам
+            const glassesByIndex: { [key: number]: { width?: any; height?: any; glass?: any } } = {};
+            
+            selectedTemplate.fields.forEach((field: any) => {
+              const match = field.name.match(/^(width|height)_(\d+)$/);
+              if (match) {
+                const [, type, indexStr] = match;
+                const index = parseInt(indexStr) - 1; // Преобразуем в 0-based индекс
+                if (!glassesByIndex[index]) glassesByIndex[index] = {};
+                glassesByIndex[index][type as 'width' | 'height'] = field;
+                glassesByIndex[index].glass = selectedTemplate.glassConfig[index];
+              }
+            });
+
+            return Object.entries(glassesByIndex).map(([indexStr, { width, height, glass }]) => {
+              const index = parseInt(indexStr);
+              if (!glass) return null;
+              
+              return (
+                <div key={index} style={{ 
+                  border: '2px solid #e1e7f0', 
+                  borderRadius: 8, 
+                  padding: 16, 
+                  marginBottom: 12,
+                  background: '#fff',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                }}>
+                  {/* Заголовок стекла */}
+                  <div style={{ marginBottom: 12 }}>
+                    <h5 style={{ margin: '0 0 4px 0', fontSize: 16, fontWeight: 600, color: '#333' }}>
+                      {glass.name}
+                    </h5>
+                    <div style={{ fontSize: 13, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {glass.type === 'stationary' && (
+                        <>
+                          <span style={{ color: '#2196f3', fontWeight: 600 }}>🔷</span>
+                          <span>Стационарное стекло</span>
+                        </>
+                      )}
+                      {glass.type === 'swing_door' && (
+                        <>
+                          <span style={{ color: '#ff9800', fontWeight: 600 }}>🔹</span>
+                          <span>Дверь распашная</span>
+                          <span style={{ color: '#888', marginLeft: 8 }}>
+                            (-{selectedTemplate.sizeAdjustments?.doorHeightReduction || 8}мм по высоте)
+                          </span>
+                        </>
+                      )}
+                      {glass.type === 'sliding_door' && (
+                        <>
+                          <span style={{ color: '#4caf50', fontWeight: 600 }}>🔹</span>
+                          <span>Дверь раздвижная</span>
+                          <span style={{ color: '#888', marginLeft: 8 }}>
+                            (-{selectedTemplate.sizeAdjustments?.doorHeightReduction || 8}мм по высоте)
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Поля ширины и высоты */}
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    {width && (
+                      <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                        <input
+                          type="number"
+                          id={`template-field-${width.name}`}
+                          className={templateGlasses[index]?.width ? 'filled' : ''}
+                          placeholder=" "
+                          value={templateGlasses[index]?.width || ''}
+                          onChange={e => {
+                            setTemplateGlasses(prev => ({
+                              ...prev,
+                              [index]: { ...(prev[index] || { width: '', height: '' }), width: e.target.value }
+                            }));
+                            const rest = { ...errors };
+                            delete rest[`templateField_${width.name}`];
+                            setErrors(rest);
+                          }}
+                          required={width.required}
+                          style={{ fontSize: 15, fontWeight: 500 }}
+                        />
+                        <label htmlFor={`template-field-${width.name}`} style={{ fontSize: 13, fontWeight: 600, color: '#555' }}>
+                          {width.label}{width.required ? ' *' : ''}
+                        </label>
+                        {errors[`templateField_${width.name}`] && (
+                          <div style={{ color: 'red', fontSize: 13 }}>
+                            {errors[`templateField_${width.name}`]}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {height && (
+                      <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                        <input
+                          type="number"
+                          id={`template-field-${height.name}`}
+                          className={templateGlasses[index]?.height ? 'filled' : ''}
+                          placeholder=" "
+                          value={templateGlasses[index]?.height || ''}
+                          onChange={e => {
+                            setTemplateGlasses(prev => ({
+                              ...prev,
+                              [index]: { ...(prev[index] || { width: '', height: '' }), height: e.target.value }
+                            }));
+                            const rest = { ...errors };
+                            delete rest[`templateField_${height.name}`];
+                            setErrors(rest);
+                          }}
+                          required={height.required}
+                          style={{ fontSize: 15, fontWeight: 500 }}
+                        />
+                        <label htmlFor={`template-field-${height.name}`} style={{ fontSize: 13, fontWeight: 600, color: '#555' }}>
+                          {height.label}{height.required ? ' *' : ''}
+                        </label>
+                        {errors[`templateField_${height.name}`] && (
+                          <div style={{ color: 'red', fontSize: 13 }}>
+                            {errors[`templateField_${height.name}`]}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Опция порожка только для распашной двери */}
+                  {glass.type === 'swing_door' && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 12, marginBottom: 4, color: '#333' }}>Порожек:</div>
+                      <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
+                          <input
+                            type="radio"
+                            name={`threshold-${index}`}
+                            checked={!(templateGlasses[index]?.hasThreshold || false)}
+                            onChange={() => {
+                              setTemplateGlasses(prev => ({
+                                ...prev,
+                                [index]: { ...(prev[index] || { width: '', height: '' }), hasThreshold: false }
+                              }));
+                            }}
+                          />
+                          Без порожка
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
+                          <input
+                            type="radio"
+                            name={`threshold-${index}`}
+                            checked={templateGlasses[index]?.hasThreshold || false}
+                            onChange={() => {
+                              setTemplateGlasses(prev => ({
+                                ...prev,
+                                [index]: { ...(prev[index] || { width: '', height: '' }), hasThreshold: true }
+                              }));
+                            }}
+                          />
+                          С порожком
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Информация об автоматических корректировках */}
+                  {glass.type === 'swing_door' && (
+                    <div style={{ 
+                      marginTop: 8, 
+                      fontSize: 11, 
+                      color: '#666', 
+                      fontStyle: 'italic',
+                      padding: '4px 8px',
+                      background: '#f8f9fa',
+                      borderRadius: 4,
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      Автоматически: высота уменьшена на {selectedTemplate.sizeAdjustments?.doorHeightReduction || 8}мм
+                      {templateGlasses[index]?.hasThreshold && 
+                        ` + ${selectedTemplate.sizeAdjustments?.thresholdReduction || 15}мм для порожка`
+                      }
+                    </div>
+                  )}
+                </div>
+              );
+            }).filter(Boolean);
+          })()}
+
+
+
+
+
+          {/* Цвет фурнитуры и чекбокс нестандартного цвета */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <select
+                  id="template-hardware-color"
+                  className={hardwareColor ? 'filled' : ''}
+                  value={hardwareColor}
+                  onChange={handleHardwareColorChange}
+                  required
+                  style={{ width: '100%' }}
+                >
+                  {HARDWARE_COLORS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <label htmlFor="template-hardware-color">Цвет фурнитуры *</label>
+                {errors.hardwareColor && <div style={{ color: 'red', fontSize: 13 }}>{errors.hardwareColor}</div>}
+              </div>
+              {/* Чекбокс нестандартного цвета */}
+              <div style={{ display: 'flex', gap: 16, minWidth: 'fit-content', marginBottom: '16px' }}>
+                {/* Чекбокс нестандартного цвета если включено в шаблоне */}
+                {selectedTemplate.customColorOption && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, whiteSpace: 'nowrap' }}>
+                    <input
+                      type="checkbox"
+                      checked={customColor}
+                      onChange={e => setCustomColor(e.target.checked)}
+                      style={{ width: 14, height: 14 }}
+                    />
+                    <span>Нестандартный цвет</span>
+                  </label>
+                )}
+
+              </div>
+            </div>
+            <div style={{ marginTop: 0, marginBottom: 0 }}>
+              <AddHardwareButton onClick={() => setShowAddHardwareDialog(true)} />
+            </div>
+            {projectHardware.length > 0 && (
+              <div style={{ marginTop: 12, marginBottom: 8 }}>
+                {projectHardware.map((hw, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
+                    <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                      <QuantityControl
+                        value={hw.quantity}
+                        onChange={v => setProjectHardware(list => list.map((item, i) => i === idx ? { ...item, quantity: v } : item))}
+                      />
+                      <button
+                        onClick={() => setProjectHardware(list => list.filter((_, i) => i !== idx))}
+                        style={{
+                          width: 32,
+                          height: 32,
+                          border: 'none',
+                          borderRadius: '50%',
+                          background: 'none',
+                          color: '#e53935',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 22,
+                          transition: 'color 0.15s',
+                          margin: 0,
+                        }}
+                        title="Удалить"
+                        onMouseOver={e => (e.currentTarget.style.color = '#b71c1c')}
+                        onMouseOut={e => (e.currentTarget.style.color = '#e53935')}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}

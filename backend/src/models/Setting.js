@@ -14,13 +14,7 @@ const settingSchema = new mongoose.Schema({
     type: Map,
     of: Number, // ключ — тип конфигурации, значение — цена
   },
-  baseCosts: [
-    {
-      id: { type: String, required: true },
-      name: { type: String, required: true },
-      value: { type: Number, required: true },
-    },
-  ],
+
   baseIsPercent: { type: Boolean, default: false },
   basePercentValue: { type: Number, default: 0 },
   customColorSurcharge: { type: Number, default: 0 }, // Надбавка за нестандартный цвет в процентах

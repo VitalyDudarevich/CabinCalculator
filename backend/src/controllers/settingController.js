@@ -33,7 +33,6 @@ exports.createSetting = async (req, res) => {
       // Обновить существующую настройку
       setting.set({
         ...req.body,
-        baseCosts: req.body.baseCosts || [],
         baseIsPercent: req.body.baseIsPercent ?? false,
         basePercentValue: req.body.basePercentValue ?? 0,
         customColorSurcharge: req.body.customColorSurcharge ?? 0,
@@ -46,7 +45,6 @@ exports.createSetting = async (req, res) => {
       // Создать новую настройку
       setting = new Setting({
         ...req.body,
-        baseCosts: req.body.baseCosts || [],
         baseIsPercent: req.body.baseIsPercent ?? false,
         basePercentValue: req.body.basePercentValue ?? 0,
         customColorSurcharge: req.body.customColorSurcharge ?? 0,
@@ -66,7 +64,6 @@ exports.updateSetting = async (req, res) => {
     const update = {
       ...req.body,
     };
-    if (!('baseCosts' in update)) update.baseCosts = [];
     if (!('baseIsPercent' in update)) update.baseIsPercent = false;
     if (!('basePercentValue' in update)) update.basePercentValue = 0;
     if (!('customColorSurcharge' in update)) update.customColorSurcharge = 0;

@@ -11,6 +11,8 @@ const settingRoutes = require('./routes/settingRoutes');
 const authRoutes = require('./routes/authRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const glassRoutes = require('./routes/glassRoutes');
+const templateRoutes = require('./routes/templateRoutes');
+const baseCostRoutes = require('./routes/baseCostRoutes');
 
 dotenv.config();
 
@@ -80,5 +82,7 @@ app.use('/api/settings', settingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/glass', glassRoutes);
+app.use('/api/templates', templateRoutes);
+app.use('/api/basecosts', baseCostRoutes);
 
 module.exports = app;

@@ -3,6 +3,7 @@ import SettingsTab from '../components/SettingsTab';
 import CompaniesTab from '../components/CompaniesTab';
 import UsersTab from '../components/UsersTab';
 import HardwareTab from '../components/HardwareTab';
+import TemplatesTab from '../components/TemplatesTab';
 // import HardwareTab from '../components/HardwareTab'; // если понадобится
 import type { User } from '../types/User';
 import type { Company } from '../types/Company';
@@ -101,6 +102,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   } else if (user && user.role === 'superadmin' && companies.length > 0) {
     effectiveCompanyId = selectedCompanyId;
   }
+  
+  console.log('AdminPanel effectiveCompanyId:', { 
+    role: user?.role, 
+    effectiveCompanyId, 
+    selectedCompanyId, 
+    companiesCount: companies.length,
+    userCompanyId: user?.companyId 
+  });
 
   // --- Синхронизация секции с query-параметрами ---
   useEffect(() => {
@@ -152,8 +161,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   // Функция для загрузки всех данных админ-панели
   const loadAllAdminData = async () => {
-    if (isLoadingData || isDataLoaded) return;
+    console.log('loadAllAdminData called:', { isLoadingData, isDataLoaded, effectiveCompanyId, companiesCount: companies.length });
+    if (isLoadingData || isDataLoaded) {
+      console.log('Skipping loadAllAdminData - already loading or loaded');
+      return;
+    }
     
+    console.log('Starting loadAllAdminData...');
     setIsLoadingData(true);
     try {
       // Загружаем пользователей
@@ -172,12 +186,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         .catch(() => setUsers([]));
 
       // Загружаем фурнитуру для всех компаний
+      console.log('Loading hardware for companies:', companies.map(c => ({ id: c._id, name: c.name })));
       const hardwarePromises = companies.map(async (company) => {
         try {
+          console.log(`Loading hardware for company ${company.name} (${company._id})`);
           const res = await fetchWithAuth(`/hardware?companyId=${company._id}`, undefined, true, onLogout);
           const data = await res.json();
+          console.log(`Hardware loaded for ${company.name}:`, data);
           return { companyId: company._id, data: Array.isArray(data) ? data : [] };
-        } catch {
+        } catch (error) {
+          console.error(`Failed to load hardware for ${company.name}:`, error);
           return { companyId: company._id, data: [] };
         }
       });
@@ -185,23 +203,39 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       // Ждем завершения всех запросов
       await Promise.all([usersPromise, ...hardwarePromises.map(async (promise) => {
         const result = await promise;
+        console.log('Setting hardware for company:', result.companyId, result.data);
         setHardwareByCompany(prev => ({ ...prev, [result.companyId]: result.data }));
       })]);
 
+      console.log('All admin data loaded successfully');
       setIsDataLoaded(true);
     } catch (error) {
       console.error('Ошибка загрузки данных админ-панели:', error);
     } finally {
       setIsLoadingData(false);
+      console.log('loadAllAdminData finished, current hardwareByCompany state will be updated');
     }
   };
 
   // Загружаем данные один раз при монтировании или изменении effectiveCompanyId
   useEffect(() => {
+    console.log('AdminPanel data loading useEffect:', { effectiveCompanyId, companiesLength: companies.length });
+    
     if (effectiveCompanyId && companies.length > 0) {
+      console.log('Calling loadAllAdminData from useEffect');
+      // Сбрасываем состояние загрузки перед новой загрузкой
+      setIsDataLoaded(false);
+      setIsLoadingData(false);
       loadAllAdminData();
+    } else {
+      console.log('Not calling loadAllAdminData:', { hasCompanyId: !!effectiveCompanyId, hasCompanies: companies.length > 0 });
     }
   }, [effectiveCompanyId, companies.length]);
+
+  // Логирование изменений hardwareByCompany для диагностики
+  useEffect(() => {
+    console.log('hardwareByCompany updated:', hardwareByCompany);
+  }, [hardwareByCompany]);
 
   // Функции для обновления данных при необходимости
   const refreshUsers = async () => {
@@ -265,6 +299,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     ...(user && user.role === 'superadmin' ? [{ key: 'companies', label: 'Компании' }] : []),
     { key: 'users', label: 'Пользователи' },
     { key: 'hardware', label: 'Цены' },
+    { key: 'templates', label: 'Шаблоны' },
     { key: 'settings', label: 'Настройки' },
   ];
 
@@ -396,7 +431,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             <HardwareTab
               companies={companies}
               selectedCompanyId={selectedCompanyId}
-              hardwareByCompany={hardwareByCompany}
               user={user}
               onLogout={onLogout}
               activeSubTab={new URLSearchParams(location.search).get('sub') || ''}
@@ -407,6 +441,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 navigate(`/admin?${params.toString()}`);
               }}
               onRefreshHardware={refreshHardware}
+            />
+          ) : section === 'templates' ? (
+            <TemplatesTab
+              companies={companies}
+              selectedCompanyId={effectiveCompanyId}
             />
           ) : section === 'settings' ? (
             <SettingsTab

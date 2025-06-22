@@ -13,8 +13,14 @@ exports.login = async (req, res) => {
       return res.status(400).json({ error: 'Требуются email/username и пароль' });
     }
 
+    // Экранируем специальные символы регулярных выражений для безопасности
+    const escapedInput = emailOrUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
     const user = await User.findOne({
-      $or: [{ email: emailOrUsername }, { username: emailOrUsername }],
+      $or: [
+        { email: { $regex: new RegExp(`^${escapedInput}$`, 'i') } },
+        { username: { $regex: new RegExp(`^${escapedInput}$`, 'i') } },
+      ],
     });
 
     if (!user) {
@@ -142,7 +148,11 @@ exports.forgotPassword = async (req, res) => {
     if (!email) {
       return res.status(400).json({ error: 'Email обязателен' });
     }
-    const user = await User.findOne({ email });
+    // Поиск по email нечувствительный к регистру
+    const escapedEmail = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
+    });
     if (!user) {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
@@ -292,7 +302,11 @@ exports.resendVerification = async (req, res) => {
     if (!email) {
       return res.status(400).json({ error: 'Email обязателен' });
     }
-    const user = await User.findOne({ email });
+    // Поиск по email нечувствительный к регистру
+    const escapedEmail = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
+    });
     if (!user) {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }

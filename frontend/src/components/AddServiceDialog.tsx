@@ -54,6 +54,8 @@ const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
     if (!service || alreadySelectedIds.includes(String(service.serviceId))) return;
     setSelected([...selected, service]);
     setSelectedServiceId('');
+    setSearch(''); // Очищаем поле поиска
+    setDropdownOpen(false); // Закрываем dropdown
   };
 
   // Удалить услугу из выбранных (только из новых, не из projectServices)
@@ -97,9 +99,12 @@ const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
           onMouseOver={e => (e.currentTarget.style.color = '#e53935')}
           onMouseOut={e => (e.currentTarget.style.color = '#888')}
         >×</button>
-        <h3 style={{ margin: 0, marginBottom: 16, fontWeight: 700, fontSize: 20 }}>
+        <h3 style={{ margin: 0, marginBottom: 8, fontWeight: 700, fontSize: 20 }}>
           Добавить услуги
         </h3>
+        <p style={{ margin: '0 0 16px 0', fontSize: 14, color: '#666' }}>
+          Выберите одну или несколько услуг для добавления
+        </p>
         {/* Список выбранных */}
         {selected.length > 0 && (
           <div style={{ marginBottom: 16 }}>
@@ -220,7 +225,7 @@ const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
               marginLeft: 0
             }}
           >
-            Сохранить
+            Сохранить {selected.length > 0 && `(${selected.length})`}
           </button>
         </div>
       </div>

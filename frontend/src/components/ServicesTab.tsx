@@ -26,6 +26,15 @@ export interface ServicesTabProps {
 
 const API_URL = BASE_API_URL;
 
+const DEFAULT_SERVICES: ServiceItem[] = [
+  { name: 'Демонтаж', price: 0 },
+  { name: 'Доставка', price: 0 },
+  { name: 'Монтаж стационарного стекла', price: 0 },
+  { name: 'Монтаж прямой раздвижной', price: 0 },
+  { name: 'Монтаж угловой раздвижной', price: 0 },
+  { name: 'Монтаж уникальной конфигурации', price: 0 },
+];
+
 const ServicesTab: React.FC<ServicesTabProps> = ({
   company,
   selectedCompanyId,
@@ -45,6 +54,46 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
     ? 'Все компании'
     : (companies.find(c => c._id === selectedCompanyId)?.name || '');
 
+  // Функция для создания услуг по умолчанию
+  const createDefaultServices = async (companyId: string) => {
+    try {
+      const payload = DEFAULT_SERVICES.map(service => ({
+        name: service.name,
+        price: service.price || 0
+      }));
+      
+      const res = await fetch(`${API_URL}/services?companyId=${companyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!res.ok) {
+        console.error('Ошибка создания услуг по умолчанию');
+        setEditList([]);
+        setOriginalList([]);
+        return;
+      }
+      
+      const data = await res.json();
+      const withId: ServiceItem[] = (Array.isArray(data) ? data : []).map((s) => ({
+        name: s.name,
+        price: s.price,
+        type: s.type,
+        serviceId: s.serviceId || s.name
+      }));
+      
+      setEditList(withId);
+      setOriginalList(withId);
+      
+      console.log('✅ Услуги по умолчанию созданы для компании:', companyName);
+    } catch (error) {
+      console.error('Ошибка создания услуг по умолчанию:', error);
+      setEditList([]);
+      setOriginalList([]);
+    }
+  };
+
   useEffect(() => {
     const companyId = selectedCompanyId || company?._id;
     if (!companyId) return setEditList([]);
@@ -53,15 +102,21 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
     fetch(`${API_URL}/services?companyId=${companyId}`)
       .then(res => res.json())
       .then(data => {
-        // Преобразуем услуги: добавляем serviceId = name
-        const withId: ServiceItem[] = (Array.isArray(data) ? data : []).map((s) => ({
-          name: s.name,
-          price: s.price,
-          type: s.type,
-          serviceId: s.serviceId || s.name
-        }));
-        setEditList(withId);
-        setOriginalList(withId);
+        if (Array.isArray(data) && data.length > 0) {
+          // Преобразуем услуги: добавляем serviceId = name
+          const withId: ServiceItem[] = data.map((s) => ({
+            name: s.name,
+            price: s.price,
+            type: s.type,
+            serviceId: s.serviceId || s.name
+          }));
+          setEditList(withId);
+          setOriginalList(withId);
+        } else {
+          // Если нет услуг, создаем их по умолчанию
+          console.log('Создаем услуги по умолчанию для компании:', companyName);
+          createDefaultServices(companyId);
+        }
         setLoading(false);
       })
       .catch(() => {

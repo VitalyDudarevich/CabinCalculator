@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ModalForm from './ModalForm';
 import ServicesTab from './ServicesTab';
 import type { ModalFormField } from './ModalForm';
@@ -22,7 +22,6 @@ export type HardwareItem = {
 interface HardwareTabProps {
   companies: Company[];
   selectedCompanyId: string;
-  hardwareByCompany: Record<string, HardwareItem[]>;
   user: User;
   onLogout: () => void;
   onCalculator?: () => void;
@@ -35,9 +34,9 @@ const MAIN_SECTIONS = ['Профили', 'Крепления'];
 const COLUMNS = 3;
 const API_URL = BASE_API_URL;
 
-const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, hardwareByCompany, user, onLogout, onCalculator, activeSubTab, onChangeSubTab, onRefreshHardware }) => {
+const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, user, onLogout, onCalculator, activeSubTab, onChangeSubTab, onRefreshHardware }) => {
   const company = companies.find(c => c._id === selectedCompanyId);
-  const [editList, setEditList] = useState<HardwareItem[]>(hardwareByCompany[selectedCompanyId] || []);
+  const [editList, setEditList] = useState<HardwareItem[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,9 +55,31 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   const [addName, setAddName] = useState('');
   const [addPrice, setAddPrice] = useState<number | ''>('');
 
-  React.useEffect(() => {
-    setEditList(hardwareByCompany[selectedCompanyId] || []);
-  }, [hardwareByCompany, selectedCompanyId]);
+  // Загружаем данные фурнитуры при изменении компании (как в GlassTab и ServicesTab)
+  useEffect(() => {
+    if (!company) {
+      setEditList([]);
+      return;
+    }
+    
+    console.log('HardwareTab loading data for company:', company.name, company._id);
+    setError('');
+    setLoading(true);
+    
+    fetch(`${API_URL}/hardware?companyId=${company._id}`)
+      .then(res => res.json())
+      .then(data => {
+        console.log('HardwareTab loaded data:', data);
+        const hardwareData = Array.isArray(data) ? data : [];
+        setEditList(hardwareData);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('HardwareTab loading error:', err);
+        setEditList([]);
+        setLoading(false);
+      });
+  }, [selectedCompanyId, company?._id]);
 
   // Синхронизируем activeTab с activeSubTab
   React.useEffect(() => {

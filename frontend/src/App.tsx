@@ -5,27 +5,13 @@ import AdminPanel from './pages/AdminPanel';
 import CalculatorPageWrapper from './pages/CalculatorPage';
 import Header from './components/Header';
 import type { Company } from './types/Company';
+import type { User } from './types/User';
 import { fetchWithAuth, refreshAccessToken } from './utils/auth';
 import { API_URL } from './utils/api';
 
-// interface Company {
-//   _id: string;
-//   name: string;
-//   city?: string;
-//   owner?: string;
-//   ownerPhone?: string;
-//   ownerName?: string;
-//   ownerContact?: string;
-//   currency?: string;
-// }
 
-interface User {
-  _id: string;
-  role: string;
-  username: string;
-  email: string;
-  companyId?: string;
-}
+
+
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -49,6 +35,7 @@ export default function App() {
           const data = await res.json();
           
           if (res.ok && data.user) {
+            console.log('User loaded successfully:', data.user);
             setUser(data.user);
           } else {
             setUser(null);
@@ -98,12 +85,17 @@ export default function App() {
     initAuth();
   }, []);
 
-  // Загрузка компаний для суперадмина
+  // Загрузка компаний для админов
   useEffect(() => {
+    console.log('Companies useEffect triggered:', { user: user?.role, selectedCompanyId });
+    
     if (user?.role === 'superadmin') {
+      console.log('Loading companies for superadmin...');
+      // Суперадмин видит все компании
       fetchWithAuth(`${API_URL}/companies`)
         .then(res => res.json())
         .then(data => {
+          console.log('Companies loaded for superadmin:', data);
           if (Array.isArray(data)) {
             setCompanies(data);
             if (data.length > 0 && !selectedCompanyId) {
@@ -115,11 +107,33 @@ export default function App() {
           console.error('Failed to load companies:', err);
           setCompanies([]);
         });
+    } else if (user?.role === 'admin') {
+      console.log('Loading companies for admin...', { companyId: user.companyId });
+      // Обычный админ видит все компании, но по умолчанию выбрана его компания
+      fetchWithAuth(`${API_URL}/companies`)
+        .then(res => res.json())
+        .then(data => {
+          console.log('Companies loaded for admin:', data);
+          if (Array.isArray(data)) {
+            setCompanies(data);
+            // Устанавливаем компанию админа как выбранную
+            if (user.companyId && !selectedCompanyId) {
+              const companyId = typeof user.companyId === 'string' ? user.companyId : user.companyId._id;
+              console.log('Setting selected company ID:', companyId);
+              setSelectedCompanyId(companyId);
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Failed to load companies:', err);
+          setCompanies([]);
+        });
     } else {
+      console.log('User role not admin/superadmin, clearing companies');
       setCompanies([]);
       setSelectedCompanyId('');
     }
-  }, [user, selectedCompanyId]);
+  }, [user]); // УБРАЛИ selectedCompanyId из зависимостей
 
   const handleLogout = () => {
     setUser(null);
@@ -181,7 +195,7 @@ export default function App() {
             />
           } />
           
-          {user.role === 'superadmin' && (
+          {(user.role === 'admin' || user.role === 'superadmin') && (
             <Route path="/admin" element={
               <AdminPanel 
                 user={user} 
@@ -195,11 +209,11 @@ export default function App() {
           )}
           
           <Route path="/" element={
-            <Navigate to={user.role === 'superadmin' ? '/admin' : '/calculator'} replace />
+            <Navigate to={(user.role === 'admin' || user.role === 'superadmin') ? '/admin' : '/calculator'} replace />
           } />
           
           <Route path="*" element={
-            <Navigate to={user.role === 'superadmin' ? '/admin' : '/calculator'} replace />
+            <Navigate to={(user.role === 'admin' || user.role === 'superadmin') ? '/admin' : '/calculator'} replace />
           } />
         </Routes>
       </div>
