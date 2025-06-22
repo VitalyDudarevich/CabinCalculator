@@ -198,45 +198,69 @@ const CalculatorPage: React.FC<{
         </div>
       </div>
       <style>{`
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
           .main-layout {
+            display: flex !important;
             flex-direction: column !important;
             padding: 0 !important;
-            max-width: 100% !important;
+            gap: 0 !important;
+            background: #f6f8fa !important;
+            min-height: 100vh !important;
             width: 100% !important;
+            max-width: 100% !important;
             box-sizing: border-box !important;
             overflow-x: hidden !important;
           }
+          
           .calculator-form-wrapper {
             order: 1 !important;
+            display: block !important;
+            visibility: visible !important;
+            flex: none !important;
+            margin: 0 !important;
+            width: 100% !important;
+            min-height: 300px !important;
             padding: 0 !important;
           }
-          .calculation-details {
-            order: 2 !important;
-          }
-          .project-history {
-            order: 3 !important;
-          }
-          .calculator-form-wrapper,
-          .calculation-details,
-          .project-history {
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            margin: 0 0 12px 0 !important;
-            box-sizing: border-box !important;
-          }
+          
           .calculator-form {
             width: 100% !important;
             max-width: 100% !important;
-            min-width: 0 !important;
             margin: 0 !important;
-            padding: 8px !important;
-            box-sizing: border-box !important;
-            background: #fff !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
+            padding: 0 !important;
           }
+          
+          .calculation-details {
+            order: 2 !important;
+            display: block !important;
+            visibility: visible !important;
+            flex: none !important;
+            margin: 0 !important;
+            width: 100vw !important;
+            min-height: 200px !important;
+          }
+          
+          .project-history {
+            order: 3 !important;
+            display: block !important;
+            visibility: visible !important;
+            flex: none !important;
+            margin: 0 !important;
+            width: 100vw !important;
+            min-height: 200px !important;
+          }
+          
+          .calculator-form-wrapper,
+          .calculation-details,
+          .project-history {
+            max-width: none !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+            position: relative !important;
+            z-index: 1 !important;
+          }
+          
+
         }
       `}</style>
     </>

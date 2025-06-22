@@ -45,13 +45,14 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
   const [search, setSearch] = useState('');
   if (!user) {
     return (
-      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, minWidth: 260, minHeight: 120, width: 320, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 12 }}>История проектов</div>
+      <div className="project-history-auth" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, minWidth: 260, minHeight: 120, width: 320, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 12, color: '#000' }}>История проектов</div>
         <input
           type="text"
           placeholder="Поиск по имени..."
           value={search}
           onChange={e => setSearch(e.target.value)}
+          className="auth-search-input"
           style={{
             width: '100%',
             maxWidth: 260,
@@ -63,9 +64,42 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
             boxSizing: 'border-box',
           }}
         />
-        <div style={{ width: '100%', maxWidth: 260 }}>
-          <div style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Авторизируйтесь, чтобы видеть историю проектов</div>
+        <div className="auth-message-container" style={{ width: '100%', maxWidth: 260 }}>
+          <div style={{ color: '#222', textAlign: 'center', marginTop: 24 }}>Авторизируйтесь, чтобы видеть историю проектов</div>
         </div>
+        <style>{`
+          @media (max-width: 768px) {
+            .project-history-auth {
+              display: block !important;
+              visibility: visible !important;
+              width: 100vw !important;
+              max-width: 100vw !important;
+              padding: 16px !important;
+              margin: 0 !important;
+              border-radius: 0 !important;
+              background: #fff !important;
+              box-shadow: none !important;
+              min-height: 150px !important;
+              position: relative !important;
+              z-index: 1 !important;
+              box-sizing: border-box !important;
+              overflow-x: hidden !important;
+              left: 0 !important;
+              right: 0 !important;
+              border-top: 1px solid #eee !important;
+            }
+            .auth-search-input {
+              width: 100% !important;
+              max-width: 100% !important;
+              box-sizing: border-box !important;
+            }
+            .auth-message-container {
+              width: 100% !important;
+              max-width: 100% !important;
+              box-sizing: border-box !important;
+            }
+          }
+        `}</style>
       </div>
     );
   }
@@ -75,13 +109,14 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
     : projects;
 
   return (
-    <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
-      <h2 style={{ margin: '0 0 16px 0', fontSize: 24, fontWeight: 700 }}>История проектов</h2>
+    <div className="project-history-container" style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
+      <h2 style={{ margin: '0 0 16px 0', fontSize: 24, fontWeight: 700, color: '#000' }}>История проектов</h2>
       <input
         type="text"
         placeholder="Поиск по имени..."
         value={search}
         onChange={e => setSearch(e.target.value)}
+        className="project-search-input"
         style={{
           width: '100%',
           maxWidth: 260,
@@ -93,15 +128,15 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
           boxSizing: 'border-box',
         }}
       />
-      <div style={{ width: '100%', maxWidth: 260 }}>
+      <div className="project-list-container" style={{ width: '100%', maxWidth: 260 }}>
         {filtered.length === 0 ? (
-          <div style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Нет проектов</div>
+          <div style={{ color: '#222', textAlign: 'center', marginTop: 24 }}>Нет проектов</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {filtered.map(project => (
               <div key={project._id} style={{ border: '1px solid #f0f0f0', borderRadius: 8, background: '#fafbff', padding: 16, boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', fontWeight: 600, fontSize: 15 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', fontWeight: 600, fontSize: 15, color: '#000' }}>
                     <span style={{ display: 'inline-block', minWidth: 12, minHeight: 12, borderRadius: 6, background: STATUS_COLORS[project.status || 'Рассчет'] || '#bdbdbd', marginRight: 8, verticalAlign: 'middle' }} />
                     {STATUS_LABELS[project.status || 'Рассчет'] || project.status || 'Рассчёт'}
                   </span>
@@ -114,7 +149,7 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
                     </span>
                   </span>
                 </div>
-                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8, wordBreak: 'break-word' }}>{project.name}</div>
+                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8, wordBreak: 'break-word', color: '#000' }}>{project.name}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <span style={{ color: '#222', fontWeight: 700, fontSize: 16 }}>Сумма:</span>
                   <span style={{ color: '#222', fontWeight: 700, fontSize: 16 }}>{typeof project.price === 'number' ? project.price.toLocaleString('ru-RU') : 0} GEL</span>
@@ -125,6 +160,39 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
           </div>
         )}
       </div>
+      <style>{`
+        @media (max-width: 768px) {
+          .project-history-container {
+            display: block !important;
+            visibility: visible !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            padding: 16px !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            background: #fff !important;
+            box-shadow: none !important;
+            min-height: 150px !important;
+            position: relative !important;
+            z-index: 1 !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
+            left: 0 !important;
+            right: 0 !important;
+            border-top: 1px solid #eee !important;
+          }
+          .project-search-input {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .project-list-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

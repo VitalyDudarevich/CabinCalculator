@@ -1820,37 +1820,34 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           max-width: 100%;
           box-sizing: border-box;
         }
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
           .calculator-form-root {
             width: 100vw !important;
             max-width: 100vw !important;
             margin: 0 !important;
             border-radius: 0 !important;
+            position: relative !important;
+            background: #fff !important;
+            box-shadow: none !important;
+            padding: 16px !important;
+            min-height: auto !important;
+            height: auto !important;
+            box-sizing: border-box !important;
             left: 0 !important;
             right: 0 !important;
-            position: fixed !important;
-            top: 56px; /* если есть шапка, иначе 0 */
-            bottom: 0;
-            min-height: calc(100vh - 56px); /* если есть шапка, иначе 100vh */
-            height: auto !important;
-            overflow-y: auto;
-            box-shadow: none !important;
-            padding-bottom: 32px !important;
-          }
-          body, html {
-            width: 100vw;
-            overflow-x: hidden;
-            margin: 0;
-            padding: 0;
-            background: #fff;
           }
           .form-actions {
-            order: 99;
-            margin-top: 12px !important;
+            margin-top: 16px !important;
             margin-bottom: 0 !important;
+          }
+          .form-group {
+            max-width: none !important;
           }
         }
         .form-group { position: relative; margin: 12px 0; width: 100%; max-width: 480px; }
+        @media (max-width: 768px) {
+          .form-group { max-width: none !important; }
+        }
         .form-group input,
         .form-group select,
         .form-group textarea {

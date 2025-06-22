@@ -486,7 +486,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   console.log('positions:', positions);
 
   return (
-    <div style={{ 
+    <div className="calculation-details-container" style={{ 
       background: '#fff', 
       borderRadius: 12, 
       boxShadow: '0 1px 4px #0001', 
@@ -664,6 +664,29 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
         Заполните данные проекта, чтобы увидеть детали расчёта.
       </div>
       )}
+      <style>{`
+        @media (max-width: 768px) {
+          .calculation-details-container {
+            display: block !important;
+            visibility: visible !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            padding: 16px !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            background: #fff !important;
+            box-shadow: none !important;
+            min-height: 150px !important;
+            position: relative !important;
+            z-index: 1 !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
+            left: 0 !important;
+            right: 0 !important;
+            border-top: 1px solid #eee !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
