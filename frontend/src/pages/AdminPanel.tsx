@@ -102,7 +102,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   } else if (user && user.role === 'superadmin' && companies.length > 0) {
     effectiveCompanyId = selectedCompanyId;
   }
-  
+
   console.log('AdminPanel effectiveCompanyId:', { 
     role: user?.role, 
     effectiveCompanyId, 

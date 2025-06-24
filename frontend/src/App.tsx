@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import AuthPage from './pages/AuthPage';
 import AdminPanel from './pages/AdminPanel';
 import CalculatorPageWrapper from './pages/CalculatorPage';
+import ProjectProgressPage from './pages/ProjectProgressPage';
 import Header from './components/Header';
 import type { Company } from './types/Company';
 import type { User } from './types/User';
@@ -190,6 +191,13 @@ export default function App() {
         <Routes>
           <Route path="/calculator" element={
             <CalculatorPageWrapper 
+              user={user} 
+              selectedCompanyId={selectedCompanyId}
+            />
+          } />
+          
+          <Route path="/project-progress" element={
+            <ProjectProgressPage 
               user={user} 
               selectedCompanyId={selectedCompanyId}
             />

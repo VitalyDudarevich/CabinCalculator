@@ -2,6 +2,7 @@ const Company = require('../models/Company');
 const Hardware = require('../models/Hardware');
 const Service = require('../models/Service');
 const Glass = require('../models/Glass');
+const Status = require('../models/Status');
 
 exports.getAllCompanies = async (req, res) => {
   try {
@@ -155,7 +156,11 @@ exports.createCompany = async (req, res) => {
       },
     ];
     await Glass.insertMany(defaultGlass, { ordered: false });
-    // 5. Возвращаем только компанию
+
+    // 5. Добавляем дефолтные статусы проектов
+    await Status.createDefaultStatusesForCompany(company._id);
+
+    // 6. Возвращаем только компанию
     res.status(201).json(company);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -8,6 +8,39 @@ import type { Project } from './ProjectHistory';
 import { API_URL as BASE_API_URL } from '../utils/api';
 import AddServiceDialog, { type ServiceItem as DialogServiceItem } from './AddServiceDialog';
 
+interface TemplateField {
+  name: string;
+  type: 'text' | 'number' | 'select';
+  label: string;
+  required: boolean;
+  options?: string[];
+}
+
+interface GlassConfig {
+  name: string;
+  type: 'stationary' | 'swing_door' | 'sliding_door';
+}
+
+interface Template {
+  _id: string;
+  name: string;
+  type: string;
+  description?: string;
+  fields: TemplateField[];
+  glassConfig?: GlassConfig[];
+  customColorOption: boolean;
+  exactHeightOption?: boolean;
+  defaultGlassColor?: string;
+  defaultGlassThickness?: string;
+  defaultHardware: string[];
+  defaultServices: string[];
+  sizeAdjustments?: {
+    doorHeightReduction: number;
+    thresholdReduction: number;
+  };
+  isSystem?: boolean;
+}
+
 const HARDWARE_COLORS = [
   { value: '', label: '' },
   { value: 'chrome', label: 'Хром' },
@@ -99,8 +132,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   const [selectedServices, setSelectedServices] = useState<DialogServiceItem[]>([]);
   const [serviceList, setServiceList] = useState<DialogServiceItem[]>([]);
   const [customColor, setCustomColor] = useState(false);
-  const [templates, setTemplates] = useState<{ _id: string; name: string; type: string; description?: string; fields: any[]; glassCount: number; customColorOption: boolean; isSystem?: boolean }[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [templateFields, setTemplateFields] = useState<{ [key: string]: string }>({});
   const [templateGlasses, setTemplateGlasses] = useState<{[glassIndex: number]: {width: string, height: string, hasThreshold?: boolean}}>({});
   // resolvedCompanyId больше не нужен, используем selectedCompanyId
@@ -122,7 +155,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       setInstallation(selectedProject.data?.installation !== undefined ? selectedProject.data.installation : true);
       setDismantling(selectedProject.data?.dismantling || false);
       setProjectHardware(Array.isArray(selectedProject.data?.projectHardware) ? selectedProject.data.projectHardware : []);
-      setStatus(selectedProject.status || 'Рассчет');
+      setStatus(selectedProject.statusId?.name || selectedProject.status || 'Рассчет');
       setCustomColor(selectedProject.data?.customColor || false);
       setStationarySize(selectedProject.data?.stationarySize || '');
       setDoorSize(selectedProject.data?.doorSize || '');
@@ -310,7 +343,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       ['delivery', delivery, selectedProject.data?.delivery !== undefined ? selectedProject.data.delivery : true],
       ['installation', installation, selectedProject.data?.installation !== undefined ? selectedProject.data.installation : true],
       ['dismantling', dismantling, selectedProject.data?.dismantling || false],
-      ['status', status, selectedProject.status || 'Рассчет'],
+      ['status', status, selectedProject.statusId?.name || selectedProject.status || 'Рассчет'],
       ['manualPrice', manualPrice, selectedProject.price],
     ];
     const changed = new Set<string>();
@@ -537,9 +570,9 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             // Инициализируем данные стекол
             const initialGlasses: {[glassIndex: number]: {width: string, height: string, hasThreshold?: boolean}} = {};
             if (fullTemplate.glassConfig && Array.isArray(fullTemplate.glassConfig)) {
-              fullTemplate.glassConfig.forEach((_: any, index: number) => {
+              for (let index = 0; index < fullTemplate.glassConfig.length; index++) {
                 initialGlasses[index] = { width: '', height: '', hasThreshold: false };
-              });
+              }
             }
             setTemplateGlasses(initialGlasses);
             
@@ -683,7 +716,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     
     // Валидация полей шаблона
     if (selectedTemplate && config.startsWith('template-')) {
-      selectedTemplate.fields?.forEach((field: any) => {
+      selectedTemplate.fields?.forEach((field: TemplateField) => {
         if (field.required && !templateFields[field.name]?.trim()) {
           newErrors[`templateField_${field.name}`] = `${field.label} обязательно для заполнения`;
         }
@@ -691,7 +724,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       
       // Валидация стекол шаблона
       if (selectedTemplate.glassConfig && Array.isArray(selectedTemplate.glassConfig)) {
-        selectedTemplate.glassConfig.forEach((glassConf: any, glassIndex: number) => {
+        selectedTemplate.glassConfig.forEach((glassConf: GlassConfig, glassIndex: number) => {
           const glassData = templateGlasses[glassIndex];
           if (!glassData?.width?.trim()) {
             newErrors[`templateGlass_${glassIndex}_width`] = `Ширина для ${glassConf.name} обязательна`;
@@ -2041,16 +2074,16 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           {/* Поля шаблона, сгруппированные по стеклам */}
           {selectedTemplate.fields && selectedTemplate.glassConfig && (() => {
             // Группируем поля по стеклам
-            const glassesByIndex: { [key: number]: { width?: any; height?: any; glass?: any } } = {};
+            const glassesByIndex: { [key: number]: { width?: TemplateField; height?: TemplateField; glass?: GlassConfig } } = {};
             
-            selectedTemplate.fields.forEach((field: any) => {
+            selectedTemplate.fields.forEach((field: TemplateField) => {
               const match = field.name.match(/^(width|height)_(\d+)$/);
               if (match) {
                 const [, type, indexStr] = match;
                 const index = parseInt(indexStr) - 1; // Преобразуем в 0-based индекс
                 if (!glassesByIndex[index]) glassesByIndex[index] = {};
                 glassesByIndex[index][type as 'width' | 'height'] = field;
-                glassesByIndex[index].glass = selectedTemplate.glassConfig[index];
+                glassesByIndex[index].glass = selectedTemplate.glassConfig?.[index];
               }
             });
 

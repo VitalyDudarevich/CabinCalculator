@@ -8,10 +8,16 @@ export interface Project {
   customer?: string;
   createdAt: string;
   status?: string;
+  statusId?: {
+    _id: string;
+    name: string;
+    color: string;
+    order: number;
+  };
   price?: number;
   data?: DraftProjectData;
   priceHistory?: { price: number; date: string }[];
-  statusHistory?: { status: string; date: string }[];
+  statusHistory?: { status: string; statusId?: string; date: string }[];
   // ... другие поля
 }
 
@@ -156,8 +162,8 @@ const ProjectHistory: React.FC<ProjectHistoryProps> = ({ user, projects = [], on
               <div key={project._id} style={{ border: '1px solid #f0f0f0', borderRadius: 8, background: '#fafbff', padding: 16, boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ display: 'flex', alignItems: 'center', fontWeight: 600, fontSize: 15, color: '#000' }}>
-                    <span style={{ display: 'inline-block', minWidth: 12, minHeight: 12, borderRadius: 6, background: STATUS_COLORS[project.status || 'Рассчет'] || '#bdbdbd', marginRight: 8, verticalAlign: 'middle' }} />
-                    {STATUS_LABELS[project.status || 'Рассчет'] || project.status || 'Рассчёт'}
+                    <span style={{ display: 'inline-block', minWidth: 12, minHeight: 12, borderRadius: 6, background: project.statusId?.color || STATUS_COLORS[project.status || 'Рассчет'] || '#bdbdbd', marginRight: 8, verticalAlign: 'middle' }} />
+                    {project.statusId?.name || STATUS_LABELS[project.status || 'Рассчет'] || project.status || 'Рассчёт'}
                   </span>
                   <span>
                     <span title="Редактировать" onClick={() => onEdit && onEdit(project)} style={{ display: 'inline-block', marginRight: 10, width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>

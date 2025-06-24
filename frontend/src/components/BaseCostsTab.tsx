@@ -144,10 +144,10 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
       }));
       
       const res = await fetch(`${API_URL}/basecosts?companyId=${company._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-        body: JSON.stringify(payload),
-      });
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+          body: JSON.stringify(payload),
+        });
       
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка сохранения');

@@ -55,9 +55,11 @@ const Header: React.FC<HeaderProps> = ({
   const tabs = [];
   if (user && (user.role === 'admin' || user.role === 'superadmin')) {
     tabs.push({ label: 'Калькулятор', path: '/calculator' });
+    tabs.push({ label: 'Прогресс Проектов', path: '/project-progress' });
     tabs.push({ label: 'Админ-панель', path: '/admin' });
   } else if (user && user.role === 'user') {
     tabs.push({ label: 'Калькулятор', path: '/calculator' });
+    tabs.push({ label: 'Прогресс Проектов', path: '/project-progress' });
   }
 
   // --- Админские секции для бургер-меню ---
@@ -268,7 +270,7 @@ const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={() => navigate('/calculator')}
                 style={{
-                  padding: '8px 24px',
+                  padding: '8px 20px',
                   borderRadius: 8,
                   background: location.pathname === '/calculator' ? '#646cff' : '#fff',
                   color: location.pathname === '/calculator' ? '#fff' : '#646cff',
@@ -283,9 +285,26 @@ const Header: React.FC<HeaderProps> = ({
                 Калькулятор
               </button>
               <button
+                onClick={() => navigate('/project-progress')}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: 8,
+                  background: location.pathname === '/project-progress' ? '#646cff' : '#fff',
+                  color: location.pathname === '/project-progress' ? '#fff' : '#646cff',
+                  border: '2px solid #646cff',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginRight: 8,
+                  boxShadow: '0 1px 4px #646cff22',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+              >
+                Прогресс
+              </button>
+              <button
                 onClick={() => navigate('/admin')}
                 style={{
-                  padding: '8px 24px',
+                  padding: '8px 20px',
                   borderRadius: 8,
                   background: location.pathname === '/admin' ? '#646cff' : '#fff',
                   color: location.pathname === '/admin' ? '#fff' : '#646cff',
@@ -307,10 +326,26 @@ const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={() => navigate('/calculator')}
                 style={{
-                  padding: '8px 24px',
+                  padding: '8px 20px',
                   borderRadius: 8,
                   background: location.pathname === '/calculator' ? '#646cff' : '#fff',
                   color: location.pathname === '/calculator' ? '#fff' : '#646cff',
+                  border: '2px solid #646cff',
+                  fontWeight: 600,
+                  marginRight: 8,
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 4px #646cff22',
+                }}
+              >
+                Калькулятор
+              </button>
+              <button
+                onClick={() => navigate('/project-progress')}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: 8,
+                  background: location.pathname === '/project-progress' ? '#646cff' : '#fff',
+                  color: location.pathname === '/project-progress' ? '#fff' : '#646cff',
                   border: '2px solid #646cff',
                   fontWeight: 600,
                   marginRight: 16,
@@ -318,7 +353,7 @@ const Header: React.FC<HeaderProps> = ({
                   boxShadow: '0 1px 4px #646cff22',
                 }}
               >
-                Калькулятор
+                Прогресс
               </button>
             </>
           )}

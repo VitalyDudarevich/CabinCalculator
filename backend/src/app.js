@@ -13,6 +13,7 @@ const serviceRoutes = require('./routes/serviceRoutes');
 const glassRoutes = require('./routes/glassRoutes');
 const templateRoutes = require('./routes/templateRoutes');
 const baseCostRoutes = require('./routes/baseCostRoutes');
+const statusRoutes = require('./routes/statusRoutes');
 
 dotenv.config();
 
@@ -84,5 +85,6 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/glass', glassRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/basecosts', baseCostRoutes);
+app.use('/api/statuses', statusRoutes);
 
 module.exports = app;

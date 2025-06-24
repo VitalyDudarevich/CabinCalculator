@@ -196,10 +196,10 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
         ));
       } else {
         // Обычная логика для пользовательских шаблонов
-        if (template._id) {
-          setTemplates(prev => prev.map(t => t._id === template._id ? savedTemplate : t));
-        } else {
-          setTemplates(prev => [...prev, savedTemplate]);
+      if (template._id) {
+        setTemplates(prev => prev.map(t => t._id === template._id ? savedTemplate : t));
+      } else {
+        setTemplates(prev => [...prev, savedTemplate]);
         }
       }
       
@@ -286,7 +286,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
                   {systemTemplates.map((template) => (
                     <TemplateCard key={template._id} template={template} onEdit={handleEditTemplate} onDelete={handleDeleteTemplate} />
                   ))}
-                </div>
+              </div>
               </div>
             );
           })()}
@@ -311,7 +311,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
                     <TemplateCard key={template._id} template={template} onEdit={handleEditTemplate} onDelete={handleDeleteTemplate} />
                   ))}
                 </div>
-              </div>
+                </div>
             );
           })()}
         </div>

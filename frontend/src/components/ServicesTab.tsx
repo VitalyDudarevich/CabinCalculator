@@ -103,15 +103,15 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          // Преобразуем услуги: добавляем serviceId = name
+        // Преобразуем услуги: добавляем serviceId = name
           const withId: ServiceItem[] = data.map((s) => ({
-            name: s.name,
-            price: s.price,
-            type: s.type,
-            serviceId: s.serviceId || s.name
-          }));
-          setEditList(withId);
-          setOriginalList(withId);
+          name: s.name,
+          price: s.price,
+          type: s.type,
+          serviceId: s.serviceId || s.name
+        }));
+        setEditList(withId);
+        setOriginalList(withId);
         } else {
           // Если нет услуг, создаем их по умолчанию
           console.log('Создаем услуги по умолчанию для компании:', companyName);
