@@ -189,6 +189,29 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
           
           {/* Поиск и фильтры справа */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {/* Кнопка "Новый проект" */}
+            <button
+              onClick={() => {
+                // Открываем модальное окно для создания нового проекта
+                setSelectedProject(null);
+                setDraftProjectData({});
+                setIsEditModalOpen(true);
+              }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 6,
+                background: '#646cff',
+                color: '#fff',
+                border: 'none',
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Новый проект
+            </button>
+            
             {/* Фильтр по дате */}
             <select
               value={dateFilter}
@@ -310,7 +333,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
       </div>
 
       {/* Модальное окно редактирования проекта */}
-      {isEditModalOpen && selectedProject && (
+      {isEditModalOpen && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -328,7 +351,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             background: '#ffffff',
             borderRadius: 12,
             width: '95vw',
-            height: '90vh',
+            height: '95vh',
             position: 'relative',
             display: 'flex',
             overflow: 'hidden'
@@ -358,13 +381,31 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
               ×
             </button>
             
+            {/* Заголовок модального окна */}
+            <div style={{
+              position: 'absolute',
+              top: 24,
+              left: 24,
+              right: 48,
+              zIndex: 1002
+            }}>
+              <h2 style={{
+                fontSize: 24,
+                fontWeight: 700,
+                margin: 0,
+                color: '#333'
+              }}>
+                {selectedProject ? `Редактирование проекта: ${selectedProject.name}` : 'Создание нового проекта'}
+              </h2>
+            </div>
+            
             {/* Основной контент в две колонки */}
             <div style={{
               display: 'flex',
               width: '100%',
               height: '100%',
-              gap: 24,
-              padding: 24
+              gap: 16,
+              padding: '64px 16px 16px 16px'
             }}>
               {/* Левая колонка - Детали расчета */}
               <div style={{
@@ -388,19 +429,27 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
               <div style={{
                 flex: '0 0 480px',
                 height: '100%',
-                overflow: 'auto'
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
               }}>
-                <CalculatorForm
-                  companyId={effectiveCompanyId}
-                  user={user}
-                  selectedCompanyId={effectiveCompanyId}
-                  settings={settings}
-                  isLoadingData={isLoadingData}
-                  onChangeDraft={setDraftProjectData}
-                  selectedProject={selectedProject}
-                  onNewProject={handleProjectUpdate}
-                  totalPrice={totalPrice}
-                />
+                <div style={{
+                  flex: 1,
+                  overflow: 'auto',
+                  paddingBottom: '80px'
+                }}>
+                  <CalculatorForm
+                    companyId={effectiveCompanyId}
+                    user={user}
+                    selectedCompanyId={effectiveCompanyId}
+                    settings={settings}
+                    isLoadingData={isLoadingData}
+                    onChangeDraft={setDraftProjectData}
+                    selectedProject={selectedProject || undefined}
+                    onNewProject={handleProjectUpdate}
+                    totalPrice={totalPrice}
+                  />
+                </div>
               </div>
             </div>
           </div>

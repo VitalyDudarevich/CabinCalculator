@@ -675,19 +675,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     // height не сбрасываем
   }, [showGlassSizes]);
 
-  // 4. При нажатии 'Новый проект' — сброс всех полей
-  const handleNewProject = () => {
-    resetAllFields();
-    setGlassColor(glassColors[0] || '');
-    
-    // При новом проекте НЕ добавляем автоматически никакие услуги
-    // Пользователь должен выбрать их сам через диалог добавления услуг
-    
-    if (onChangeDraft) onChangeDraft({});
-    if (onNewProject) onNewProject();
-    setExactHeight(false);
-    setProjectHardware([]); // Сбросить фурнитуру при новом проекте
-  };
+
 
   // Валидация формы
   const validateForm = () => {
@@ -2467,12 +2455,11 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         />
       </div>
 
-      {/* Кнопки действий */}
-      <div className="form-actions" style={{ display: 'flex', gap: 16, margin: '12px 0 0 0' }}>
-        <button style={{ flex: 1, padding: '10px 0', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={handleNewProject}>НОВЫЙ ПРОЕКТ</button>
+      {/* Кнопка сохранения */}
+      <div className="form-actions" style={{ margin: '12px 0 0 0' }}>
         <button
           style={{
-            flex: 1,
+            width: '100%',
             padding: '10px 0',
             borderRadius: 8,
             background: !selectedProject || changedFields.size > 0 ? '#646cff' : '#ccc',
