@@ -167,7 +167,13 @@ export default function App() {
 
   return (
     <Router>
-      <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
+      <div style={{ 
+        minHeight: '100vh', 
+        background: '#f5f5f5',
+        // Важно: позволяем горизонтальную прокрутку на уровне всего приложения
+        overflowX: 'auto',
+        overflowY: 'auto'
+      }}>
         <Header 
           user={user} 
           companies={companies}

@@ -13,6 +13,7 @@ exports.getProjects = async (req, res) => {
     const projects = await Project.find(filter)
       .populate('statusId', 'name color order')
       .populate('companyId', 'name')
+      .populate('statusHistory.statusId', 'name color')
       .sort({ createdAt: -1 });
     res.json(projects);
   } catch (err) {
@@ -96,8 +97,17 @@ exports.createProject = async (req, res) => {
 // Обновить проект
 exports.updateProject = async (req, res) => {
   try {
+    console.log('🔄 updateProject called with body:', JSON.stringify(req.body, null, 2));
+
     const project = await Project.findById(req.params.id).populate('statusId');
     if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    console.log('📋 Current project status:', {
+      currentStatus: project.status,
+      currentStatusId: project.statusId?._id,
+      requestStatus: req.body.status,
+      requestStatusId: req.body.statusId,
+    });
 
     // Если цена изменилась — добавляем в историю новую цену с датой изменения
     if (typeof req.body.price === 'number' && req.body.price !== project.price) {
@@ -115,11 +125,16 @@ exports.updateProject = async (req, res) => {
 
     // Если передан statusId, используем его
     if (req.body.statusId && req.body.statusId !== project.statusId?.toString()) {
-      statusChanged = true;
-      // Получаем информацию о новом статусе
+      // Проверяем, что статус существует
       const newStatus = await Status.findById(req.body.statusId);
       if (newStatus) {
+        newStatusId = newStatus._id;
         newStatusName = newStatus.name;
+        statusChanged = true;
+      } else {
+        // Если statusId невалидный, не изменяем статус
+        console.warn(`Invalid statusId provided: ${req.body.statusId}`);
+        newStatusId = null;
       }
     }
     // Если передан только status (старый формат), найдем соответствующий statusId
@@ -131,18 +146,39 @@ exports.updateProject = async (req, res) => {
       });
       if (statusDoc) {
         newStatusId = statusDoc._id;
+        newStatusName = statusDoc.name;
         statusChanged = true;
+      } else {
+        // Если status не найден, не изменяем статус
+        console.warn(`Status not found: ${req.body.status} for company: ${project.companyId}`);
+        newStatusId = null;
       }
     }
 
-    // Если статус изменился, добавляем в историю
+    // Если статус изменился И найден валидный statusId, добавляем в историю
     if (statusChanged && newStatusId) {
+      const newHistoryEntry = { statusId: newStatusId, status: newStatusName, date: new Date() };
+      console.log('📝 Adding to statusHistory:', newHistoryEntry);
+
       project.statusHistory = [
         ...(Array.isArray(project.statusHistory) ? project.statusHistory : []),
-        { statusId: newStatusId, status: newStatusName, date: new Date() },
+        newHistoryEntry,
       ];
       project.statusId = newStatusId;
       project.status = newStatusName; // Обновляем для обратной совместимости
+
+      console.log('✅ Status updated successfully:', {
+        newStatusId,
+        newStatusName,
+        statusHistoryLength: project.statusHistory.length,
+      });
+    } else if (statusChanged && !newStatusId) {
+      console.error('❌ Status changed but no valid statusId found!', {
+        statusChanged,
+        newStatusId,
+        requestStatus: req.body.status,
+        requestStatusId: req.body.statusId,
+      });
     }
 
     // Удаляем priceHistory и statusHistory из req.body, чтобы не затирать историю

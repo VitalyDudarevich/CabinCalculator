@@ -5,7 +5,7 @@ import { QuantityControl } from './AddHardwareDialog';
 import type { User } from '../types/User';
 import type { DraftProjectData } from './CalculationDetails';
 import type { Project } from './ProjectHistory';
-import { API_URL as BASE_API_URL } from '../utils/api';
+import { API_URL as BASE_API_URL, updateProjectStatus, updateProject } from '../utils/api';
 import AddServiceDialog, { type ServiceItem as DialogServiceItem } from './AddServiceDialog';
 
 interface TemplateField {
@@ -69,6 +69,7 @@ interface Settings {
   baseCostPercentage?: number;
   glassList?: { color: string; thickness?: string; thickness_mm?: number; price: number; companyId: string }[];
   hardwareList?: { _id?: string; name: string; price: number; companyId?: string }[];
+  statusList?: { _id: string; name: string; color: string; order: number }[]; // Добавляем статусы
 }
 
 interface CalculatorFormProps {
@@ -82,16 +83,6 @@ interface CalculatorFormProps {
   onNewProject?: (project?: Project) => void;
   totalPrice?: number;
 }
-
-const STATUS_OPTIONS = [
-  'Рассчет',
-  'Согласован',
-  'Заказан',
-  'Стекло Доставлено',
-  'Установка',
-  'Установлено',
-  'Оплачено',
-];
 
 const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, selectedCompanyId = '', settings: propsSettings, isLoadingData, onChangeDraft, selectedProject, onNewProject, totalPrice }) => {
   const [projectName, setProjectName] = useState('');
@@ -155,7 +146,14 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       setInstallation(selectedProject.data?.installation !== undefined ? selectedProject.data.installation : true);
       setDismantling(selectedProject.data?.dismantling || false);
       setProjectHardware(Array.isArray(selectedProject.data?.projectHardware) ? selectedProject.data.projectHardware : []);
-      setStatus(selectedProject.statusId?.name || selectedProject.status || 'Рассчет');
+      const projectStatus = selectedProject.statusId?.name || selectedProject.status || 'Рассчет';
+      console.log('🔄 Setting initial status:', { 
+        projectStatus, 
+        fromStatusId: selectedProject.statusId?.name,
+        fromStatus: selectedProject.status,
+        availableStatuses: propsSettings?.statusList?.map(s => s.name) || []
+      });
+      setStatus(projectStatus);
       setCustomColor(selectedProject.data?.customColor || false);
       setStationarySize(selectedProject.data?.stationarySize || '');
       setDoorSize(selectedProject.data?.doorSize || '');
@@ -237,6 +235,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   useEffect(() => {
     if (propsSettings) {
       console.log('CalculatorForm: используем переданные данные', propsSettings);
+      console.log('📊 Status list from settings:', propsSettings.statusList);
+      
       // Преобразуем данные hardwareList чтобы добавить _id если его нет
       const hardwareData = Array.isArray(propsSettings.hardwareList) 
         ? propsSettings.hardwareList.map((item, index) => ({
@@ -779,6 +779,33 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     } else {
       finalPrice = totalPrice ?? 0;
     }
+    
+    // Находим statusId по названию статуса
+    const selectedStatus = propsSettings?.statusList?.find(s => s.name === status);
+    const statusId = selectedStatus?._id;
+    
+    console.log('🎯 Status data:', { 
+      status, 
+      statusId, 
+      selectedStatus, 
+      statusList: propsSettings?.statusList?.map(s => ({ _id: s._id, name: s.name })),
+      statusListLength: propsSettings?.statusList?.length || 0,
+      currentProjectStatus: selectedProject?.status,
+      currentProjectStatusId: selectedProject?.statusId,
+      isValidObjectId: statusId ? /^[0-9a-fA-F]{24}$/.test(statusId) : 'N/A'
+    });
+    
+    // Проверяем, что статус найден для редактирования проекта
+    if (selectedProject && !statusId && status) {
+      console.error('❌ Status not found in statusList:', status);
+      setErrors({ global: `Статус "${status}" не найден. Пожалуйста, выберите действительный статус.` });
+      setSaveStatus('error');
+      return;
+    }
+    
+    // Для новых проектов - если нет statusId, используем только status
+    // Сервер сам найдет соответствующий statusId
+    
     // Собираем данные проекта
     const projectData = {
       name: projectName,
@@ -811,28 +838,33 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       },
       companyId: effectiveCompanyId,
       status,
+      // Передаем statusId только если он найден и валиден
+      ...(statusId ? { statusId } : {}),
       price: finalPrice,
       priceHistory: [
         { price: finalPrice, date: now }
       ],
     };
 
-    let res, savedProject;
+    console.log('📤 Sending project data:', JSON.stringify(projectData, null, 2));
+
+    let savedProject;
     try {
       if (selectedProject && selectedProject._id) {
-        // Редактирование: PUT
-        res = await fetch(`${BASE_API_URL}/projects/${selectedProject._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(projectData),
-        });
-        if (!res.ok) throw new Error('Ошибка при сохранении изменений');
-        savedProject = await res.json();
+        // Проверяем, изменился ли только статус
+        const onlyStatusChanged = changedFields.size === 1 && changedFields.has('status') && statusId;
+        
+        if (onlyStatusChanged) {
+          console.log('🎯 Updating only status using special endpoint');
+          // Используем специальный эндпоинт для обновления только статуса
+          savedProject = await updateProjectStatus(selectedProject._id, statusId);
+        } else {
+          console.log('🔄 Updating full project data');
+          // Используем обычное обновление проекта
+          savedProject = await updateProject(selectedProject._id, projectData);
+        }
+        console.log('📞 Calling onNewProject with saved project:', savedProject?.name, savedProject?._id);
         if (typeof onNewProject === 'function') onNewProject(savedProject);
-        // Сбросить все поля к дефолтным значениям, как при создании нового проекта
-        resetAllFields();
-        setSaveStatus('success');
-        setChangedFields(new Set());
         if (savedProject) {
           setProjectName(savedProject.name || '');
           setCustomer(savedProject.customer || '');
@@ -896,13 +928,15 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         }
       } else {
         // Новый проект: POST
-        res = await fetch(`${BASE_API_URL}/projects`, {
+        console.log('➕ Creating new project');
+        const res = await fetch(`${BASE_API_URL}/projects`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(projectData),
         });
         if (!res.ok) throw new Error('Ошибка при сохранении проекта');
         savedProject = await res.json();
+        console.log('📞 Calling onNewProject with new project:', savedProject?.name, savedProject?._id);
         if (typeof onNewProject === 'function') onNewProject(savedProject);
         resetAllFields();
         setSaveStatus('success');
@@ -911,12 +945,14 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       setSaveStatus('error');
       const errMsg = e instanceof Error ? e.message : 'Ошибка сохранения';
       setErrors({ global: errMsg });
+      console.error('❌ Error saving project:', e);
     }
-    // Сбросить выбранный проект и draftProjectData после сохранения
-    if (typeof onNewProject === 'function') onNewProject(undefined);
-    resetAllFields();
-    setSaveStatus('success');
-    setChangedFields(new Set());
+    
+    // Устанавливаем финальные состояния только при успехе
+    if (savedProject) {
+      setSaveStatus('success');
+      setChangedFields(new Set());
+    }
   };
 
   const handleAddGlass = () => {
@@ -982,6 +1018,22 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       <h2 style={{ fontWeight: 700, fontSize: 24, margin: '0 0 12px 0' }}>
         {selectedProject ? `Редактирование ${selectedProject.name || ''}` : 'Новый проект'}
       </h2>
+      
+      {/* Глобальная ошибка */}
+      {errors.global && (
+        <div style={{
+          background: '#ffebee',
+          border: '1px solid #f44336',
+          borderRadius: 8,
+          padding: 12,
+          marginBottom: 16,
+          color: '#d32f2f',
+          fontSize: 14
+        }}>
+          ⚠️ {errors.global}
+        </div>
+      )}
+      
       <div className="form-fields" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0 }}>
         {/* Если редактирование — статус и цена первыми */}
         {selectedProject && (
@@ -994,8 +1046,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                 style={{ fontWeight: 500, fontSize: 16, background: changedFields.has('status') ? '#fffbe6' : undefined }}
               >
                 <option value="" disabled hidden></option>
-                {STATUS_OPTIONS.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
+                {(propsSettings?.statusList || []).map(status => (
+                  <option key={status._id} value={status.name}>{status.name}</option>
                 ))}
               </select>
               <label>Статус</label>

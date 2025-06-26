@@ -13,6 +13,8 @@ export interface ProjectApiResponse {
     order: number;
   };
   price?: number;
+  priceHistory?: { price: number; date: string }[];
+  statusHistory?: { status: string; statusId?: string; date: string }[];
   createdAt: string;
   updatedAt: string;
   data?: Record<string, unknown>;

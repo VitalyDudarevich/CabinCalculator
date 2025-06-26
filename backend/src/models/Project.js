@@ -13,7 +13,7 @@ const statusHistorySchema = new mongoose.Schema(
     statusId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Status',
-      required: true,
+      required: false, // Делаем необязательным для обратной совместимости
     },
     status: { type: String }, // Устаревшее поле для обратной совместимости
     date: { type: Date, default: Date.now },

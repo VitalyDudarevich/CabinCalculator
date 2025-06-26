@@ -23,8 +23,12 @@ interface DraftProjectData {
   installation?: boolean;
   dismantling?: boolean;
   priceHistory?: { price: number; date: string }[];
+  statusHistory?: { status: string; statusId?: string; date: string }[];
   price?: number;
   createdAt?: string;
+  _id?: string;
+  status?: string;
+  statusId?: { _id: string; name: string; color: string; order: number };
   showGlassSizes?: boolean;
   exactHeight?: boolean;
   stationarySize?: string;
