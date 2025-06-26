@@ -79,13 +79,37 @@ interface SortableProjectProps {
   project: Project;
   isOverlay?: boolean;
   onEdit?: (project: Project) => void;
-  onProjectMove?: (projectId: string, targetStatusId: string, statusName: string) => Promise<void>;
+  onProjectMove?: (projectId: string, targetStatusId: string, statusName: string, insertPosition?: number) => Promise<void>;
+  isDragActive?: boolean;
+  onSetDragActive?: (active: boolean) => void;
+  statuses?: Status[];
+  projectIndex?: number;
+  statusId?: string;
+  insertionPosition?: {statusId: string; position: number} | null;
 }
 
-const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = false, onEdit, onProjectMove }) => {
+const SortableProject: React.FC<SortableProjectProps> = ({ 
+  project, 
+  isOverlay = false, 
+  onEdit, 
+  onProjectMove, 
+  isDragActive = false, 
+  onSetDragActive, 
+  statuses = [], 
+  projectIndex = 0, 
+  statusId, 
+  insertionPosition
+}) => {
   console.log('🎯 SortableProject RENDERING for:', project.name, 'ID:', project._id);
   
   const [isHovered, setIsHovered] = React.useState(false);
+  const projectRef = React.useRef<HTMLDivElement>(null);
+  
+  // Определяем нужно ли добавить spacing сверху или снизу
+  const shouldAddSpaceAbove = insertionPosition?.statusId === statusId && insertionPosition?.position === projectIndex;
+  const shouldAddSpaceBelow = insertionPosition?.statusId === statusId && insertionPosition?.position === projectIndex + 1;
+  
+
   
   console.log('📞 Calling useSortable with ID:', project._id);
   const sortableResult = useSortable({
@@ -119,6 +143,9 @@ const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = 
 
   // Альтернативная реализация drag and drop
   const [isDraggingManual, setIsDraggingManual] = React.useState(false);
+  
+  // Отключаем hover эффекты во время драга других проектов
+  const shouldShowHover = isHovered && (!isDragActive || isDragging || isDraggingManual);
 
 
   
@@ -132,6 +159,14 @@ const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = 
     let moved = false;
     let dragElement: HTMLElement | null = null;
     
+    // Размеры летающей карточки (примерные, основаны на стилях)
+    const flyingCardWidth = 280; // Примерная ширина летающей карточки
+    const flyingCardHeight = 120; // Примерная высота летающей карточки
+    
+    // Вычисляем offset для позиционирования курсора в центре по ширине и в верхней трети по высоте летающей карточки
+    const offsetX = -flyingCardWidth / 2;  // Курсор в центре по ширине
+    const offsetY = -flyingCardHeight / 3; // Курсор в верхней трети по высоте
+    
     const handleMouseMove = (event: MouseEvent) => {
       const deltaX = Math.abs(event.clientX - startX);
       const deltaY = Math.abs(event.clientY - startY);
@@ -139,6 +174,13 @@ const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = 
       if (!moved && (deltaX > 5 || deltaY > 5)) {
         moved = true;
         setIsDraggingManual(true);
+        onSetDragActive?.(true); // Устанавливаем глобальный флаг драга
+        
+        // Устанавливаем курсор grabbing на весь документ
+        document.body.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+        document.body.classList.add('dragging-active');
+        
         console.log('🔥 Manual drag started for:', project.name);
         
         // Создаем летающий элемент
@@ -155,8 +197,8 @@ const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = 
             z-index: 9999;
             position: fixed;
             transform: rotate(3deg);
-            min-width: 200px;
-            max-width: 300px;
+            width: ${flyingCardWidth}px;
+            box-sizing: border-box;
           ">
             <div style="font-weight: 600; font-size: 16px; color: #000; margin-bottom: 4px;">
               ${project.name}
@@ -167,27 +209,26 @@ const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = 
           </div>
         `;
         dragElement.style.position = 'fixed';
-        dragElement.style.left = event.clientX + 10 + 'px';
-        dragElement.style.top = event.clientY + 10 + 'px';
+        // Позиционируем так, чтобы курсор был в центре по ширине и в верхней трети по высоте
+        dragElement.style.left = event.clientX + offsetX + 'px';
+        dragElement.style.top = event.clientY + offsetY + 'px';
         dragElement.style.zIndex = '9999';
         dragElement.style.pointerEvents = 'none';
         document.body.appendChild(dragElement);
       }
       
       if (moved && dragElement) {
-        // Обновляем позицию летающего элемента
-        dragElement.style.left = event.clientX + 10 + 'px';
-        dragElement.style.top = event.clientY + 10 + 'px';
+        // Обновляем позицию летающего элемента с учетом offset
+        dragElement.style.left = event.clientX + offsetX + 'px';
+        dragElement.style.top = event.clientY + offsetY + 'px';
         
         // Определяем колонку под курсором для подсветки
         const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY);
         
-        // Убираем все предыдущие подсветки
+        // Убираем все предыдущие подсветки - только то что мы добавляли
         document.querySelectorAll('.kanban-column').forEach(col => {
           const element = col as HTMLElement;
-          element.style.background = '';
-          element.style.border = '';
-          element.style.transform = '';
+          element.classList.remove('drag-highlight');
         });
         
         // Ищем колонку под курсором
@@ -196,12 +237,9 @@ const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = 
         
         while (dropZone && attempts < 10) {
           if (dropZone.classList?.contains('kanban-column')) {
-            // Подсвечиваем найденную колонку
+            // Подсвечиваем найденную колонку через CSS класс
             const columnElement = dropZone as HTMLElement;
-            columnElement.style.background = '#e8f5e8 !important';
-            columnElement.style.border = '3px dashed #4caf50 !important';
-            columnElement.style.transform = 'scale(1.02)';
-            columnElement.style.transition = 'all 0.2s ease';
+            columnElement.classList.add('drag-highlight');
             break;
           }
           dropZone = dropZone.parentElement;
@@ -217,10 +255,7 @@ const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = 
       // Убираем все подсветки колонок
       document.querySelectorAll('.kanban-column').forEach(col => {
         const element = col as HTMLElement;
-        element.style.background = '';
-        element.style.border = '';
-        element.style.transform = '';
-        element.style.transition = '';
+        element.classList.remove('drag-highlight');
       });
       
       if (dragElement) {
@@ -228,87 +263,155 @@ const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = 
       }
       
       setIsDraggingManual(false);
+      onSetDragActive?.(false); // Сбрасываем глобальный флаг драга
       
-      if (moved) {
-        console.log('🎯 Manual drag ended for:', project.name);
-        
-        // Определяем колонку для drop
-        const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY);
-        let dropZone = elementUnderMouse;
-        let attempts = 0;
-        
-        while (dropZone && attempts < 10) {
-          const statusId = dropZone.getAttribute('data-status-id');
-          const statusName = dropZone.getAttribute('data-status-name');
+      // Сбрасываем курсор на документе
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.body.classList.remove('dragging-active');
+      
+              if (moved) {
+          console.log('🎯 Manual drag ended for:', project.name);
           
-          if (statusId && statusName) {
-            console.log('✅ Dropped on column:', statusName, 'ID:', statusId);
-            
-            // Проверяем что это другая колонка
-            if (project.statusId?._id !== statusId) {
-              console.log('🚀 Moving project to new status...');
+          // Определяем элемент для drop (insertion point или колонка)
+          const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY);
+          let dropZone = elementUnderMouse;
+          let attempts = 0;
+          
+          while (dropZone && attempts < 10) {
+            // Сначала проверяем на insertion point
+            const dropId = dropZone.getAttribute('data-droppable-id');
+            if (dropId && dropId.includes('-insert-')) {
+              const parts = dropId.split('-insert-');
+              const statusId = parts[0];
+              const insertPosition = parseInt(parts[1], 10);
               
-              // Показываем уведомление о начале перемещения
-              const loadingMessage = `⏳ Перемещаем проект "${project.name}"...`;
-              const notification = document.createElement('div');
-              notification.innerHTML = loadingMessage;
-              notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #2196f3;
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                z-index: 10000;
-                font-weight: 600;
-              `;
-              document.body.appendChild(notification);
-              
-              // Реальное перемещение проекта
-              if (onProjectMove) {
-                try {
-                  await onProjectMove(project._id, statusId, statusName);
-                  
-                  // Успешное перемещение
-                  notification.innerHTML = `✅ Проект перемещен в "${statusName}"`;
-                  notification.style.background = '#4caf50';
-                  
-                  setTimeout(() => {
-                    if (notification.parentNode) {
-                      document.body.removeChild(notification);
-                    }
-                  }, 3000);
-                  
-                } catch (err) {
-                  // Ошибка перемещения
-                  notification.innerHTML = `❌ Ошибка: ${err instanceof Error ? err.message : 'Не удалось переместить проект'}`;
-                  notification.style.background = '#f44336';
-                  
-                  setTimeout(() => {
-                    if (notification.parentNode) {
-                      document.body.removeChild(notification);
-                    }
-                  }, 5000);
+                             // Находим статус по ID
+               const targetStatus = statuses.find((s: Status) => s._id === statusId);
+              if (targetStatus) {
+                console.log('✅ Dropped on insertion point:', targetStatus.name, 'position:', insertPosition);
+                
+                // Показываем уведомление о начале перемещения
+                const loadingMessage = `⏳ Перемещаем проект "${project.name}" на позицию ${insertPosition + 1}...`;
+                const notification = document.createElement('div');
+                notification.innerHTML = loadingMessage;
+                notification.style.cssText = `
+                  position: fixed;
+                  top: 20px;
+                  right: 20px;
+                  background: #2196f3;
+                  color: white;
+                  padding: 12px 20px;
+                  border-radius: 8px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                  z-index: 10000;
+                  font-weight: 600;
+                `;
+                document.body.appendChild(notification);
+                
+                // Реальное перемещение проекта с позицией
+                if (onProjectMove) {
+                  try {
+                    await onProjectMove(project._id, statusId, targetStatus.name, insertPosition);
+                    
+                    // Успешное перемещение
+                    notification.innerHTML = `✅ Проект перемещен в "${targetStatus.name}" на позицию ${insertPosition + 1}`;
+                    notification.style.background = '#4caf50';
+                    
+                    setTimeout(() => {
+                      if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                      }
+                    }, 3000);
+                    
+                  } catch (err) {
+                    // Ошибка перемещения
+                    notification.innerHTML = `❌ Ошибка: ${err instanceof Error ? err.message : 'Не удалось переместить проект'}`;
+                    notification.style.background = '#f44336';
+                    
+                    setTimeout(() => {
+                      if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                      }
+                    }, 5000);
+                  }
                 }
+                return;
               }
-              
-            } else {
-              console.log('⚠️ Same column, no move needed');
             }
-            return;
+            
+            // Если не insertion point, проверяем колонку (старое поведение)
+            const statusId = dropZone.getAttribute('data-status-id');
+            const statusName = dropZone.getAttribute('data-status-name');
+            
+            if (statusId && statusName) {
+              console.log('✅ Dropped on column:', statusName, 'ID:', statusId);
+              
+              // Проверяем что это другая колонка
+              if (project.statusId?._id !== statusId) {
+                console.log('🚀 Moving project to new status...');
+                
+                // Показываем уведомление о начале перемещения
+                const loadingMessage = `⏳ Перемещаем проект "${project.name}"...`;
+                const notification = document.createElement('div');
+                notification.innerHTML = loadingMessage;
+                notification.style.cssText = `
+                  position: fixed;
+                  top: 20px;
+                  right: 20px;
+                  background: #2196f3;
+                  color: white;
+                  padding: 12px 20px;
+                  border-radius: 8px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                  z-index: 10000;
+                  font-weight: 600;
+                `;
+                document.body.appendChild(notification);
+                
+                // Реальное перемещение проекта без позиции (в конец)
+                if (onProjectMove) {
+                  try {
+                    await onProjectMove(project._id, statusId, statusName);
+                    
+                    // Успешное перемещение
+                    notification.innerHTML = `✅ Проект перемещен в "${statusName}"`;
+                    notification.style.background = '#4caf50';
+                    
+                    setTimeout(() => {
+                      if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                      }
+                    }, 3000);
+                    
+                  } catch (err) {
+                    // Ошибка перемещения
+                    notification.innerHTML = `❌ Ошибка: ${err instanceof Error ? err.message : 'Не удалось переместить проект'}`;
+                    notification.style.background = '#f44336';
+                    
+                    setTimeout(() => {
+                      if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                      }
+                    }, 5000);
+                  }
+                }
+                
+              } else {
+                console.log('⚠️ Same column, no move needed');
+              }
+              return;
+            }
+            
+            dropZone = dropZone.parentElement;
+            attempts++;
           }
           
-          dropZone = dropZone.parentElement;
-          attempts++;
+          console.log('❌ No valid drop zone found');
+        } else {
+          console.log('🖱️ Just a click on:', project.name);
+          if (onEdit) onEdit(project);
         }
-        
-        console.log('❌ No valid drop zone found');
-      } else {
-        console.log('🖱️ Just a click on:', project.name);
-        if (onEdit) onEdit(project);
-      }
     };
     
     document.addEventListener('mousemove', handleMouseMove);
@@ -322,37 +425,38 @@ const SortableProject: React.FC<SortableProjectProps> = ({ project, isOverlay = 
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        if (projectRef.current !== node) {
+          projectRef.current = node;
+        }
+      }}
       {...testHandlers}
+      data-project-id={project._id}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
         ...style,
-        cursor: isDraggingManual ? 'grabbing' : isHovered ? 'grab' : 'pointer', // Всегда показываем что кликабельно
+        cursor: isDraggingManual ? 'grabbing' : isHovered ? 'grab' : 'pointer',
         transition: (isDragging || isDraggingManual) ? 'none' : 'all 0.2s ease',
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
-        // Добавляем визуальную индикацию hover и drag
-        backgroundColor: isDraggingManual ? '#e3f2fd' : isHovered ? '#f0f8ff' : 'transparent',
-        // Добавляем border при hover или drag
-        border: (isHovered || isDraggingManual) ? '3px solid #2196f3' : '3px solid transparent', // Более яркая рамка
         borderRadius: '8px',
-        // Убеждаемся что pointer events работают
         pointerEvents: 'auto',
-        // Добавляем тень при hover или drag
-        boxShadow: isDraggingManual ? '0 8px 24px rgba(33, 150, 243, 0.4)' : isHovered ? '0 4px 12px rgba(33, 150, 243, 0.3)' : 'none',
-        // Делаем элемент полупрозрачным во время drag
         opacity: isDraggingManual ? 0.7 : 1,
-        // Добавляем минимальную высоту чтобы было проще кликать
         minHeight: '60px',
+        // Динамический spacing для показа позиции вставки
+        marginTop: shouldAddSpaceAbove ? '40px' : '8px',
+        marginBottom: shouldAddSpaceBelow ? '40px' : '8px',
       }}
     >
       <ProjectCard 
         project={project} 
         isOverlay={isOverlay} 
-        isHovered={isHovered}
+        isHovered={shouldShowHover}
         isDragging={isDragging}
+        isDraggingManual={isDraggingManual}
       />
     </div>
   );
@@ -364,35 +468,40 @@ interface ProjectCardProps {
   isOverlay?: boolean;
   isHovered?: boolean;
   isDragging?: boolean;
+  isDraggingManual?: boolean;
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ 
   project, 
   isOverlay = false, 
   isHovered = false, 
-  isDragging = false 
+  isDragging = false,
+  isDraggingManual = false
 }) => {
   return (
     <div
       style={{
         marginBottom: 8,
-        background: isOverlay 
-          ? '#f0f8ff' 
+        background: isOverlay || isDraggingManual
+          ? '#e3f2fd' 
           : isHovered 
             ? '#f0f8ff' 
             : '#fafbff',
         borderRadius: 8,
         padding: 16,
-        border: isOverlay || isHovered 
-          ? '1px solid #2196f3' 
+        // Улучшенная синяя рамка при hover и dragging
+        border: (isOverlay || isHovered || isDraggingManual)
+          ? '2px solid #2196f3' 
           : '1px solid #f0f0f0',
-        boxShadow: isOverlay 
-          ? '0 8px 24px rgba(0,0,0,0.3)' 
+        boxShadow: isOverlay || isDraggingManual
+          ? '0 8px 24px rgba(33, 150, 243, 0.4)' 
           : isHovered 
-            ? '0 4px 12px rgba(0,0,0,0.15)' 
+            ? '0 4px 12px rgba(33, 150, 243, 0.3)' 
             : '0 1px 2px rgba(0,0,0,0.02)',
         userSelect: 'none',
-        transition: isOverlay || isDragging ? 'none' : 'all 0.2s ease',
+        transition: isOverlay || isDragging || isDraggingManual ? 'none' : 'all 0.2s ease',
+        // Убеждаемся что рамка точно выровнена по карточке
+        boxSizing: 'border-box',
       }}
     >
       {/* Название проекта */}
@@ -471,8 +580,12 @@ interface DroppableStatusProps {
   status: Status;
   projects: Project[];
   onProjectEdit?: (project: Project) => void;
-  onProjectMove?: (projectId: string, targetStatusId: string, statusName: string) => Promise<void>;
+  onProjectMove?: (projectId: string, targetStatusId: string, statusName: string, insertPosition?: number) => Promise<void>;
   isDesktop?: boolean;
+  isDragActive?: boolean;
+  onSetDragActive?: (active: boolean) => void;
+  statuses: Status[];
+  insertionPosition?: {statusId: string; position: number} | null;
 }
 
 const DroppableStatus: React.FC<DroppableStatusProps> = ({ 
@@ -480,7 +593,11 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
   projects, 
   onProjectEdit,
   onProjectMove,
-  isDesktop = true 
+  isDesktop = true,
+  isDragActive = false,
+  onSetDragActive,
+  statuses,
+  insertionPosition
 }) => {
   const projectIds = projects.map(p => p._id);
   const [isHovered, setIsHovered] = React.useState(false);
@@ -504,14 +621,16 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
     display: 'flex',
     flexDirection: 'column' as const,
     overflow: 'hidden',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    border: '2px solid #e0e0e0'
   } : {
     background: '#f8f9fa',
     borderRadius: 12,
     padding: 12,
     minHeight: 'calc(100vh - 320px)',
     maxHeight: 'calc(100vh - 320px)',
-    overflowY: 'auto' as const
+    overflowY: 'auto' as const,
+    border: '2px solid #e0e0e0'
   };
 
   console.log('🏗️ Creating DroppableStatus for:', status.name, 'with ID:', status._id);
@@ -526,8 +645,16 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       style={{
         ...containerStyle,
-        background: isOver ? '#e3f2fd' : isHovered ? '#f8f9fa' : containerStyle.background,
-        border: isOver ? '2px dashed #2196f3' : '2px dashed transparent',
+        background: isOver 
+          ? 'linear-gradient(135deg, #bbdefb 0%, #90caf9 100%)' 
+          : isHovered 
+            ? '#f8f9fa' 
+            : containerStyle.background,
+        border: isOver ? '4px dashed #2196f3' : undefined, // Оставляем базовую границу
+        transform: isOver ? 'scale(1.05)' : 'scale(1)',
+        boxShadow: isOver 
+          ? '0 8px 24px rgba(33, 150, 243, 0.3)' 
+          : containerStyle.boxShadow,
         transition: 'all 0.2s ease',
       }}
     >
@@ -569,7 +696,7 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
         </span>
       </div>
 
-      {/* Список проектов */}
+            {/* Список проектов с динамическим spacing */}
       <div style={{
         flex: 1,
         overflowY: isDesktop ? 'auto' : 'visible',
@@ -577,21 +704,20 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
         padding: 4,
       }}>
         <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
-          {(() => {
-            console.log('🔍 SortableContext rendering:', {
-              statusName: status.name,
-              projectIds,
-              projectCount: projects.length
-            });
-            return projects.map((project) => (
-              <SortableProject
-                key={project._id}
-                project={project}
-                onEdit={onProjectEdit}
-                onProjectMove={onProjectMove}
-              />
-            ));
-          })()}
+          {projects.map((project, index) => (
+            <SortableProject
+              key={project._id}
+              project={project}
+              onEdit={onProjectEdit}
+              onProjectMove={onProjectMove}
+              isDragActive={isDragActive}
+              onSetDragActive={onSetDragActive}
+              statuses={statuses}
+              projectIndex={index}
+              statusId={status._id}
+              insertionPosition={insertionPosition}
+            />
+          ))}
         </SortableContext>
       </div>
     </div>
@@ -624,6 +750,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   
   // Состояние для drag overlay
   const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+  
+  // Состояние для отслеживания позиции вставки
+  const [insertionPosition, setInsertionPosition] = useState<{statusId: string; position: number} | null>(null);
+  
+  // Функция для управления состоянием драга
+  const handleSetDragActive = (active: boolean) => {
+    setIsDragActive(active);
+  };
 
   // Упрощенная настройка сенсоров
   const sensors = useSensors(
@@ -718,7 +853,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }, [projects, statuses]);
 
   // Функция для реального перемещения проекта
-  const handleProjectMove = async (projectId: string, targetStatusId: string, statusName: string) => {
+  const handleProjectMove = async (projectId: string, targetStatusId: string, statusName: string, insertPosition?: number) => {
     try {
       // Находим целевой статус для получения полной информации
       const targetStatus = statuses.find(s => s._id === targetStatusId);
@@ -732,27 +867,50 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         throw new Error('Проект не найден');
       }
 
-      // Сначала обновляем локальное состояние для мгновенной реакции
-      setProjects(prev =>
-        prev.map(p =>
-          p._id === projectId 
-            ? { 
-                ...p, 
-                status: targetStatus.name,
-                statusId: {
-                  _id: targetStatus._id,
-                  name: targetStatus.name,
-                  color: targetStatus.color,
-                  order: targetStatus.order
-                }
-              } 
-            : p
-        )
-      );
+      // Обновляем локальное состояние с учетом позиции
+      setProjects(prev => {
+        // Убираем проект из старой позиции
+        const withoutProject = prev.filter(p => p._id !== projectId);
+        
+        // Обновляем информацию о статусе проекта
+        const updatedProject = {
+          ...originalProject,
+          status: targetStatus.name,
+          statusId: {
+            _id: targetStatus._id,
+            name: targetStatus.name,
+            color: targetStatus.color,
+            order: targetStatus.order
+          }
+        };
+
+        // Если позиция не указана, добавляем в конец для этого статуса
+        if (insertPosition === undefined) {
+          return [...withoutProject, updatedProject];
+        }
+
+        // Получаем проекты для целевого статуса
+        const targetStatusProjects = withoutProject.filter(p => 
+          p.statusId?._id === targetStatusId || 
+          (p.status === targetStatus.name && !p.statusId)
+        );
+        
+        // Получаем проекты других статусов
+        const otherStatusProjects = withoutProject.filter(p => 
+          p.statusId?._id !== targetStatusId && 
+          !(p.status === targetStatus.name && !p.statusId)
+        );
+
+        // Вставляем проект в указанную позицию
+        const newTargetProjects = [...targetStatusProjects];
+        newTargetProjects.splice(insertPosition, 0, updatedProject);
+
+        return [...otherStatusProjects, ...newTargetProjects];
+      });
 
       // Отправляем обновление на сервер
       await updateProjectStatus(projectId, targetStatusId);
-      console.log(`✅ Проект успешно перемещен в статус ${statusName}`);
+      console.log(`✅ Проект успешно перемещен в статус ${statusName}${insertPosition !== undefined ? ` на позицию ${insertPosition}` : ''}`);
       
     } catch (err) {
       console.error('❌ Ошибка обновления статуса:', err);
@@ -781,6 +939,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const { active } = event;
     const project = projects.find(p => p._id === active.id);
     setActiveProject(project || null);
+    setIsDragActive(true); // Устанавливаем флаг активного драга
+    
+    // Устанавливаем курсор grabbing на весь документ
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+    document.body.classList.add('dragging-active');
+    
     console.log('Project found:', project?.name);
   };
 
@@ -791,6 +956,27 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       overId: over?.id,
       hasTarget: !!over
     });
+    
+    // Определяем позицию вставки на основе координат мыши
+    if (over && over.id && typeof over.id === 'string') {
+      const statusId = over.id;
+      const status = statuses.find(s => s._id === statusId);
+      
+      if (status) {
+        const statusProjects = projectsByStatus[statusId] || [];
+        
+                 // Упрощенная логика: определяем позицию вставки
+         let insertPosition = statusProjects.length; // По умолчанию в конец
+         
+         // Если есть проекты в колонке, попробуем определить точную позицию
+         if (statusProjects.length > 0) {
+           // Упрощенная логика: вставляем в середину списка для демонстрации
+           insertPosition = Math.floor(statusProjects.length / 2);
+         }
+         
+         setInsertionPosition({ statusId, position: insertPosition });
+      }
+    }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -803,6 +989,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     });
     
     setActiveProject(null);
+    setIsDragActive(false); // Сбрасываем флаг активного драга
+    setInsertionPosition(null); // Сбрасываем позицию вставки
+    
+    // Сбрасываем курсор на документе
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    document.body.classList.remove('dragging-active');
     
     if (!over) {
       console.log('❌ No drop target');
@@ -810,7 +1003,23 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
 
     const projectId = active.id as string;
-    const targetStatusId = over.id as string;
+    const dropTargetId = over.id as string;
+    
+    // Парсим target ID для определения типа drop зоны
+    let targetStatusId: string;
+    let insertPosition: number | undefined;
+    
+    if (dropTargetId.includes('-insert-')) {
+      // Drop на insertion point
+      const parts = dropTargetId.split('-insert-');
+      targetStatusId = parts[0];
+      insertPosition = parseInt(parts[1], 10);
+      console.log('📍 Drop on insertion point:', { targetStatusId, insertPosition });
+    } else {
+      // Drop на статус целиком (старое поведение)
+      targetStatusId = dropTargetId;
+      console.log('📍 Drop on status:', { targetStatusId });
+    }
     
     // Найти целевой статус
     const targetStatus = statuses.find(status => String(status._id) === targetStatusId);
@@ -826,53 +1035,14 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       return;
     }
 
-    // Проверить, изменился ли статус
-    if (project.statusId?._id === targetStatusId) {
-      console.log('❌ Same status, no change needed');
-      return;
-    }
-
-    console.log('🔄 Moving project:', project.name, 'to status:', targetStatus.name);
+    console.log('🔄 Moving project:', project.name, 'to status:', targetStatus.name, 'at position:', insertPosition);
     
-    // Обновляем локальное состояние
-    setProjects(prev =>
-      prev.map(p =>
-        p._id === projectId 
-          ? { 
-              ...p, 
-              status: targetStatus.name,
-              statusId: {
-                _id: targetStatus._id,
-                name: targetStatus.name,
-                color: targetStatus.color,
-                order: targetStatus.order
-              }
-            } 
-          : p
-      )
-    );
-
-    // Отправляем обновление на сервер
     try {
-      await updateProjectStatus(projectId, targetStatusId);
-      console.log(`✅ Проект успешно перемещен в статус ${targetStatus.name}`);
+      await handleProjectMove(projectId, targetStatusId, targetStatus.name, insertPosition);
     } catch (err) {
-      console.error('❌ Ошибка обновления статуса:', err);
-      setError('Не удалось обновить статус проекта');
+      console.error('❌ Ошибка перемещения проекта:', err);
+      setError('Не удалось переместить проект');
       setTimeout(() => setError(null), 3000);
-      
-      // Откатываем изменения в случае ошибки
-      setProjects(prev =>
-        prev.map(p =>
-          p._id === projectId 
-            ? { 
-                ...p, 
-                status: project.status,
-                statusId: project.statusId
-              } 
-            : p
-        )
-      );
     }
   };
 
@@ -1027,6 +1197,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onProjectEdit={onProjectEdit}
             onProjectMove={handleProjectMove}
             isDesktop={false}
+            isDragActive={isDragActive}
+            onSetDragActive={handleSetDragActive}
+            statuses={statuses}
+            insertionPosition={insertionPosition}
           />
         )}
       </div>
@@ -1046,11 +1220,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div style={{ 
-        padding: '16px', 
+      <div className="kanban-container" style={{ 
+        padding: '16px',
         height: '100%', 
         position: 'relative',
-        minHeight: '100%'
+        minHeight: '100%',
+
       }}>
         {/* Уведомление об ошибке */}
         {error && (
@@ -1068,7 +1243,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         )}
         
         <div 
-          className="kanban-board"
+          className="kanban-board kanban-grid"
           style={{ 
             display: 'flex',
             overflowX: 'auto',
@@ -1080,7 +1255,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
             height: '100%',
             minWidth: 'fit-content',
             scrollbarWidth: 'thin',
-            scrollbarColor: '#c1c1c1 #f1f1f1'
+            scrollbarColor: '#c1c1c1 #f1f1f1',
+
           }}
         >
           {statuses.map(status => (
@@ -1091,6 +1267,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
               onProjectEdit={onProjectEdit}
               onProjectMove={handleProjectMove}
               isDesktop={true}
+              isDragActive={isDragActive}
+              onSetDragActive={handleSetDragActive}
+              statuses={statuses}
+              insertionPosition={insertionPosition}
             />
           ))}
         </div>
@@ -1121,6 +1301,32 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         }
         .kanban-board::-webkit-scrollbar-thumb:hover {
           background: #a1a1a1;
+        }
+        
+        /* Принудительный курсор во время драга */
+        body.dragging-active,
+        body.dragging-active *,
+        body.dragging-active *:hover {
+          cursor: grabbing !important;
+          user-select: none !important;
+        }
+        
+        /* Подсветка колонки при драге */
+        .kanban-column.drag-highlight {
+          background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%) !important;
+          transition: background 0.2s ease !important;
+        }
+
+        /* Родительский контейнер для kanban-колонок */
+        .kanban-container {
+          overflow: visible !important;
+          padding-top: 30px !important;
+          margin-top: 10px !important;
+        }
+        
+        /* Контейнер для grid */
+        .kanban-grid {
+          overflow: visible !important;
         }
       `}</style>
     </>
