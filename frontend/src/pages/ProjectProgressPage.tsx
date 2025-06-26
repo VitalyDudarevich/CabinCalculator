@@ -43,6 +43,12 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [kanbanKey, setKanbanKey] = useState(0); // Ключ для принудительного обновления канбан доски
+  
+  // Состояние для поиска и фильтров
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
 
   // Эффективные ID для админа/пользователя
   let effectiveCompanyId = selectedCompanyId;
@@ -152,36 +158,133 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
       left: 0,
       right: 0,
       bottom: 0,
-      background: '#f5f5f5',
+      background: '#ffffff',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
       {/* Заголовок страницы */}
       <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        padding: '12px 24px',
-        background: '#f5f5f5',
-        borderBottom: '1px solid #e0e0e0',
+        background: '#ffffff',
         flexShrink: 0,
-        zIndex: 50
+        zIndex: 50,
+        padding: '8px 24px 8px 24px'
       }}>
-        <h1 style={{ 
-          fontSize: 22,
-          fontWeight: 700, 
-          margin: 0,
-          color: '#333' 
+        {/* Заголовок слева, поиск и фильтры справа */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between'
         }}>
-          Прогресс Проектов
-        </h1>
-        
-        {user && (
-          <div style={{ color: '#666', fontSize: 13 }}>
-            👤 {user.username}
+          {/* Заголовок слева */}
+          <h1 style={{ 
+            fontSize: 22,
+            fontWeight: 700, 
+            margin: 0,
+            color: '#333',
+            flexShrink: 0
+          }}>
+            Прогресс Проектов
+          </h1>
+          
+          {/* Поиск и фильтры справа */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {/* Фильтр по дате */}
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'custom')}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 6,
+                border: '1px solid #ccc',
+                fontSize: 14,
+                minWidth: '120px'
+              }}
+            >
+              <option value="all">Все даты</option>
+              <option value="today">Сегодня</option>
+              <option value="week">За неделю</option>
+              <option value="month">За месяц</option>
+              <option value="custom">Период</option>
+            </select>
+            
+            {/* Поля для произвольного периода */}
+            {dateFilter === 'custom' && (
+              <>
+                <input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 6,
+                    border: '1px solid #ccc',
+                    fontSize: 14
+                  }}
+                />
+                <span style={{ color: '#666' }}>—</span>
+                <input
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 6,
+                    border: '1px solid #ccc',
+                    fontSize: 14
+                  }}
+                />
+              </>
+            )}
+            
+            {/* Поиск с иконкой лупы */}
+            <div style={{ position: 'relative' }}>
+              <svg
+                style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none'
+                }}
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle 
+                  cx="11" 
+                  cy="11" 
+                  r="8" 
+                  stroke="#666" 
+                  strokeWidth="2"
+                  fill="none"
+                />
+                <path 
+                  d="m21 21-4.35-4.35" 
+                  stroke="#666" 
+                  strokeWidth="2" 
+                  strokeLinecap="round"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder=""
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '280px',
+                  padding: '8px 12px 8px 36px',
+                  borderRadius: 6,
+                  border: '1px solid #ccc',
+                  fontSize: 14,
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
           </div>
-        )}
+        </div>
       </div>
       
       {/* Канбан-доска напрямую без белой подложки */}
@@ -199,6 +302,10 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             console.log('Удалить проект:', project);
             // TODO: Реализовать подтверждение удаления
           }}
+          searchTerm={searchTerm}
+          dateFilter={dateFilter}
+          customDateFrom={customDateFrom}
+          customDateTo={customDateTo}
         />
       </div>
 
@@ -218,7 +325,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
           padding: '20px'
         }}>
           <div style={{
-            background: '#f5f5f5',
+            background: '#ffffff',
             borderRadius: 12,
             width: '95vw',
             height: '90vh',

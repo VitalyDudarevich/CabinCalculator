@@ -56,6 +56,10 @@ interface KanbanBoardProps {
   companyId: string;
   onProjectEdit?: (project: Project) => void;
   onProjectDelete?: (project: Project) => void;
+  searchTerm?: string;
+  dateFilter?: 'all' | 'today' | 'week' | 'month' | 'custom';
+  customDateFrom?: string;
+  customDateTo?: string;
 }
 
 // Конфигурационные лейблы как в ProjectHistory
@@ -86,6 +90,8 @@ interface SortableProjectProps {
   projectIndex?: number;
   statusId?: string;
   insertionPosition?: {statusId: string; position: number} | null;
+  projectsByStatus?: Record<string, Project[]>;
+  onInsertionPositionChange?: (position: {statusId: string; position: number} | null) => void;
 }
 
 const SortableProject: React.FC<SortableProjectProps> = ({ 
@@ -95,36 +101,41 @@ const SortableProject: React.FC<SortableProjectProps> = ({
   onProjectMove, 
   isDragActive = false, 
   onSetDragActive, 
-  statuses = [], 
+  statuses = [], // eslint-disable-line @typescript-eslint/no-unused-vars
   projectIndex = 0, 
   statusId, 
-  insertionPosition
+  insertionPosition,
+  projectsByStatus = {},
+  onInsertionPositionChange
 }) => {
-  console.log('🎯 SortableProject RENDERING for:', project.name, 'ID:', project._id);
-  
   const [isHovered, setIsHovered] = React.useState(false);
   const projectRef = React.useRef<HTMLDivElement>(null);
+  const lastInsertionPositionRef = React.useRef<{statusId: string; position: number} | null>(null);
   
   // Определяем нужно ли добавить spacing сверху или снизу
   const shouldAddSpaceAbove = insertionPosition?.statusId === statusId && insertionPosition?.position === projectIndex;
   const shouldAddSpaceBelow = insertionPosition?.statusId === statusId && insertionPosition?.position === projectIndex + 1;
   
+  // Сохраняем последнее значение insertionPosition в ref для использования в handleMouseUp
+  React.useEffect(() => {
+    lastInsertionPositionRef.current = insertionPosition || null;
+  }, [insertionPosition]);
+
+  // Отладка spacing отключена (индикаторы удалены)
+  // if (shouldAddSpaceAbove || shouldAddSpaceBelow) {
+  //   console.log(`🔍 SPACING APPLIED for ${project.name} (index ${projectIndex}):`, {
+  //     insertionPosition: insertionPosition?.position,
+  //     shouldAddSpaceAbove,
+  //     shouldAddSpaceBelow,
+  //     marginTop: shouldAddSpaceAbove ? '80px' : '8px',
+  //     marginBottom: shouldAddSpaceBelow ? '80px' : '8px'
+  //   });
+  // }
+  
 
   
-  console.log('📞 Calling useSortable with ID:', project._id);
   const sortableResult = useSortable({
     id: project._id,
-  });
-  
-  console.log('📦 useSortable returned:', {
-    projectName: project.name,
-    projectId: project._id,
-    hasListeners: !!sortableResult.listeners,
-    hasAttributes: !!sortableResult.attributes,
-    hasSetNodeRef: !!sortableResult.setNodeRef,
-    isDragging: sortableResult.isDragging,
-    listeners: sortableResult.listeners,
-    attributes: sortableResult.attributes
   });
 
   const {
@@ -150,7 +161,6 @@ const SortableProject: React.FC<SortableProjectProps> = ({
 
   
   const handleManualMouseDown = (e: React.MouseEvent) => {
-    console.log('🎯 MOUSEDOWN TRIGGERED! Project:', project.name);
     e.preventDefault(); // Предотвращаем выделение текста
     e.stopPropagation(); // Предотвращаем всплытие события
     
@@ -181,7 +191,7 @@ const SortableProject: React.FC<SortableProjectProps> = ({
         document.body.style.userSelect = 'none';
         document.body.classList.add('dragging-active');
         
-        console.log('🔥 Manual drag started for:', project.name);
+        console.log('🔥 MANUAL DRAG STARTED:', project.name);
         
         // Создаем летающий элемент
         dragElement = document.createElement('div');
@@ -231,7 +241,7 @@ const SortableProject: React.FC<SortableProjectProps> = ({
           element.classList.remove('drag-highlight');
         });
         
-        // Ищем колонку под курсором
+        // Ищем колонку под курсором и обновляем позицию вставки
         let dropZone = elementUnderMouse;
         let attempts = 0;
         
@@ -240,10 +250,62 @@ const SortableProject: React.FC<SortableProjectProps> = ({
             // Подсвечиваем найденную колонку через CSS класс
             const columnElement = dropZone as HTMLElement;
             columnElement.classList.add('drag-highlight');
+            
+            // Получаем ID статуса колонки для позиционирования
+            const statusId = columnElement.getAttribute('data-status-id');
+            if (statusId) {
+              const statusProjects = projectsByStatus[statusId] || [];
+              
+              // Динамическое позиционирование на основе координат мыши
+              const columnRect = columnElement.getBoundingClientRect();
+              const mouseY = event.clientY;
+              const relativeY = mouseY - columnRect.top;
+              
+              // Находим карточки в колонке
+              const projectCards = columnElement.querySelectorAll('[data-project-id]');
+              let insertPosition = 0;
+              
+              // Определяем позицию вставки на основе позиции мыши относительно карточек
+              for (let i = 0; i < projectCards.length; i++) {
+                const cardElement = projectCards[i] as HTMLElement;
+                const cardRect = cardElement.getBoundingClientRect();
+                const cardMiddle = cardRect.top - columnRect.top + cardRect.height / 2;
+                
+                if (relativeY < cardMiddle) {
+                  insertPosition = i;
+                  break;
+                } else {
+                  insertPosition = i + 1;
+                }
+              }
+              
+              // Ограничиваем позицию разумными пределами
+              insertPosition = Math.max(0, Math.min(insertPosition, statusProjects.length));
+              
+              // Проверяем, изменилась ли позиция
+              const currentPosition = insertionPosition;
+              const isPositionChanged = !currentPosition || 
+                currentPosition.statusId !== statusId || 
+                currentPosition.position !== insertPosition;
+              
+              if (isPositionChanged) {
+                                 console.log('🎯 MANUAL DRAG - INSERTION POSITION CHANGED:', { 
+                   from: currentPosition,
+                   to: { statusId, position: insertPosition },
+                   totalProjects: statusProjects.length 
+                 });
+                 onInsertionPositionChange?.({ statusId, position: insertPosition });
+              }
+            }
             break;
           }
           dropZone = dropZone.parentElement;
           attempts++;
+        }
+        
+        // Если не нашли колонку, очищаем позицию вставки
+        if (attempts >= 10) {
+          onInsertionPositionChange?.(null);
         }
       }
     };
@@ -262,8 +324,12 @@ const SortableProject: React.FC<SortableProjectProps> = ({
         document.body.removeChild(dragElement);
       }
       
+      // ВАЖНО: Сохраняем позицию вставки из ref для использования в drop
+      const savedInsertionPosition = lastInsertionPositionRef.current;
+      
       setIsDraggingManual(false);
       onSetDragActive?.(false); // Сбрасываем глобальный флаг драга
+      onInsertionPositionChange?.(null); // Очищаем позицию вставки
       
       // Сбрасываем курсор на документе
       document.body.style.cursor = '';
@@ -271,7 +337,7 @@ const SortableProject: React.FC<SortableProjectProps> = ({
       document.body.classList.remove('dragging-active');
       
               if (moved) {
-          console.log('🎯 Manual drag ended for:', project.name);
+          console.log('🏁 MANUAL DRAG ENDED:', project.name);
           
           // Определяем элемент для drop (insertion point или колонка)
           const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY);
@@ -279,82 +345,54 @@ const SortableProject: React.FC<SortableProjectProps> = ({
           let attempts = 0;
           
           while (dropZone && attempts < 10) {
-            // Сначала проверяем на insertion point
-            const dropId = dropZone.getAttribute('data-droppable-id');
-            if (dropId && dropId.includes('-insert-')) {
-              const parts = dropId.split('-insert-');
-              const statusId = parts[0];
-              const insertPosition = parseInt(parts[1], 10);
-              
-                             // Находим статус по ID
-               const targetStatus = statuses.find((s: Status) => s._id === statusId);
-              if (targetStatus) {
-                console.log('✅ Dropped on insertion point:', targetStatus.name, 'position:', insertPosition);
-                
-                // Показываем уведомление о начале перемещения
-                const loadingMessage = `⏳ Перемещаем проект "${project.name}" на позицию ${insertPosition + 1}...`;
-                const notification = document.createElement('div');
-                notification.innerHTML = loadingMessage;
-                notification.style.cssText = `
-                  position: fixed;
-                  top: 20px;
-                  right: 20px;
-                  background: #2196f3;
-                  color: white;
-                  padding: 12px 20px;
-                  border-radius: 8px;
-                  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                  z-index: 10000;
-                  font-weight: 600;
-                `;
-                document.body.appendChild(notification);
-                
-                // Реальное перемещение проекта с позицией
-                if (onProjectMove) {
-                  try {
-                    await onProjectMove(project._id, statusId, targetStatus.name, insertPosition);
-                    
-                    // Успешное перемещение
-                    notification.innerHTML = `✅ Проект перемещен в "${targetStatus.name}" на позицию ${insertPosition + 1}`;
-                    notification.style.background = '#4caf50';
-                    
-                    setTimeout(() => {
-                      if (notification.parentNode) {
-                        document.body.removeChild(notification);
-                      }
-                    }, 3000);
-                    
-                  } catch (err) {
-                    // Ошибка перемещения
-                    notification.innerHTML = `❌ Ошибка: ${err instanceof Error ? err.message : 'Не удалось переместить проект'}`;
-                    notification.style.background = '#f44336';
-                    
-                    setTimeout(() => {
-                      if (notification.parentNode) {
-                        document.body.removeChild(notification);
-                      }
-                    }, 5000);
-                  }
-                }
-                return;
-              }
-            }
-            
-            // Если не insertion point, проверяем колонку (старое поведение)
+            // Проверяем колонку и используем СОХРАНЕННОЕ состояние insertionPosition
             const statusId = dropZone.getAttribute('data-status-id');
             const statusName = dropZone.getAttribute('data-status-name');
             
             if (statusId && statusName) {
-              console.log('✅ Dropped on column:', statusName, 'ID:', statusId);
-              
-              // Проверяем что это другая колонка
-              if (project.statusId?._id !== statusId) {
-                console.log('🚀 Moving project to new status...');
+              // Используем СОХРАНЕННОЕ состояние insertionPosition если есть
+              const insertPositionToUse = savedInsertionPosition?.statusId === statusId 
+                ? savedInsertionPosition.position 
+                : undefined;
                 
+              console.log('📍 DROP on column:', statusName, 'with insertion position:', insertPositionToUse);
+              
+              // Проверяем нужно ли что-то перемещать
+              const isSameStatus = project.statusId?._id === statusId;
+              const isDifferentPosition = insertPositionToUse !== undefined;
+              
+              console.log('🔍 DROP DEBUG:', {
+                projectName: project.name,
+                fromStatus: project.statusId?.name,
+                toStatus: statusName,
+                savedInsertionPosition,
+                insertPosition: insertPositionToUse,
+                isSameStatus,
+                isDifferentPosition
+              });
+              
+              if (!isSameStatus || isDifferentPosition) {
                 // Показываем уведомление о начале перемещения
-                const loadingMessage = `⏳ Перемещаем проект "${project.name}"...`;
+                const positionText = insertPositionToUse !== undefined 
+                  ? ` на позицию ${insertPositionToUse + 1}` 
+                  : '';
+                const loadingMessage = `Перемещаем проект "${project.name}"${positionText}...`;
                 const notification = document.createElement('div');
-                notification.innerHTML = loadingMessage;
+                notification.innerHTML = `
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span>${loadingMessage}</span>
+                    <button style="
+                      background: none;
+                      border: none;
+                      color: white;
+                      font-size: 16px;
+                      cursor: pointer;
+                      padding: 0 0 0 12px;
+                      margin: 0;
+                      line-height: 1;
+                    " onclick="this.parentElement.parentElement.remove()">✕</button>
+                  </div>
+                `;
                 notification.style.cssText = `
                   position: fixed;
                   top: 20px;
@@ -369,13 +407,30 @@ const SortableProject: React.FC<SortableProjectProps> = ({
                 `;
                 document.body.appendChild(notification);
                 
-                // Реальное перемещение проекта без позиции (в конец)
+                // Реальное перемещение проекта с позицией если есть
                 if (onProjectMove) {
                   try {
-                    await onProjectMove(project._id, statusId, statusName);
+                    await onProjectMove(project._id, statusId, statusName, insertPositionToUse);
                     
                     // Успешное перемещение
-                    notification.innerHTML = `✅ Проект перемещен в "${statusName}"`;
+                    const successText = insertPositionToUse !== undefined 
+                      ? ` на позицию ${insertPositionToUse + 1}` 
+                      : '';
+                    notification.innerHTML = `
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span>Проект перемещен в "${statusName}"${successText}</span>
+                        <button style="
+                          background: none;
+                          border: none;
+                          color: white;
+                          font-size: 16px;
+                          cursor: pointer;
+                          padding: 0 0 0 12px;
+                          margin: 0;
+                          line-height: 1;
+                        " onclick="this.parentElement.parentElement.remove()">✕</button>
+                      </div>
+                    `;
                     notification.style.background = '#4caf50';
                     
                     setTimeout(() => {
@@ -386,7 +441,21 @@ const SortableProject: React.FC<SortableProjectProps> = ({
                     
                   } catch (err) {
                     // Ошибка перемещения
-                    notification.innerHTML = `❌ Ошибка: ${err instanceof Error ? err.message : 'Не удалось переместить проект'}`;
+                    notification.innerHTML = `
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span>Ошибка: ${err instanceof Error ? err.message : 'Не удалось переместить проект'}</span>
+                        <button style="
+                          background: none;
+                          border: none;
+                          color: white;
+                          font-size: 16px;
+                          cursor: pointer;
+                          padding: 0 0 0 12px;
+                          margin: 0;
+                          line-height: 1;
+                        " onclick="this.parentElement.parentElement.remove()">✕</button>
+                      </div>
+                    `;
                     notification.style.background = '#f44336';
                     
                     setTimeout(() => {
@@ -398,7 +467,7 @@ const SortableProject: React.FC<SortableProjectProps> = ({
                 }
                 
               } else {
-                console.log('⚠️ Same column, no move needed');
+                console.log('⚠️ Same position in same column - no move needed');
               }
               return;
             }
@@ -407,9 +476,9 @@ const SortableProject: React.FC<SortableProjectProps> = ({
             attempts++;
           }
           
-          console.log('❌ No valid drop zone found');
+          console.log('❌ Invalid drop zone');
         } else {
-          console.log('🖱️ Just a click on:', project.name);
+          // Обычный клик - открываем редактирование
           if (onEdit) onEdit(project);
         }
     };
@@ -438,7 +507,8 @@ const SortableProject: React.FC<SortableProjectProps> = ({
       style={{
         ...style,
         cursor: isDraggingManual ? 'grabbing' : isHovered ? 'grab' : 'pointer',
-        transition: (isDragging || isDraggingManual) ? 'none' : 'all 0.2s ease',
+        // Убираем transition для margin во время dragActive
+        transition: isDragActive ? 'margin 0.2s ease' : (isDragging || isDraggingManual) ? 'none' : 'all 0.2s ease',
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
@@ -447,8 +517,8 @@ const SortableProject: React.FC<SortableProjectProps> = ({
         opacity: isDraggingManual ? 0.7 : 1,
         minHeight: '60px',
         // Динамический spacing для показа позиции вставки
-        marginTop: shouldAddSpaceAbove ? '40px' : '8px',
-        marginBottom: shouldAddSpaceBelow ? '40px' : '8px',
+        marginTop: shouldAddSpaceAbove ? '80px' : '8px',
+        marginBottom: shouldAddSpaceBelow ? '80px' : '8px',
       }}
     >
       <ProjectCard 
@@ -486,7 +556,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           ? '#e3f2fd' 
           : isHovered 
             ? '#f0f8ff' 
-            : '#fafbff',
+            : '#ffffff',
         borderRadius: 8,
         padding: 16,
         // Улучшенная синяя рамка при hover и dragging
@@ -495,9 +565,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           : '1px solid #f0f0f0',
         boxShadow: isOverlay || isDraggingManual
           ? '0 8px 24px rgba(33, 150, 243, 0.4)' 
-          : isHovered 
-            ? '0 4px 12px rgba(33, 150, 243, 0.3)' 
-            : '0 1px 2px rgba(0,0,0,0.02)',
+          : 'none',
         userSelect: 'none',
         transition: isOverlay || isDragging || isDraggingManual ? 'none' : 'all 0.2s ease',
         // Убеждаемся что рамка точно выровнена по карточке
@@ -586,6 +654,8 @@ interface DroppableStatusProps {
   onSetDragActive?: (active: boolean) => void;
   statuses: Status[];
   insertionPosition?: {statusId: string; position: number} | null;
+  projectsByStatus?: Record<string, Project[]>;
+  onInsertionPositionChange?: (position: {statusId: string; position: number} | null) => void;
 }
 
 const DroppableStatus: React.FC<DroppableStatusProps> = ({ 
@@ -597,7 +667,9 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
   isDragActive = false,
   onSetDragActive,
   statuses,
-  insertionPosition
+  insertionPosition,
+  projectsByStatus = {},
+  onInsertionPositionChange
 }) => {
   const projectIds = projects.map(p => p._id);
   const [isHovered, setIsHovered] = React.useState(false);
@@ -621,7 +693,6 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
     display: 'flex',
     flexDirection: 'column' as const,
     overflow: 'hidden',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
     border: '2px solid #e0e0e0'
   } : {
     background: '#f8f9fa',
@@ -633,7 +704,7 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
     border: '2px solid #e0e0e0'
   };
 
-  console.log('🏗️ Creating DroppableStatus for:', status.name, 'with ID:', status._id);
+  // console.log('🏗️ Creating DroppableStatus for:', status.name, 'with ID:', status._id);
   
   return (
     <div 
@@ -654,7 +725,7 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
         transform: isOver ? 'scale(1.05)' : 'scale(1)',
         boxShadow: isOver 
           ? '0 8px 24px rgba(33, 150, 243, 0.3)' 
-          : containerStyle.boxShadow,
+          : 'none',
         transition: 'all 0.2s ease',
       }}
     >
@@ -664,7 +735,6 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
         alignItems: 'center', 
         marginBottom: 16,
         paddingBottom: 12,
-        borderBottom: '2px solid #e0e0e0',
         flexShrink: 0
       }}>
         <div 
@@ -716,6 +786,8 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
               projectIndex={index}
               statusId={status._id}
               insertionPosition={insertionPosition}
+              projectsByStatus={projectsByStatus}
+              onInsertionPositionChange={onInsertionPositionChange}
             />
           ))}
         </SortableContext>
@@ -727,18 +799,22 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
   companyId, 
   onProjectEdit,
-  onProjectDelete: _onProjectDelete // eslint-disable-line @typescript-eslint/no-unused-vars
+  onProjectDelete: _onProjectDelete, // eslint-disable-line @typescript-eslint/no-unused-vars
+  searchTerm = '',
+  dateFilter = 'all',
+  customDateFrom = '',
+  customDateTo = ''
 }) => {
-  // ПРОСТАЯ ОТЛАДКА ДЛЯ ПРОВЕРКИ
-  console.log('🔥 KanbanBoard RENDERING at:', new Date().toISOString());
+  // ПРОСТАЯ ОТЛАДКА ДЛЯ ПРОВЕРКИ (отключена для уменьшения шума)
+  // console.log('🔥 KanbanBoard RENDERING at:', new Date().toISOString());
   
-  // Отладка монтирования компонента
-  React.useEffect(() => {
-    console.log('🏗️ KanbanBoard mounted/remounted at:', new Date().toISOString());
-    return () => {
-      console.log('💥 KanbanBoard unmounting at:', new Date().toISOString());
-    };
-  }, []);
+  // Отладка монтирования компонента (отключена)
+  // React.useEffect(() => {
+  //   console.log('🏗️ KanbanBoard mounted/remounted at:', new Date().toISOString());
+  //   return () => {
+  //     console.log('💥 KanbanBoard unmounting at:', new Date().toISOString());
+  //   };
+  // }, []);
   
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -755,9 +831,67 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Состояние для отслеживания позиции вставки
   const [insertionPosition, setInsertionPosition] = useState<{statusId: string; position: number} | null>(null);
   
+  // Отладка изменений insertionPosition (убрана для уменьшения шума в консоли)
+  // React.useEffect(() => {
+  //   console.log('🔄 insertionPosition changed:', insertionPosition);
+  // }, [insertionPosition]);
+  
   // Функция для управления состоянием драга
   const handleSetDragActive = (active: boolean) => {
     setIsDragActive(active);
+  };
+
+  // Функция фильтрации проектов
+  const filterProjects = (projects: Project[]): Project[] => {
+    let filtered = projects;
+
+    // Фильтр по поисковому запросу
+    if (searchTerm.trim()) {
+      const search = searchTerm.trim().toLowerCase();
+      filtered = filtered.filter(project => {
+        const nameMatch = project.name && project.name.toLowerCase().includes(search);
+        const customerMatch = project.customer && project.customer.toLowerCase().includes(search);
+        return nameMatch || customerMatch;
+      });
+    }
+
+    // Фильтр по дате
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      filtered = filtered.filter(project => {
+        const projectDate = new Date(project.createdAt);
+        
+        switch (dateFilter) {
+          case 'today':
+            return projectDate >= today;
+          case 'week': {
+            const weekAgo = new Date(today);
+            weekAgo.setDate(today.getDate() - 7);
+            return projectDate >= weekAgo;
+          }
+          case 'month': {
+            const monthAgo = new Date(today);
+            monthAgo.setMonth(today.getMonth() - 1);
+            return projectDate >= monthAgo;
+          }
+          case 'custom': {
+            if (customDateFrom && customDateTo) {
+              const fromDate = new Date(customDateFrom);
+              const toDate = new Date(customDateTo);
+              toDate.setHours(23, 59, 59, 999); // включаем весь день
+              return projectDate >= fromDate && projectDate <= toDate;
+            }
+            return true;
+          }
+          default:
+            return true;
+        }
+      });
+    }
+
+    return filtered;
   };
 
   // Упрощенная настройка сенсоров
@@ -839,18 +973,22 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   }, [companyId]);
 
-  // Упрощенная группировка проектов по ID статусов
+  // Упрощенная группировка проектов по ID статусов с применением фильтров
   const projectsByStatus = React.useMemo(() => {
     const byStatus: Record<string, Project[]> = {};
+    // Применяем фильтрацию к проектам
+    const filteredProjects = filterProjects(projects);
+    
     statuses.forEach(status => {
-      byStatus[status._id] = projects.filter(project => 
+      const statusProjects = filteredProjects.filter(project => 
         // Сравниваем по statusId._id если есть, иначе по названию статуса
         project.statusId?._id === status._id || 
         (project.status === status.name && !project.statusId)
       );
+      byStatus[status._id] = statusProjects;
     });
     return byStatus;
-  }, [projects, statuses]);
+  }, [projects, statuses, searchTerm, dateFilter, customDateFrom, customDateTo]);
 
   // Функция для реального перемещения проекта
   const handleProjectMove = async (projectId: string, targetStatusId: string, statusName: string, insertPosition?: number) => {
@@ -869,8 +1007,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
       // Обновляем локальное состояние с учетом позиции
       setProjects(prev => {
-        // Убираем проект из старой позиции
-        const withoutProject = prev.filter(p => p._id !== projectId);
+        console.log('🔧 UPDATING PROJECTS STATE:', {
+          projectId,
+          targetStatusId,
+          insertPosition,
+          originalStatus: originalProject.statusId?._id
+        });
         
         // Обновляем информацию о статусе проекта
         const updatedProject = {
@@ -886,31 +1028,102 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
         // Если позиция не указана, добавляем в конец для этого статуса
         if (insertPosition === undefined) {
+          const withoutProject = prev.filter(p => p._id !== projectId);
           return [...withoutProject, updatedProject];
         }
 
-        // Получаем проекты для целевого статуса
-        const targetStatusProjects = withoutProject.filter(p => 
-          p.statusId?._id === targetStatusId || 
-          (p.status === targetStatus.name && !p.statusId)
-        );
+        // Определяем, перемещаем ли в том же статусе
+        const isSameStatus = originalProject.statusId?._id === targetStatusId;
         
-        // Получаем проекты других статусов
-        const otherStatusProjects = withoutProject.filter(p => 
-          p.statusId?._id !== targetStatusId && 
-          !(p.status === targetStatus.name && !p.statusId)
-        );
+        if (isSameStatus) {
+          // Внутри того же статуса - просто меняем порядок
+          const result = [...prev];
+          const currentIndex = result.findIndex(p => p._id === projectId);
+          
+          if (currentIndex !== -1) {
+            // Удаляем из текущей позиции
+            result.splice(currentIndex, 1);
+            
+            // Корректируем позицию вставки если удаляли элемент перед ней
+            let adjustedPosition = insertPosition;
+            if (currentIndex < insertPosition) {
+              adjustedPosition = insertPosition - 1;
+            }
+            
+            // Получаем проекты целевого статуса (без перетаскиваемого проекта)
+            const statusProjects = result.filter(p => 
+              p.statusId?._id === targetStatusId || 
+              (p.status === targetStatus.name && !p.statusId)
+            );
+            
+            // Ограничиваем позицию
+            adjustedPosition = Math.max(0, Math.min(adjustedPosition, statusProjects.length));
+            
+            console.log('📍 SAME STATUS MOVE:', {
+              currentIndex,
+              originalPosition: insertPosition,
+              adjustedPosition,
+              statusProjectsCount: statusProjects.length
+            });
+            
+            // Находим глобальную позицию для вставки
+            const otherProjects = result.filter(p => 
+              p.statusId?._id !== targetStatusId && 
+              !(p.status === targetStatus.name && !p.statusId)
+            );
+            
+            // Вставляем обновленный проект
+            const targetProjects = [...statusProjects];
+            targetProjects.splice(adjustedPosition, 0, updatedProject);
+            
+            return [...otherProjects, ...targetProjects];
+          }
+          
+          return prev;
+        } else {
+          // Перемещение в другой статус
+          const withoutProject = prev.filter(p => p._id !== projectId);
+          
+          // Получаем проекты для целевого статуса
+          const targetStatusProjects = withoutProject.filter(p => 
+            p.statusId?._id === targetStatusId || 
+            (p.status === targetStatus.name && !p.statusId)
+          );
+          
+          // Получаем проекты других статусов
+          const otherStatusProjects = withoutProject.filter(p => 
+            p.statusId?._id !== targetStatusId && 
+            !(p.status === targetStatus.name && !p.statusId)
+          );
 
-        // Вставляем проект в указанную позицию
-        const newTargetProjects = [...targetStatusProjects];
-        newTargetProjects.splice(insertPosition, 0, updatedProject);
+          // Ограничиваем позицию
+          const safePosition = Math.max(0, Math.min(insertPosition, targetStatusProjects.length));
+          
+          console.log('📍 DIFFERENT STATUS MOVE:', {
+            originalPosition: insertPosition,
+            safePosition,
+            targetProjectsCount: targetStatusProjects.length
+          });
 
-        return [...otherStatusProjects, ...newTargetProjects];
+          // Вставляем проект в указанную позицию
+          const newTargetProjects = [...targetStatusProjects];
+          newTargetProjects.splice(safePosition, 0, updatedProject);
+
+          return [...otherStatusProjects, ...newTargetProjects];
+        }
       });
 
       // Отправляем обновление на сервер
       await updateProjectStatus(projectId, targetStatusId);
       console.log(`✅ Проект успешно перемещен в статус ${statusName}${insertPosition !== undefined ? ` на позицию ${insertPosition}` : ''}`);
+      
+      // Логируем финальное состояние для отладки (отключено для уменьшения шума)
+      // console.log('🎯 FINAL PROJECTS STATE:', {
+      //   allProjects: projects.map(p => ({ id: p._id, name: p.name, status: p.statusId?.name || p.status })),
+      //   targetStatusProjects: projects
+      //     .filter(p => p.statusId?._id === targetStatusId || (p.status === statusName && !p.statusId))
+      //     .map(p => ({ id: p._id, name: p.name }))
+      // });
       
     } catch (err) {
       console.error('❌ Ошибка обновления статуса:', err);
@@ -949,32 +1162,35 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     console.log('Project found:', project?.name);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    console.log('🔄 Drag over:', {
-      activeId: active.id,
-      overId: over?.id,
-      hasTarget: !!over
-    });
+      const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
     
-    // Определяем позицию вставки на основе координат мыши
+    // Простая логика для тестирования
     if (over && over.id && typeof over.id === 'string') {
       const statusId = over.id;
-      const status = statuses.find(s => s._id === statusId);
+      const statusProjects = projectsByStatus[statusId] || [];
       
-      if (status) {
-        const statusProjects = projectsByStatus[statusId] || [];
-        
-                 // Упрощенная логика: определяем позицию вставки
-         let insertPosition = statusProjects.length; // По умолчанию в конец
-         
-         // Если есть проекты в колонке, попробуем определить точную позицию
-         if (statusProjects.length > 0) {
-           // Упрощенная логика: вставляем в середину списка для демонстрации
-           insertPosition = Math.floor(statusProjects.length / 2);
-         }
-         
-         setInsertionPosition({ statusId, position: insertPosition });
+      // Фиксированная позиция для тестирования - середина
+      const insertPosition = Math.floor(statusProjects.length / 2);
+      
+      // Проверяем, изменилась ли позиция
+      const currentPosition = insertionPosition;
+      const isPositionChanged = !currentPosition || 
+        currentPosition.statusId !== statusId || 
+        currentPosition.position !== insertPosition;
+      
+      if (isPositionChanged) {
+        console.log('🎯 INSERTION POSITION CHANGED:', { 
+          from: currentPosition,
+          to: { statusId, position: insertPosition },
+          totalProjects: statusProjects.length 
+        });
+        setInsertionPosition({ statusId, position: insertPosition });
+      }
+    } else {
+      if (insertionPosition) {
+        console.log('🚫 CLEARING INSERTION POSITION');
+        setInsertionPosition(null);
       }
     }
   };
@@ -1005,21 +1221,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const projectId = active.id as string;
     const dropTargetId = over.id as string;
     
-    // Парсим target ID для определения типа drop зоны
-    let targetStatusId: string;
-    let insertPosition: number | undefined;
+    // Используем insertPosition из состояния если есть, иначе drop на статус целиком
+    const targetStatusId = dropTargetId;
+    const insertPosition = insertionPosition?.statusId === targetStatusId ? insertionPosition.position : undefined;
     
-    if (dropTargetId.includes('-insert-')) {
-      // Drop на insertion point
-      const parts = dropTargetId.split('-insert-');
-      targetStatusId = parts[0];
-      insertPosition = parseInt(parts[1], 10);
-      console.log('📍 Drop on insertion point:', { targetStatusId, insertPosition });
-    } else {
-      // Drop на статус целиком (старое поведение)
-      targetStatusId = dropTargetId;
-      console.log('📍 Drop on status:', { targetStatusId });
-    }
+    console.log('📍 Drop details:', { 
+      targetStatusId, 
+      insertPosition, 
+      hasInsertionState: !!insertionPosition 
+    });
     
     // Найти целевой статус
     const targetStatus = statuses.find(status => String(status._id) === targetStatusId);
@@ -1032,6 +1242,21 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const project = projects.find(p => p._id === projectId);
     if (!project) {
       console.error('❌ Project not found:', projectId);
+      return;
+    }
+
+    // Проверить, нужно ли что-то менять
+    const isSameStatus = project.statusId?._id === targetStatusId;
+    const currentStatusProjects = projectsByStatus[targetStatusId] || [];
+    const currentPosition = currentStatusProjects.findIndex(p => p._id === projectId);
+    
+    if (isSameStatus && insertPosition === undefined) {
+      console.log('❌ Same status, no position specified, no change needed');
+      return;
+    }
+    
+    if (isSameStatus && insertPosition === currentPosition) {
+      console.log('❌ Same position in same status, no change needed');
       return;
     }
 
@@ -1201,6 +1426,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onSetDragActive={handleSetDragActive}
             statuses={statuses}
             insertionPosition={insertionPosition}
+            projectsByStatus={projectsByStatus}
+            onInsertionPositionChange={setInsertionPosition}
           />
         )}
       </div>
@@ -1221,7 +1448,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       onDragEnd={handleDragEnd}
     >
       <div className="kanban-container" style={{ 
-        padding: '16px',
+        padding: '0px 16px 16px 16px',
         height: '100%', 
         position: 'relative',
         minHeight: '100%',
@@ -1271,6 +1498,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
               onSetDragActive={handleSetDragActive}
               statuses={statuses}
               insertionPosition={insertionPosition}
+              projectsByStatus={projectsByStatus}
+              onInsertionPositionChange={setInsertionPosition}
             />
           ))}
         </div>
@@ -1320,8 +1549,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         /* Родительский контейнер для kanban-колонок */
         .kanban-container {
           overflow: visible !important;
-          padding-top: 30px !important;
-          margin-top: 10px !important;
+          padding-top: 0px !important;
+          margin-top: 0px !important;
         }
         
         /* Контейнер для grid */
