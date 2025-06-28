@@ -243,6 +243,32 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
           .glass-tab-root div, .glass-tab-root span, .glass-tab-root label {
             color: #333 !important;
           }
+          .glass-tab-root input[type="number"] {
+            width: 160px !important;
+            padding: 8px !important;
+            border-radius: 6px !important;
+            border: 1px solid #ccc !important;
+            font-size: 15px !important;
+            margin-top: 2px !important;
+            box-sizing: border-box !important;
+          }
+          .glass-tab-root input[type="number"]:disabled {
+            background: #f5f5f5 !important;
+            color: #888 !important;
+          }
+          .glass-tab-root input[type="number"]:not(:disabled) {
+            background: #fff !important;
+            color: #333 !important;
+          }
+          .glass-tab-root input[type="text"] {
+            padding: 8px !important;
+            border-radius: 6px !important;
+            border: 1px solid #ccc !important;
+            font-size: 15px !important;
+            background: #fff !important;
+            color: #333 !important;
+            box-sizing: border-box !important;
+          }
         }
       `}</style>
     </div>

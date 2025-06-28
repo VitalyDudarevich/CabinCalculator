@@ -431,6 +431,23 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
           .hardware-column div, .hardware-column span, .hardware-column label {
             color: #333 !important;
           }
+          .hardware-column input[type="number"] {
+            width: 160px !important;
+            padding: 8px !important;
+            border-radius: 6px !important;
+            border: 1px solid #ccc !important;
+            font-size: 15px !important;
+            margin-top: 2px !important;
+            box-sizing: border-box !important;
+          }
+          .hardware-column input[type="number"]:disabled {
+            background: #f5f5f5 !important;
+            color: #888 !important;
+          }
+          .hardware-column input[type="number"]:not(:disabled) {
+            background: #fff !important;
+            color: #333 !important;
+          }
           div, span, h1, h2, h3, p, label {
             color: #333 !important;
           }

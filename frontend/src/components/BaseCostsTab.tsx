@@ -283,6 +283,32 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
           .base-costs-tab-root div, .base-costs-tab-root span, .base-costs-tab-root label {
             color: #333 !important;
           }
+          .base-costs-tab-root input[type="number"] {
+            width: 160px !important;
+            padding: 8px !important;
+            border-radius: 6px !important;
+            border: 1px solid #ccc !important;
+            font-size: 15px !important;
+            margin-top: 2px !important;
+            box-sizing: border-box !important;
+          }
+          .base-costs-tab-root input[type="number"]:disabled {
+            background: #f5f5f5 !important;
+            color: #888 !important;
+          }
+          .base-costs-tab-root input[type="number"]:not(:disabled) {
+            background: #fff !important;
+            color: #333 !important;
+          }
+          .base-costs-tab-root input[type="text"] {
+            padding: 8px !important;
+            border-radius: 6px !important;
+            border: 1px solid #ccc !important;
+            font-size: 15px !important;
+            background: #fff !important;
+            color: #333 !important;
+            box-sizing: border-box !important;
+          }
         }
       `}</style>
     </div>

@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { fetchWithAuth } from './auth';
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api';
 
 export interface Status {
   _id: string;
@@ -18,11 +20,8 @@ export interface StatusStats extends Status {
 
 // Получить все статусы компании
 export const getStatuses = async (companyId: string): Promise<Status[]> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_BASE_URL}/statuses?companyId=${companyId}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/statuses?companyId=${companyId}`, {
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -36,11 +35,8 @@ export const getStatuses = async (companyId: string): Promise<Status[]> => {
 
 // Получить статистику статусов
 export const getStatusStats = async (companyId: string): Promise<StatusStats[]> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_BASE_URL}/statuses/stats?companyId=${companyId}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/statuses/stats?companyId=${companyId}`, {
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -54,11 +50,8 @@ export const getStatusStats = async (companyId: string): Promise<StatusStats[]> 
 
 // Получить статус по ID
 export const getStatusById = async (statusId: string): Promise<Status> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_BASE_URL}/statuses/${statusId}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/statuses/${statusId}`, {
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -77,12 +70,9 @@ export const createStatus = async (statusData: {
   companyId: string;
   order?: number;
 }): Promise<Status> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_BASE_URL}/statuses`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/statuses`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(statusData),
@@ -105,12 +95,9 @@ export const updateStatus = async (
     isActive?: boolean;
   },
 ): Promise<Status> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_BASE_URL}/statuses/${statusId}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/statuses/${statusId}`, {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(statusData),
@@ -127,12 +114,9 @@ export const updateStatus = async (
 export const reorderStatuses = async (
   statusOrder: { id: string; order: number }[],
 ): Promise<void> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_BASE_URL}/statuses/reorder`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/statuses/reorder`, {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ statusOrder }),
@@ -147,12 +131,9 @@ export const reorderStatuses = async (
 export const deleteStatus = async (
   statusId: string,
 ): Promise<{ message: string; projectsMoved: number }> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_BASE_URL}/statuses/${statusId}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/statuses/${statusId}`, {
     method: 'DELETE',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -169,12 +150,9 @@ export const updateProjectStatus = async (
   projectId: string,
   statusId: string,
 ): Promise<{ _id: string; statusId: Status; status: string; updatedAt: string }> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/status`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/projects/${projectId}/status`, {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ statusId }),
