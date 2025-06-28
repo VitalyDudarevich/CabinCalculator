@@ -483,16 +483,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           .admin-content {
             padding: 0 !important;
             background: #fff !important;
+            color: #333 !important;
             overflow-x: auto !important;
             width: 100vw !important;
             min-width: 0 !important;
             height: calc(100vh - 56px) !important;
+          }
+          .admin-content * {
+            color: #333 !important;
+          }
+          .admin-content h1, .admin-content h2, .admin-content h3 {
+            color: #333 !important;
+          }
+          .admin-content th, .admin-content td {
+            color: #333 !important;
+          }
+          .admin-content div, .admin-content span, .admin-content p {
+            color: #333 !important;
           }
           .admin-sidebar {
             display: none !important;
           }
           body, html, #root, .App, .admin-panel-root {
             background: #fff !important;
+            color: #333 !important;
           }
         }
       `}</style>

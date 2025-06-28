@@ -272,6 +272,16 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
             margin: 0 !important;
             border-radius: 0 !important;
             padding: 8px !important;
+            color: #333 !important;
+          }
+          .base-costs-tab-root * {
+            color: #333 !important;
+          }
+          .base-costs-tab-root h1, .base-costs-tab-root h2, .base-costs-tab-root h3 {
+            color: #333 !important;
+          }
+          .base-costs-tab-root div, .base-costs-tab-root span, .base-costs-tab-root label {
+            color: #333 !important;
           }
         }
       `}</style>

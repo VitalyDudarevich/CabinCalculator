@@ -121,8 +121,13 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
         )}
       </div>
       <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {displayCompanies.length === 0 && user.role !== 'superadmin' && (
-          <div style={{ color: '#888' }}>Нет компаний</div>
+        {displayCompanies.length === 0 && (
+          <div style={{ color: '#888', textAlign: 'center', padding: '40px 0' }}>
+            <div>Загружаем компании...</div>
+            <div style={{ fontSize: '12px', color: '#aaa', marginTop: '8px' }}>
+              {user.role === 'superadmin' ? 'Загрузка всех компаний' : 'Загрузка данных компании'}
+            </div>
+          </div>
         )}
         {displayCompanies.length > 0 && (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>

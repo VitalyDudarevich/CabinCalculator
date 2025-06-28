@@ -414,12 +414,25 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
           .hardware-columns {
             flex-direction: column !important;
             gap: 8px !important;
+            color: #333 !important;
           }
           .hardware-column {
             min-width: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
             padding: 0 !important;
+          }
+          .hardware-column * {
+            color: #333 !important;
+          }
+          .hardware-column h1, .hardware-column h2, .hardware-column h3 {
+            color: #333 !important;
+          }
+          .hardware-column div, .hardware-column span, .hardware-column label {
+            color: #333 !important;
+          }
+          div, span, h1, h2, h3, p, label {
+            color: #333 !important;
           }
         }
       `}</style>

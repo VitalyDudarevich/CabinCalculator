@@ -113,11 +113,15 @@ export default function App() {
             if (data.length > 0 && !selectedCompanyId) {
               setSelectedCompanyId(data[0]._id);
             }
+          } else {
+            console.log('❌ Invalid companies data received:', data);
+            setCompanies([]);
           }
         })
         .catch(err => {
-          console.error('Failed to load companies:', err);
+          console.error('❌ Failed to load companies:', err);
           setCompanies([]);
+          setError('Ошибка загрузки компаний. Проверьте соединение.');
         });
     } else if (user?.role === 'admin') {
       console.log('Loading companies for admin...', { companyId: user.companyId });
@@ -134,11 +138,15 @@ export default function App() {
               console.log('Setting selected company ID:', companyId);
               setSelectedCompanyId(companyId);
             }
+          } else {
+            console.log('❌ Invalid companies data received:', data);
+            setCompanies([]);
           }
         })
         .catch(err => {
-          console.error('Failed to load companies:', err);
+          console.error('❌ Failed to load companies:', err);
           setCompanies([]);
+          setError('Ошибка загрузки компаний. Проверьте соединение.');
         });
     } else {
       console.log('User role not admin/superadmin, clearing companies');

@@ -232,6 +232,16 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
             margin: 0 !important;
             border-radius: 0 !important;
             padding: 8px !important;
+            color: #333 !important;
+          }
+          .glass-tab-root * {
+            color: #333 !important;
+          }
+          .glass-tab-root h1, .glass-tab-root h2, .glass-tab-root h3 {
+            color: #333 !important;
+          }
+          .glass-tab-root div, .glass-tab-root span, .glass-tab-root label {
+            color: #333 !important;
           }
         }
       `}</style>

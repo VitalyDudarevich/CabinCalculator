@@ -289,11 +289,13 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
             border: none !important;
             background: #fff !important;
             table-layout: fixed !important;
+            color: #333 !important;
           }
           .users-table th, .users-table td {
             padding: 8px 4px !important;
             border: none !important;
             background: #fff !important;
+            color: #333 !important;
             word-break: break-word !important;
           }
           .users-table tr {
@@ -304,6 +306,13 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
           }
           .users-table th {
             font-size: 15px !important;
+            color: #333 !important;
+          }
+          table th, table td {
+            color: #333 !important;
+          }
+          div, span, h1, h2, h3, p {
+            color: #333 !important;
           }
         }
       `}</style>

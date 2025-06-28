@@ -289,6 +289,16 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
             margin: 0 !important;
             border-radius: 0 !important;
             padding: 8px !important;
+            color: #333 !important;
+          }
+          .services-tab-root * {
+            color: #333 !important;
+          }
+          .services-tab-root h1, .services-tab-root h2, .services-tab-root h3 {
+            color: #333 !important;
+          }
+          .services-tab-root div, .services-tab-root span, .services-tab-root label {
+            color: #333 !important;
           }
         }
       `}</style>
