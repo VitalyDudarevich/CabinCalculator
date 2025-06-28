@@ -6,6 +6,7 @@ import CalculationDetails from '../components/CalculationDetails';
 import type { Project } from '../components/ProjectHistory';
 import type { DraftProjectData } from '../components/CalculationDetails';
 import { API_URL } from '../utils/api';
+import { fetchWithAuth } from '../utils/auth';
 import { getStatuses, type Status } from '../utils/statusApi';
 
 interface ProjectProgressPageProps {
@@ -69,9 +70,9 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
       setIsLoadingData(true);
       try {
         const [settingsRes, glassRes, hardwareRes, statusesData] = await Promise.all([
-          fetch(`${API_URL}/settings?companyId=${effectiveCompanyId}`),
-          fetch(`${API_URL}/glass?companyId=${effectiveCompanyId}`),
-          fetch(`${API_URL}/hardware?companyId=${effectiveCompanyId}`),
+          fetchWithAuth(`${API_URL}/settings?companyId=${effectiveCompanyId}`),
+          fetchWithAuth(`${API_URL}/glass?companyId=${effectiveCompanyId}`),
+          fetchWithAuth(`${API_URL}/hardware?companyId=${effectiveCompanyId}`),
           getStatuses(effectiveCompanyId),
         ]);
         

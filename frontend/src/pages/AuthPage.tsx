@@ -58,17 +58,17 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
         setToken(data.accessToken);
         setMessage('Успешный вход!');
         
-        // Сохраняем токены в зависимости от настройки "Запомнить меня"
+        // Всегда сохраняем токены для SPA навигации
+        localStorage.setItem('token', data.accessToken);
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
+        
+        // "Запомнить меня" влияет только на флаг постоянного хранения
         if (rememberMe) {
-          localStorage.setItem('token', data.accessToken);
-          if (data.refreshToken) {
-            localStorage.setItem('refreshToken', data.refreshToken);
-          }
           localStorage.setItem('rememberMe', 'true');
         } else {
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('rememberMe');
+          localStorage.setItem('rememberMe', 'false');
         }
       } else {
         setMessage(data.error || 'Ошибка входа');

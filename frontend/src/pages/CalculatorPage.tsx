@@ -73,9 +73,9 @@ const CalculatorPage: React.FC<{
       try {
         console.log('CalculatorPage: загружаю данные для companyId =', effectiveSelectedCompanyId);
         const [settingsRes, glassRes, hardwareRes] = await Promise.all([
-          fetch(`${API_URL}/settings?companyId=${effectiveSelectedCompanyId}`),
-          fetch(`${API_URL}/glass?companyId=${effectiveSelectedCompanyId}`),
-          fetch(`${API_URL}/hardware?companyId=${effectiveSelectedCompanyId}`),
+          fetchWithAuth(`${API_URL}/settings?companyId=${effectiveSelectedCompanyId}`),
+          fetchWithAuth(`${API_URL}/glass?companyId=${effectiveSelectedCompanyId}`),
+          fetchWithAuth(`${API_URL}/hardware?companyId=${effectiveSelectedCompanyId}`),
         ]);
         
         const [settingsData, glassList, hardwareList] = await Promise.all([

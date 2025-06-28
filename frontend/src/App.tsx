@@ -60,26 +60,37 @@ export default function App() {
     loadUser();
   }, [token]);
 
-  // Автоматическое восстановление accessToken через refreshToken при rememberMe
+  // Автоматическое восстановление токенов при старте приложения
   useEffect(() => {
     const initAuth = async () => {
-      const rememberMe = localStorage.getItem('rememberMe') === 'true';
       const storedToken = localStorage.getItem('token');
       const refreshToken = localStorage.getItem('refreshToken');
       
-      // Если нет токена, но есть флаг "запомнить меня" и refresh токен
-      if (!storedToken && rememberMe && refreshToken) {
+      console.log('🚀 App init auth:', { 
+        hasStoredToken: !!storedToken, 
+        hasRefreshToken: !!refreshToken 
+      });
+      
+      // Если есть сохраненный токен - используем его
+      if (storedToken) {
+        console.log('✅ Found stored token, using it');
+        setToken(storedToken);
+      } 
+      // Если нет токена, но есть refresh токен - пытаемся обновить
+      else if (refreshToken) {
+        console.log('🔄 No stored token, but have refresh token, trying to refresh');
         try {
           const newToken = await refreshAccessToken();
+          console.log('✅ Successfully refreshed token');
           setToken(newToken);
         } catch (error) {
-          console.error('Auto refresh failed:', error);
+          console.error('❌ Auto refresh failed:', error);
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('rememberMe');
         }
-      } else if (storedToken) {
-        setToken(storedToken);
+      } else {
+        console.log('❌ No tokens found');
       }
     };
 

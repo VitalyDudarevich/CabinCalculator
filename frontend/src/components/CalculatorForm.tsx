@@ -6,6 +6,7 @@ import type { User } from '../types/User';
 import type { DraftProjectData } from './CalculationDetails';
 import type { Project } from './ProjectHistory';
 import { API_URL as BASE_API_URL, updateProjectStatus, updateProject } from '../utils/api';
+import { fetchWithAuth } from '../utils/auth';
 import AddServiceDialog, { type ServiceItem as DialogServiceItem } from './AddServiceDialog';
 
 interface TemplateField {
@@ -192,7 +193,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       // Загружаем шаблон если конфигурация шаблонная
       if (selectedProject.data?.config && selectedProject.data.config.startsWith('template-')) {
         const templateId = selectedProject.data.config.replace('template-', '');
-        fetch(`${BASE_API_URL}/templates/${templateId}`)
+        fetchWithAuth(`${BASE_API_URL}/templates/${templateId}`)
           .then(res => res.json())
           .then(template => {
             setSelectedTemplate(template);
@@ -262,7 +263,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   // Получение списка услуг для компании
   useEffect(() => {
     if (!effectiveCompanyId) return;
-    fetch(`${BASE_API_URL}/services?companyId=${effectiveCompanyId}`)
+    fetchWithAuth(`${BASE_API_URL}/services?companyId=${effectiveCompanyId}`)
       .then(res => res.json())
       .then(data => {
         const list: DialogServiceItem[] = (Array.isArray(data) ? data : []).map((s: { serviceId?: string; name: string; price: number }) => ({
@@ -281,7 +282,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   // Загрузка шаблонов конфигураций
   useEffect(() => {
     if (!effectiveCompanyId) return;
-    fetch(`${BASE_API_URL}/templates/active?companyId=${effectiveCompanyId}`)
+    fetchWithAuth(`${BASE_API_URL}/templates/active?companyId=${effectiveCompanyId}`)
       .then(res => res.json())
       .then(data => {
         setTemplates(Array.isArray(data) ? data : []);
@@ -416,7 +417,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
 
     try {
       // Получаем системные шаблоны для компании
-      const res = await fetch(`${BASE_API_URL}/templates/system?companyId=${effectiveCompanyId}`);
+      const res = await fetchWithAuth(`${BASE_API_URL}/templates/system?companyId=${effectiveCompanyId}`);
       if (!res.ok) {
         console.warn('Не удалось загрузить системные шаблоны');
         setProjectHardware([]);
@@ -539,7 +540,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         setSelectedTemplate(template);
         
         // Загружаем полную информацию о шаблоне
-        fetch(`${BASE_API_URL}/templates/${templateId}`)
+        fetchWithAuth(`${BASE_API_URL}/templates/${templateId}`)
           .then(res => res.json())
           .then(fullTemplate => {
             setSelectedTemplate(fullTemplate);
@@ -917,7 +918,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       } else {
         // Новый проект: POST
         console.log('➕ Creating new project');
-        const res = await fetch(`${BASE_API_URL}/projects`, {
+        const res = await fetchWithAuth(`${BASE_API_URL}/projects`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(projectData),
