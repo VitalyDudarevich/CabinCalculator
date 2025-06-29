@@ -120,7 +120,7 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
   };
 
   return (
-    <div className="glass-tab-root" style={{ maxWidth: 540, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24 }}>
+    <div className="glass-tab-root" style={{ maxWidth: 800, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, flex: 1 }}>Стекло {companyName}</h2>
         <button
@@ -171,7 +171,7 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
                 setEditList(list => list.map((it, i) => i === idx ? { ...it, price: val === '' ? null : Number(val) } : it));
               }}
               style={{
-                width: 160,
+                width: 180,
                 padding: 8,
                 borderRadius: 6,
                 border: '1px solid #ccc',
@@ -191,41 +191,57 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
       ))}
       {editMode && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
             <input
               type="text"
               value={addName}
               onChange={e => setAddName(e.target.value)}
               placeholder="Название стекла"
-              style={{ flex: 2, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
+              style={{ width: 200, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
             />
             <input
               type="number"
               value={addPrice}
               onChange={e => setAddPrice(e.target.value === '' ? '' : Number(e.target.value))}
               placeholder="Цена"
-              style={{ width: 100, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
+              style={{ width: 120, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
             />
             <input
               type="text"
               value={addThickness}
               onChange={e => setAddThickness(e.target.value)}
               placeholder="Толщина"
-              style={{ width: 90, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
+              style={{ width: 110, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
             />
             <input
               type="text"
               value={addColor}
               onChange={e => setAddColor(e.target.value)}
               placeholder="Цвет/тип"
-              style={{ width: 120, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
+              style={{ width: 150, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15 }}
             />
-            <button type="button" onClick={handleAdd} style={{ padding: '8px 14px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}>Добавить</button>
+            <button type="button" onClick={handleAdd} style={{ padding: '8px 16px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}>Добавить</button>
           </div>
           {addError && <div style={{ color: 'crimson', marginTop: 6 }}>{addError}</div>}
         </>
       )}
       <style>{`
+        @media (max-width: 768px) {
+          .glass-tab-root {
+            max-width: 100% !important;
+            margin: 0 8px !important;
+            padding: 16px !important;
+          }
+          .glass-tab-root > div:first-child {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+          .glass-tab-root > div:first-child > div {
+            display: flex !important;
+            gap: 8px !important;
+          }
+        }
         @media (max-width: 600px) {
           .glass-tab-root {
             max-width: 100% !important;
@@ -245,7 +261,7 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
             color: #333 !important;
           }
           .glass-tab-root input[type="number"] {
-            width: 160px !important;
+            width: 180px !important;
             padding: 8px !important;
             border-radius: 6px !important;
             border: 1px solid #ccc !important;
