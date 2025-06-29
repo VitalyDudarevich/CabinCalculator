@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const hardwareController = require('../controllers/hardwareController');
+const authMiddleware = require('../middleware/auth');
+
+// Все маршруты требуют аутентификации
+router.use(authMiddleware.authenticate);
 
 router.get('/', hardwareController.getHardwareByCompany);
 router.get('/:id', hardwareController.getHardwareById);

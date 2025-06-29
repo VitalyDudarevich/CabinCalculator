@@ -18,6 +18,7 @@ import {
   CSS,
 } from '@dnd-kit/utilities';
 import { FaUserEdit, FaRegTrashAlt } from 'react-icons/fa';
+import { API_URL } from '../utils/api';
 // Типы уже определены в компоненте
 
 interface Status {
@@ -436,7 +437,7 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
     
     setLoading(true);
     try {
-      const res = await fetchWithAuth(`http://localhost:5000/api/statuses/stats?companyId=${selectedCompanyId}`);
+      const res = await fetchWithAuth(`${API_URL}/statuses/stats?companyId=${selectedCompanyId}`);
       if (res.ok) {
         const data = await res.json();
         setStatuses(data);
@@ -462,7 +463,7 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
     }
 
     try {
-      const res = await fetchWithAuth('http://localhost:5000/api/statuses', {
+      const res = await fetchWithAuth(`${API_URL}/statuses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -502,7 +503,7 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
     }
 
     try {
-      const res = await fetchWithAuth(`http://localhost:5000/api/statuses/${editingStatus._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/statuses/${editingStatus._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -547,7 +548,7 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
     }
 
     try {
-      const res = await fetchWithAuth(`http://localhost:5000/api/statuses/${status._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/statuses/${status._id}`, {
         method: 'DELETE'
       });
 
@@ -656,7 +657,7 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
     }));
 
     try {
-      const res = await fetchWithAuth('http://localhost:5000/api/statuses/reorder', {
+      const res = await fetchWithAuth(`${API_URL}/statuses/reorder`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ statusOrder })
@@ -742,12 +743,60 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
             textAlign: 'center',
             color: '#888',
             fontSize: 16,
-            fontStyle: 'italic',
             background: '#f9f9f9',
             borderRadius: 12,
-            border: '2px dashed #ddd'
+            border: '2px dashed #ddd',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 16
           }}>
-            Нет статусов. Добавьте первый статус для начала работы.
+            <div style={{ fontStyle: 'italic' }}>
+              Нет статусов. Добавьте первый статус для начала работы.
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetchWithAuth(`${API_URL}/statuses/create-defaults`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ companyId: selectedCompanyId })
+                  });
+                  
+                  if (res.ok) {
+                    const result = await res.json();
+                    alert(`Создано ${result.createdStatuses.length} дефолтных статусов для компании "${result.companyName}"`);
+                    loadStatuses();
+                    onRefreshStatuses?.();
+                  } else {
+                    const errorData = await res.json();
+                    alert(errorData.error || 'Ошибка создания дефолтных статусов');
+                  }
+                } catch (error) {
+                  console.error('Error creating default statuses:', error);
+                  alert('Ошибка создания дефолтных статусов');
+                }
+              }}
+              style={{
+                padding: '12px 24px',
+                borderRadius: 8,
+                background: '#646cff',
+                color: '#fff',
+                border: 'none',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: 14,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#5a5fcf';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#646cff';
+              }}
+            >
+              Создать дефолтные статусы
+            </button>
           </div>
         ) : (
           <DndContext

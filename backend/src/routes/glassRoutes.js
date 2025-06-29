@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const glassController = require('../controllers/glassController');
+const authMiddleware = require('../middleware/auth');
+
+// Все маршруты требуют аутентификации
+router.use(authMiddleware.authenticate);
 
 // Получить все варианты стекла по companyId
 router.get('/', glassController.getGlassByCompany);

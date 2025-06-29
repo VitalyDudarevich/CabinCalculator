@@ -1,5 +1,6 @@
 const Status = require('../models/Status');
 const Project = require('../models/Project');
+const Company = require('../models/Company');
 
 // Получить все статусы компании
 exports.getStatuses = async (req, res) => {
@@ -243,6 +244,34 @@ exports.reorderStatuses = async (req, res) => {
     await Promise.all(updatePromises);
 
     res.json({ message: 'Status order updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Создать дефолтные статусы для компании
+exports.createDefaultStatuses = async (req, res) => {
+  try {
+    const { companyId } = req.body;
+
+    if (!companyId) {
+      return res.status(400).json({ error: 'CompanyId is required' });
+    }
+
+    // Проверяем, что компания существует
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Создаем дефолтные статусы
+    const createdStatuses = await Status.createDefaultStatusesForCompany(companyId);
+
+    res.status(201).json({
+      message: `Created ${createdStatuses.length} default statuses for company ${company.name}`,
+      createdStatuses,
+      companyName: company.name,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

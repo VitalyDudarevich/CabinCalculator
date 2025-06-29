@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const projectController = require('../controllers/projectController');
+const authMiddleware = require('../middleware/auth');
+
+// Все маршруты требуют аутентификации
+router.use(authMiddleware.authenticate);
 
 router.get('/', projectController.getProjects); // ?companyId=...&userId=...
 router.get('/:id', projectController.getProjectById);

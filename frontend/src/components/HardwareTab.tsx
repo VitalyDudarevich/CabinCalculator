@@ -6,6 +6,7 @@ import type { User } from '../types/User';
 import BaseCostsTab from './BaseCostsTab';
 import GlassTab from './GlassTab';
 import { API_URL as BASE_API_URL } from '../utils/api';
+import { fetchWithAuth } from '../utils/auth';
 
 interface Company {
   _id: string;
@@ -66,7 +67,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
     setError('');
     setLoading(true);
     
-    fetch(`${API_URL}/hardware?companyId=${company._id}`)
+    fetchWithAuth(`${API_URL}/hardware?companyId=${company._id}`)
       .then(res => res.json())
       .then(data => {
         console.log('HardwareTab loaded data:', data);
@@ -139,9 +140,9 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
     setError('');
     try {
       const priceToSave = addPrice === '' ? null : Number(addPrice);
-      const res = await fetch(`${API_URL}/hardware`, {
+      const res = await fetchWithAuth(`${API_URL}/hardware`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           section,
           name: addName.trim(),
@@ -179,9 +180,9 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
     setDeleteLoading(item.section + '|' + item.name);
     setError('');
     try {
-      const res = await fetch(`${API_URL}/hardware/${item._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/hardware/${item._id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { 'Content-Type': 'application/json' },
       });
       if (!res.ok) throw new Error('Ошибка удаления');
       // После успешного удаления — обновить hardware из базы
@@ -202,9 +203,9 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
     try {
       // price всегда number или null, преобразование не нужно
       const toSave = editList;
-      const res = await fetch(`${API_URL}/hardware?companyId=${company._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/hardware?companyId=${company._id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toSave),
       });
       if (!res.ok) throw new Error('Ошибка сохранения');

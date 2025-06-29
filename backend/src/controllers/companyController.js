@@ -158,7 +158,16 @@ exports.createCompany = async (req, res) => {
     await Glass.insertMany(defaultGlass, { ordered: false });
 
     // 5. Добавляем дефолтные статусы проектов
-    await Status.createDefaultStatusesForCompany(company._id);
+    try {
+      await Status.createDefaultStatusesForCompany(company._id);
+      console.log(`✅ Дефолтные статусы созданы для компании: ${company.name}`);
+    } catch (statusError) {
+      console.error(
+        `❌ Ошибка создания дефолтных статусов для компании ${company.name}:`,
+        statusError,
+      );
+      // Не прерываем создание компании, но логируем ошибку
+    }
 
     // 6. Возвращаем только компанию
     res.status(201).json(company);

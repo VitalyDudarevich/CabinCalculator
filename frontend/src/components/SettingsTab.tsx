@@ -1,6 +1,7 @@
 // import type { User } from '../pages/AdminPanel';
 import React, { useState, useEffect } from 'react';
 import { API_URL as BASE_API_URL } from '../utils/api';
+import { fetchWithAuth } from '../utils/auth';
 const API_URL = BASE_API_URL;
 // ... существующий код ...
 // Здесь будет содержимое вкладки 'Настройки', вынесенное из AdminPanel.tsx 
@@ -61,7 +62,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     if (!company?._id) return;
     setSettingsLoading(true);
     setSettingsError('');
-    fetch(`${API_URL}/settings?companyId=${company._id}`)
+    fetchWithAuth(`${API_URL}/settings?companyId=${company._id}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -119,15 +120,15 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
       };
       let res;
       if (settingsId) {
-        res = await fetch(`${API_URL}/settings/${settingsId}`, {
+        res = await fetchWithAuth(`${API_URL}/settings/${settingsId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        res = await fetch(`${API_URL}/settings`, {
+        res = await fetchWithAuth(`${API_URL}/settings`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       }

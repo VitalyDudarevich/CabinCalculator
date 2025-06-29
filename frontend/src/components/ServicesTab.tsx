@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 // import ModalForm from './ModalForm'; // больше не используется
 import type { User } from '../types/User';
 import { API_URL as BASE_API_URL } from '../utils/api';
+import { fetchWithAuth } from '../utils/auth';
 
 interface Company {
   _id: string;
@@ -62,9 +63,9 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
         price: service.price || 0
       }));
       
-      const res = await fetch(`${API_URL}/services?companyId=${companyId}`, {
+      const res = await fetchWithAuth(`${API_URL}/services?companyId=${companyId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       
@@ -99,7 +100,7 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
     if (!companyId) return setEditList([]);
     setError('');
     setLoading(true);
-    fetch(`${API_URL}/services?companyId=${companyId}`)
+    fetchWithAuth(`${API_URL}/services?companyId=${companyId}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -160,9 +161,9 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
         name: s.name,
         price: typeof s.price === 'number' ? s.price : (s.price === '' || s.price == null ? null : Number(s.price))
       }));
-      const res = await fetch(`${API_URL}/services?companyId=${company._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/services?companyId=${company._id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toSave),
       });
       if (!res.ok) throw new Error('Ошибка сохранения');

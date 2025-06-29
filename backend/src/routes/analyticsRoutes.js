@@ -8,10 +8,10 @@ const {
   getCustomerAnalysis,
   getExportData,
 } = require('../controllers/analyticsController');
-const authMiddleware = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 
 // Все маршруты требуют аутентификации
-router.use(authMiddleware.authenticate);
+router.use(authenticate);
 
 // Отчёт по продажам и выручке
 router.get('/sales', getSalesReport);

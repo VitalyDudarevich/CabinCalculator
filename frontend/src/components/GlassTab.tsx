@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL as BASE_API_URL } from '../utils/api';
+import { fetchWithAuth } from '../utils/auth';
 const API_URL = BASE_API_URL;
 
 interface Company {
@@ -41,7 +42,7 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
     if (!company) return setEditList([]);
     setError('');
     setLoading(true);
-    fetch(`${API_URL}/glass?companyId=${company._id}`)
+    fetchWithAuth(`${API_URL}/glass?companyId=${company._id}`)
       .then(res => res.json())
       .then(data => {
         setEditList(Array.isArray(data) ? data : []);
@@ -95,9 +96,9 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
         thickness: s.thickness,
         color: s.color,
       }));
-      const res = await fetch(`${API_URL}/glass?companyId=${company._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/glass?companyId=${company._id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toSave),
       });
       if (!res.ok) throw new Error('Ошибка сохранения');

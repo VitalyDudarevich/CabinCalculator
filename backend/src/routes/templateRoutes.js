@@ -10,6 +10,10 @@ const {
   getSystemTemplates,
   updateSystemTemplate,
 } = require('../controllers/templateController');
+const authMiddleware = require('../middleware/auth');
+
+// Все маршруты требуют аутентификации
+router.use(authMiddleware.authenticate);
 
 // Маршруты для работы с шаблонами
 router.get('/', getTemplates);

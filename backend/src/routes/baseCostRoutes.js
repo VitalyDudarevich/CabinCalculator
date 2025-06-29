@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const baseCostController = require('../controllers/baseCostController');
+const authMiddleware = require('../middleware/auth');
+
+// Все маршруты требуют аутентификации
+router.use(authMiddleware.authenticate);
 
 // GET /basecosts - получить все базовые стоимости для компании
 router.get('/', baseCostController.getBaseCosts);

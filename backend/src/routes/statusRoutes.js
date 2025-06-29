@@ -18,6 +18,9 @@ router.get('/:id', statusController.getStatusById);
 // POST /api/statuses - создать новый статус (только админы)
 router.post('/', requireAdmin, checkCompanyAccess, statusController.createStatus);
 
+// POST /api/statuses/create-defaults - создать дефолтные статусы для компании (только админы)
+router.post('/create-defaults', requireAdmin, statusController.createDefaultStatuses);
+
 // PUT /api/statuses/reorder - изменить порядок статусов (только админы)
 router.put('/reorder', requireAdmin, statusController.reorderStatuses);
 

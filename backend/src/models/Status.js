@@ -100,13 +100,33 @@ statusSchema.statics.getDefaultStatuses = function () {
 // Метод для создания статусов по умолчанию для компании
 statusSchema.statics.createDefaultStatusesForCompany = async function (companyId) {
   const defaultStatuses = this.getDefaultStatuses();
-  const statusPromises = defaultStatuses.map((status) =>
-    this.create({
-      ...status,
-      companyId,
-    }),
-  );
-  return await Promise.all(statusPromises);
+  const createdStatuses = [];
+
+  for (const status of defaultStatuses) {
+    try {
+      // Проверяем, существует ли уже такой статус для этой компании
+      const existingStatus = await this.findOne({
+        companyId,
+        name: status.name,
+      });
+
+      if (!existingStatus) {
+        const newStatus = await this.create({
+          ...status,
+          companyId,
+        });
+        createdStatuses.push(newStatus);
+        console.log(`✅ Создан статус "${status.name}" для компании ${companyId}`);
+      } else {
+        console.log(`ℹ️ Статус "${status.name}" уже существует для компании ${companyId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Ошибка создания статуса "${status.name}":`, error.message);
+      // Продолжаем создание остальных статусов
+    }
+  }
+
+  return createdStatuses;
 };
 
 module.exports = mongoose.model('Status', statusSchema);

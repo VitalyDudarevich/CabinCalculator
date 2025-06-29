@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL as BASE_API_URL } from '../utils/api';
+import { fetchWithAuth } from '../utils/auth';
 import AddHardwareButton from './AddHardwareButton';
 import AddHardwareDialog, { type HardwareDialogItem } from './AddHardwareDialog';
 import { QuantityControl } from './AddHardwareDialog';
@@ -91,7 +92,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
     setLoading(true);
     try {
       // Загружаем пользовательские шаблоны (исключаем системные)
-      const res = await fetch(`${API_URL}/templates?companyId=${company._id}`);
+      const res = await fetchWithAuth(`${API_URL}/templates?companyId=${company._id}`);
       let userTemplates = await res.json();
       
       // Фильтруем только пользовательские шаблоны (не системные)
@@ -99,7 +100,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
         .filter((t: { isSystem?: boolean }) => !t.isSystem);
       
       // Загружаем системные шаблоны из базы данных
-      const systemRes = await fetch(`${API_URL}/templates/system?companyId=${company._id}`);
+      const systemRes = await fetchWithAuth(`${API_URL}/templates/system?companyId=${company._id}`);
       const systemTemplates = systemRes.ok ? await systemRes.json() : [];
       
       // Помечаем системные шаблоны флагом isSystem
@@ -143,9 +144,8 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
     if (!window.confirm(`Удалить шаблон "${template.name}"?`)) return;
     
     try {
-      const res = await fetch(`${API_URL}/templates/${template._id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
+      const res = await fetchWithAuth(`${API_URL}/templates/${template._id}`, {
+        method: 'DELETE'
       });
       
       if (!res.ok) throw new Error('Ошибка удаления');
@@ -174,11 +174,10 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
         url = template._id ? `${API_URL}/templates/${template._id}` : `${API_URL}/templates`;
       }
       
-      const res = await fetch(url, {
+      const res = await fetchWithAuth(url, {
         method,
         headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(template)
       });
@@ -383,9 +382,9 @@ const TemplateEditor: React.FC<{
   const loadHardwareAndServices = async () => {
     try {
       const [hardwareRes, servicesRes, glassRes] = await Promise.all([
-        fetch(`${API_URL}/hardware?companyId=${companyId}`),
-        fetch(`${API_URL}/services?companyId=${companyId}`),
-        fetch(`${API_URL}/glass?companyId=${companyId}`)
+        fetchWithAuth(`${API_URL}/hardware?companyId=${companyId}`),
+        fetchWithAuth(`${API_URL}/services?companyId=${companyId}`),
+        fetchWithAuth(`${API_URL}/glass?companyId=${companyId}`)
       ]);
       
       const hardware = await hardwareRes.json();

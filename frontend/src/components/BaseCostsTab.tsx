@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL as BASE_API_URL } from '../utils/api';
+import { fetchWithAuth } from '../utils/auth';
 const API_URL = BASE_API_URL;
 
 interface Company {
@@ -52,9 +53,9 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
         value: item.value || 0
       }));
       
-      const res = await fetch(`${API_URL}/basecosts?companyId=${company._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/basecosts?companyId=${company._id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       
@@ -87,7 +88,7 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
     if (!company?._id) return;
     setLoading(true);
     setError('');
-    fetch(`${API_URL}/basecosts?companyId=${company._id}`)
+    fetchWithAuth(`${API_URL}/basecosts?companyId=${company._id}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -143,9 +144,9 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
         value: typeof item.value === 'number' ? item.value : (item.value === '' || item.value === null ? 0 : Number(item.value))
       }));
       
-      const res = await fetch(`${API_URL}/basecosts?companyId=${company._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/basecosts?companyId=${company._id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       
