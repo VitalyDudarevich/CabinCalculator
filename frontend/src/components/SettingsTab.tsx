@@ -176,7 +176,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         {!editMode && (
           <button
             onClick={() => setEditMode(true)}
-            style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}
+            style={{ padding: '8px 18px', borderRadius: 8, background: '#fff', color: '#646cff', border: '2px solid #646cff', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}
           >
             Редактировать
           </button>

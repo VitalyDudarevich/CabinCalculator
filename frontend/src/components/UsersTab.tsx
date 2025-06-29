@@ -174,7 +174,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
         <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>
           Пользователи {companyName}
         </h2>
-        <button onClick={handleAddUser} style={{ padding: '8px 18px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
+        <button onClick={handleAddUser} style={{ padding: '8px 18px', borderRadius: 8, background: '#fff', color: '#646cff', border: '2px solid #646cff', fontWeight: 600, fontSize: 16, cursor: 'pointer', height: '40px', lineHeight: 1.25 }}>
           Добавить
         </button>
       </div>

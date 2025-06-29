@@ -24,7 +24,7 @@ declare global {
   }
 }
 
-const currencyOptions = ['GEL', 'USD', 'RR'];
+const currencyOptions = ['GEL', 'USD', 'RR', 'BYN'];
 
 interface AdminPanelProps {
   user: User;
@@ -413,8 +413,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           padding: isMobile ? 0 : 32, 
           background: isMobile ? '#fff' : '#f6f8fa', 
           minHeight: 'calc(100vh - 56px)',
-          height: 'calc(100vh - 56px)',
-          overflow: 'auto',
           position: 'relative',
           opacity: isTransitioning ? 0.7 : 1,
           transition: 'opacity 0.1s ease-in-out'
@@ -531,10 +529,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             padding: 0 !important;
             background: #fff !important;
             color: #333 !important;
-            overflow-x: auto !important;
             width: 100vw !important;
             min-width: 0 !important;
-            height: calc(100vh - 56px) !important;
+            min-height: calc(100vh - 56px) !important;
           }
           .admin-content * {
             color: #333 !important;

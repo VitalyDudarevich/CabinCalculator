@@ -409,7 +409,14 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
         onRefreshStatuses?.();
       } else {
         const errorData = await res.json();
-        setError(errorData.error || 'Ошибка создания статуса');
+        let russianError = errorData.error || 'Ошибка создания статуса';
+        
+        // Переводим английские ошибки на русский
+        if (russianError.includes('Status with this name already exists')) {
+          russianError = 'Статус с таким названием уже существует для этой компании';
+        }
+        
+        setError(russianError);
       }
     } catch (error) {
       console.error('Error creating status:', error);
@@ -442,7 +449,14 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
         onRefreshStatuses?.();
       } else {
         const errorData = await res.json();
-        setError(errorData.error || 'Ошибка обновления статуса');
+        let russianError = errorData.error || 'Ошибка обновления статуса';
+        
+        // Переводим английские ошибки на русский
+        if (russianError.includes('Status with this name already exists')) {
+          russianError = 'Статус с таким названием уже существует для этой компании';
+        }
+        
+        setError(russianError);
       }
     } catch (error) {
       console.error('Error updating status:', error);
@@ -584,14 +598,18 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
 
   return (
     <>
-      <div style={{ padding: 16 }}>
+      <div style={{
+        minHeight: 500,
+        width: '100%'
+      }}>
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          marginBottom: 24 
+          marginBottom: 24,
+          gap: 16
         }}>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: '#000' }}>
+          <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: '#000', flex: 1 }}>
             Управление статусами
           </h2>
           <button
@@ -599,19 +617,19 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
             style={{
               padding: '12px 20px',
               borderRadius: 8,
-              background: '#646cff',
-              color: '#fff',
-              border: 'none',
+              background: '#fff',
+              color: '#646cff',
+              border: '2px solid #646cff',
               fontWeight: 600,
               cursor: 'pointer',
               fontSize: 14,
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#5a5fcf';
+              e.currentTarget.style.background = '#f6f8ff';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#646cff';
+              e.currentTarget.style.background = '#fff';
             }}
           >
             + Добавить статус
@@ -632,7 +650,8 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
           </div>
         )}
 
-        {statuses.length === 0 ? (
+        <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
+          {statuses.length === 0 ? (
           <div style={{
             padding: 40,
             textAlign: 'center',
@@ -724,16 +743,34 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
             <div style={{
               background: '#fff',
               borderRadius: 12,
-              padding: 32,
+              padding: 24,
               width: 450,
               maxWidth: '90vw',
               boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
             }}>
-              <h3 style={{ margin: '0 0 24px 0', fontSize: 20, fontWeight: 600, color: '#000' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: 20, fontWeight: 600, color: '#000' }}>
                 Добавить новый статус
               </h3>
               
-              <div style={{ marginBottom: 20 }}>
+              {error && (
+                <div style={{
+                  padding: 12,
+                  background: '#ffebee',
+                  color: '#c62828',
+                  borderRadius: 8,
+                  marginBottom: 16,
+                  border: '1px solid #ffcdd2',
+                  fontSize: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  <span>⚠️</span>
+                  <span>{error}</span>
+                </div>
+              )}
+              
+              <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: '#000' }}>
                   Название статуса
                 </label>
@@ -751,7 +788,8 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
                     color: '#000',
                     background: '#fff',
                     outline: 'none',
-                    transition: 'border-color 0.2s ease'
+                    transition: 'border-color 0.2s ease',
+                    boxSizing: 'border-box'
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = '#646cff';
@@ -762,7 +800,7 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
                 />
               </div>
 
-              <div style={{ marginBottom: 32 }}>
+              <div style={{ marginBottom: 24 }}>
                 <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: '#000' }}>
                   Цвет статуса
                 </label>
@@ -788,7 +826,8 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
                       background: '#fff',
                       fontFamily: 'monospace',
                       outline: 'none',
-                      transition: 'border-color 0.2s ease'
+                      transition: 'border-color 0.2s ease',
+                      boxSizing: 'border-box'
                     }}
                     onFocus={(e) => {
                       e.currentTarget.style.borderColor = '#646cff';
@@ -853,6 +892,7 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* CSS стили для drag & drop */}

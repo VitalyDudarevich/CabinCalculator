@@ -1003,8 +1003,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   }
 
   return (
-    <div className="calculator-form-root" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
-      <h2 style={{ fontWeight: 700, fontSize: 24, margin: '0 0 12px 0' }}>
+    <div className="calculator-form-root" style={{ padding: 24, width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
+      <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 16, color: '#000' }}>
         {selectedProject ? `Редактирование ${selectedProject.name || ''}` : 'Новый проект'}
       </h2>
       
@@ -2506,10 +2506,6 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       )}
       <style>{`
         .calculator-form-root {
-          background: #fff;
-          border-radius: 12px;
-          box-shadow: 0 1px 4px #0001;
-          padding: 24px;
           width: 100%;
           max-width: 480px;
           margin: 0 auto;
@@ -2528,10 +2524,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             width: 100vw !important;
             max-width: 100vw !important;
             margin: 0 !important;
-            border-radius: 0 !important;
             position: relative !important;
-            background: #fff !important;
-            box-shadow: none !important;
             padding: 16px !important;
             min-height: auto !important;
             height: auto !important;

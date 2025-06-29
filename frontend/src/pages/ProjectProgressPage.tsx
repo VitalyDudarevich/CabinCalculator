@@ -212,7 +212,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
         background: '#ffffff',
         flexShrink: 0,
         zIndex: 50,
-        padding: '8px'
+        padding: isMobile ? '8px' : '8px 32px 8px 8px' // Добавляем 32px справа как в Header
       }}>
         {/* Заголовок слева, поиск и фильтры справа */}
         <div style={{ 
@@ -227,7 +227,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             display: 'flex',
             alignItems: isMobile ? 'flex-start' : 'center',
             justifyContent: 'space-between',
-            width: '100%'
+            width: isMobile ? '100%' : 'auto', // На десктопе не растягиваем на всю ширину
+            marginRight: isMobile ? 0 : 24 // Добавляем отступ между заголовком и фильтрами
           }}>
             {/* Заголовок слева */}
             <h1 style={{ 
@@ -240,51 +241,83 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
               Прогресс Проектов
             </h1>
             
-            {/* Кнопка "Новый проект" */}
-            <button
-              onClick={() => {
-                // Открываем модальное окно для создания нового проекта
-                setSelectedProject(null);
-                setDraftProjectData({});
-                setIsEditModalOpen(true);
-              }}
-              style={{
-                padding: isMobile ? '0' : '8px 16px',
-                borderRadius: isMobile ? '50%' : 6,
-                background: isMobile ? '#ffffff' : '#646cff',
-                color: isMobile ? '#646cff' : '#fff',
-                border: isMobile ? '2px solid #646cff' : 'none',
-                fontWeight: isMobile ? 200 : 600,
-                fontSize: isMobile ? 24 : 14,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                width: isMobile ? '36px' : 'auto',
-                height: isMobile ? '36px' : 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                boxShadow: isMobile ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                lineHeight: isMobile ? 0.8 : 'normal',
-                textAlign: 'center',
-                marginTop: '0',
-                marginRight: isMobile ? '8px' : '0',
-                fontFamily: isMobile ? 'Arial, sans-serif' : 'inherit'
-              }}
-              title={isMobile ? 'Новый проект' : undefined}
-            >
-              {isMobile ? '+' : 'Новый проект'}
-            </button>
+            {/* Кнопка "Новый проект" - показываем только на мобайле в этом месте */}
+            {isMobile && (
+              <button
+                onClick={() => {
+                  // Открываем модальное окно для создания нового проекта
+                  setSelectedProject(null);
+                  setDraftProjectData({});
+                  setIsEditModalOpen(true);
+                }}
+                style={{
+                  padding: '0',
+                  borderRadius: '50%',
+                  background: '#ffffff',
+                  color: '#646cff',
+                  border: '2px solid #646cff',
+                  fontWeight: 200,
+                  fontSize: 24,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  lineHeight: 0.8,
+                  textAlign: 'center',
+                  marginTop: '0',
+                  marginRight: '8px',
+                  fontFamily: 'Arial, sans-serif'
+                }}
+                title="Новый проект"
+              >
+                +
+              </button>
+            )}
           </div>
           
-          {/* Вторая строка (на мобайле) - Поиск и фильтры */}
+          {/* Вторая строка (на мобайле) / Правая часть (на десктопе) - Поиск и фильтры */}
           <div style={{ 
             display: 'flex', 
             gap: 12, 
             alignItems: 'center',
             flexWrap: 'wrap',
-            width: '100%'
+            width: isMobile ? '100%' : 'auto',
+            justifyContent: isMobile ? 'flex-start' : 'flex-end' // На десктопе выравниваем по правому краю
           }}>
+            {/* Кнопка "Новый проект" для десктопа */}
+            {!isMobile && (
+              <button
+                onClick={() => {
+                  // Открываем модальное окно для создания нового проекта
+                  setSelectedProject(null);
+                  setDraftProjectData({});
+                  setIsEditModalOpen(true);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  background: '#fff',
+                  color: '#646cff',
+                  border: '2px solid #646cff',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  marginRight: 16 // Отступ между кнопкой и фильтрами
+                }}
+              >
+                Новый проект
+              </button>
+            )}
             {/* Фильтр по дате */}
             <select
               value={dateFilter}
@@ -429,7 +462,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
       {isEditModalOpen && (
         <div style={{
           position: 'fixed',
-          top: 0,
+          top: 56,
           left: 0,
           right: 0,
           bottom: 0,
@@ -445,7 +478,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             background: '#ffffff',
             borderRadius: isMobile ? 0 : 12,
             width: isMobile ? '100vw' : '95vw',
-            height: isMobile ? '100vh' : '95vh',
+            height: isMobile ? 'calc(100vh - 56px)' : 'calc(95vh - 56px)',
             position: 'relative',
             display: 'flex',
             overflow: 'hidden'
@@ -460,6 +493,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 background: 'transparent',
                 border: 'none',
                 borderRadius: 0,
+                outline: 'none',
+                boxShadow: 'none',
                 width: 48,
                 height: 48,
                 fontSize: 36,
@@ -508,7 +543,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 height: isMobile ? 'auto' : '100%',
                 minHeight: isMobile ? '300px' : 'auto',
                 overflow: 'auto',
-                paddingBottom: isMobile ? '20px' : '0'
+                paddingBottom: isMobile ? '20px' : '0',
+                paddingLeft: isMobile ? '20px' : '24px'
               }}>
                 <CalculationDetails
                   draft={draftProjectData}
@@ -535,7 +571,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 <div style={{
                   flex: 1,
                   overflow: 'auto',
-                  paddingBottom: isMobile ? '20px' : '80px'
+                  paddingBottom: isMobile ? '20px' : '80px',
+                  paddingLeft: isMobile ? '20px' : '24px'
                 }}>
                   <CalculatorForm
                     companyId={effectiveCompanyId}

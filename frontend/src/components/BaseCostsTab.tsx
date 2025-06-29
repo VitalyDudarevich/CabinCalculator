@@ -182,9 +182,12 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   return (
-    <div className="base-costs-tab-root" style={{ maxWidth: 540, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24 }}>
+    <div style={{
+      minHeight: 500,
+      width: '100%'
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, flex: 1 }}>Базовая стоимость конструкций</h2>
+        <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>Базовая стоимость конструкций</h2>
         <button
           onClick={editMode ? handleSave : () => { setEditMode(true); setOriginalBaseCosts(baseCosts); }}
           style={{
@@ -216,9 +219,10 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
           </button>
         )}
       </div>
-      {error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
-      {success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
-      {baseCosts.length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет базовых стоимостей</div>}
+      <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
+        {error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
+        {success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
+        {baseCosts.length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет базовых стоимостей</div>}
       {baseCosts.map((item, idx) => (
         <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, position: 'relative' }}>
           <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -264,26 +268,16 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
           {addError && <div style={{ color: 'crimson', marginTop: 4 }}>{addError}</div>}
         </>
       )}
+      </div>
       <style>{`
         @media (max-width: 600px) {
-          .base-costs-tab-root {
-            max-width: 100% !important;
-            width: 100% !important;
-            margin: 0 !important;
-            border-radius: 0 !important;
-            padding: 8px !important;
+          /* Мобильные стили для видимости текста */
+          div,
+          h1, h2, h3,
+          span, label {
             color: #333 !important;
           }
-          .base-costs-tab-root * {
-            color: #333 !important;
-          }
-          .base-costs-tab-root h1, .base-costs-tab-root h2, .base-costs-tab-root h3 {
-            color: #333 !important;
-          }
-          .base-costs-tab-root div, .base-costs-tab-root span, .base-costs-tab-root label {
-            color: #333 !important;
-          }
-          .base-costs-tab-root input[type="number"] {
+          input[type="number"] {
             width: 160px !important;
             padding: 8px !important;
             border-radius: 6px !important;
@@ -291,16 +285,14 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
             font-size: 15px !important;
             margin-top: 2px !important;
             box-sizing: border-box !important;
-          }
-          .base-costs-tab-root input[type="number"]:disabled {
-            background: #f5f5f5 !important;
-            color: #888 !important;
-          }
-          .base-costs-tab-root input[type="number"]:not(:disabled) {
             background: #fff !important;
             color: #333 !important;
           }
-          .base-costs-tab-root input[type="text"] {
+          input[type="number"]:disabled {
+            background: #f5f5f5 !important;
+            color: #888 !important;
+          }
+          input[type="text"] {
             padding: 8px !important;
             border-radius: 6px !important;
             border: 1px solid #ccc !important;

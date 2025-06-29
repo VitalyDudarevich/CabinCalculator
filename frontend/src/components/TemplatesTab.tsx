@@ -237,9 +237,9 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
           style={{
             padding: '8px 18px',
             borderRadius: 8,
-            background: '#646cff',
-            color: '#fff',
-            border: 'none',
+            background: '#fff',
+            color: '#646cff',
+            border: '2px solid #646cff',
             fontWeight: 600,
             fontSize: 16,
             cursor: 'pointer',

@@ -562,17 +562,14 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
 
   return (
     <div className="calculation-details-container" style={{ 
-      background: '#fff', 
-      borderRadius: 12, 
-      boxShadow: '0 1px 4px #0001', 
-      padding: 24, 
+      padding: 24,
       minWidth: 320, 
       flex: 1,
       color: '#000',
       overflowX: 'hidden',
       maxWidth: '100%'
     }}>
-      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 16, color: '#000' }}>Детали расчёта</h2>
+      <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 16, color: '#000' }}>Детали расчёта</h2>
       {draft && Object.keys(draft).length > 0 ? (
         <div style={{ color: '#222', fontSize: 16 }}>
           {(draft.projectName || draft.config) && (
@@ -825,15 +822,22 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                 </div>
               )}
               <div style={{ fontWeight: 700, fontSize: 18, marginTop: 16 }}>
-                Итого: {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
+                Цена: {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
                   ? draft.priceHistory[draft.priceHistory.length - 1].price.toFixed(2)
                   : total.toFixed(2)} {settings.currency}
               </div>
-              {usdRate > 0 && (
+              {settings.showUSD && usdRate > 0 && (
                 <div style={{ color: '#888', fontSize: 15, marginTop: 4 }}>
                   ~ {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
                     ? (draft.priceHistory[draft.priceHistory.length - 1].price / usdRate).toFixed(2)
                     : (total / usdRate).toFixed(2)} $
+                </div>
+              )}
+              {settings.showRR && settings.rrRate && parseFloat(settings.rrRate) > 0 && (
+                <div style={{ color: '#888', fontSize: 15, marginTop: 4 }}>
+                  ~ {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
+                    ? (draft.priceHistory[draft.priceHistory.length - 1].price / parseFloat(settings.rrRate)).toFixed(2)
+                    : (total / parseFloat(settings.rrRate)).toFixed(2)} ₽
                 </div>
               )}
             </div>
