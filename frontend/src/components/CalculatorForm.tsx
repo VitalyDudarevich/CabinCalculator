@@ -464,7 +464,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       }
 
       const systemTemplates = await res.json();
-      const systemTemplate = systemTemplates.find((t: { type: string }) => t.type === templateType);
+      const systemTemplate = Array.isArray(systemTemplates) ? systemTemplates.find((t: { type: string }) => t.type === templateType) : null;
 
       if (systemTemplate) {
         // Устанавливаем дефолтную фурнитуру
@@ -482,7 +482,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         // Устанавливаем дефолтные услуги
         if (systemTemplate.defaultServices && systemTemplate.defaultServices.length > 0) {
           const defaultServices = systemTemplate.defaultServices.map((serviceName: string) => {
-            const foundService = serviceList.find(s => s.name === serviceName);
+            const foundService = Array.isArray(serviceList) ? serviceList.find(s => s.name === serviceName) : null;
             return foundService || {
               serviceId: serviceName,
               name: serviceName,
@@ -572,7 +572,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     // Проверяем, выбран ли пользовательский шаблон
     if (value.startsWith('template-')) {
       const templateId = value.replace('template-', '');
-      const template = templates.find(t => t._id === templateId);
+      const template = Array.isArray(templates) ? templates.find(t => t._id === templateId) : null;
       
       if (template) {
         setSelectedTemplate(template);
@@ -631,7 +631,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             if (fullTemplate.defaultServices && fullTemplate.defaultServices.length > 0) {
               const defaultServices = fullTemplate.defaultServices.map((serviceName: string) => {
                 // Ищем услугу в списке serviceList по имени
-                const foundService = serviceList.find(s => s.name === serviceName);
+                const foundService = Array.isArray(serviceList) ? serviceList.find(s => s.name === serviceName) : null;
                 return foundService || {
                   serviceId: serviceName,
                   name: serviceName,
