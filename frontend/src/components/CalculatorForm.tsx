@@ -259,12 +259,37 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         : [];
       setHardwareList(hardwareData);
       
-      // Собираем уникальные цвета стекла для выпадающего списка
-      const uniqueColors = Array.from(new Set((Array.isArray(propsSettings.glassList) ? propsSettings.glassList : []).map((g: unknown) => (g as { color?: string }).color).filter((c: unknown): c is string => Boolean(c))));
-      console.log('🔍 ОТЛАДКА uniqueColors:', uniqueColors);
+      // Собираем уникальные цвета стекла для выпадающего списка - ИСПРАВЛЕННАЯ ВЕРСИЯ
+      let uniqueColors: string[] = [];
+      if (Array.isArray(propsSettings.glassList) && propsSettings.glassList.length > 0) {
+        const colors = propsSettings.glassList
+          .map((glass: { color: string; thickness?: string; thickness_mm?: number; price: number; companyId: string }) => {
+            console.log('🔍 Обрабатываем glass:', glass, 'color:', glass?.color);
+            return glass?.color;
+          })
+          .filter((color: string | undefined) => {
+            const isValid = color && typeof color === 'string' && color.trim() !== '';
+            console.log('🔍 Color valid?', color, '→', isValid);
+            return isValid;
+          }) as string[];
+        
+        uniqueColors = Array.from(new Set(colors));
+        console.log('🔍 Все цвета после фильтрации:', colors);
+        console.log('🔍 Уникальные цвета:', uniqueColors);
+      } else {
+        console.log('🔍 glassList пустой или не массив');
+      }
+      
+      console.log('🔍 ФИНАЛЬНЫЕ uniqueColors:', uniqueColors);
       setGlassColors(uniqueColors);
-      setGlassColor(uniqueColors[0] || '');
-      console.log('🔍 ОТЛАДКА первый цвет:', uniqueColors[0] || 'НЕТ ЦВЕТОВ');
+      
+      if (uniqueColors.length > 0) {
+        setGlassColor(uniqueColors[0]);
+        console.log('🔍 Установлен первый цвет:', uniqueColors[0]);
+      } else {
+        setGlassColor('');
+        console.log('🔍 НЕТ ЦВЕТОВ - устанавливаем пустую строку');
+      }
     } else {
       console.log('CalculatorForm: данные еще не загружены');
       setHardwareList([]);
