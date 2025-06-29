@@ -3,6 +3,7 @@ import { FaRegTrashAlt, FaUserEdit } from 'react-icons/fa';
 import ModalForm from './ModalForm';
 import type { User } from '../types/User';
 import type { Company } from '../types/Company';
+import { API_URL } from '../utils/api';
 
 interface CompaniesTabProps {
   companies: Company[];
@@ -40,7 +41,7 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
       setCompanyNameError('Компания с таким именем уже существует');
       return;
     }
-    const res = await fetchWithAuth('/companies', {
+    const res = await fetchWithAuth(`${API_URL}/companies`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(companyForm),
@@ -50,7 +51,7 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
     if (setShowAddCompany) setShowAddCompany(false);
     setCompanyForm({ name: '', city: '', ownerName: '', ownerContact: '' });
     setCompanyNameError('');
-    const companiesRes = await fetchWithAuth('/companies');
+    const companiesRes = await fetchWithAuth(`${API_URL}/companies`);
     const companiesList = await companiesRes.json();
     if (Array.isArray(companiesList)) {
       setCompanies(companiesList);
@@ -81,12 +82,12 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
   const handleDeleteCompany = async (id: string) => {
     if (!window.confirm('Удалить компанию?')) return;
 
-    const res = await fetchWithAuth(`/companies/${id}`, { method: 'DELETE' });
+    const res = await fetchWithAuth(`${API_URL}/companies/${id}`, { method: 'DELETE' });
     const data = await res.json();
     handleApiError(data);
 
     // После удаления: обновляем список компаний
-    const companiesRes = await fetchWithAuth('/companies');
+    const companiesRes = await fetchWithAuth(`${API_URL}/companies`);
     const companiesList = await companiesRes.json();
     if (Array.isArray(companiesList)) {
       setCompanies(companiesList);
@@ -206,7 +207,7 @@ const CompaniesTab: React.FC<CompaniesTabProps> = ({ companies, selectedCompanyI
           ]}
           onSubmit={async () => {
             if (!editCompanyId) return;
-            const res = await fetchWithAuth(`/companies/${editCompanyId}`, {
+            const res = await fetchWithAuth(`${API_URL}/companies/${editCompanyId}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(companyForm),

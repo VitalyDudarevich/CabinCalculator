@@ -2,6 +2,7 @@ import React from 'react';
 import ModalForm from './ModalForm';
 import type { User } from '../types/User';
 import { FaUserEdit, FaRegTrashAlt } from 'react-icons/fa';
+import { API_URL } from '../utils/api';
 
 interface Company {
   _id: string;
@@ -68,7 +69,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
       body.companyId = selectedCompanyId;
     }
     try {
-      const res = await fetchWithAuth('/users', {
+      const res = await fetchWithAuth(`${API_URL}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -128,7 +129,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
       body.companyId = selectedCompanyId;
     }
     try {
-      const res = await fetchWithAuth(`/users/${editUser._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/users/${editUser._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -154,7 +155,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
   const handleDeleteUser = async (user: User) => {
     if (!window.confirm('Удалить пользователя?')) return;
     try {
-      const res = await fetchWithAuth(`/users/${user._id}`, { method: 'DELETE' });
+      const res = await fetchWithAuth(`${API_URL}/users/${user._id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Ошибка удаления');
       // Обновляем список пользователей
       if (onRefreshUsers) {
