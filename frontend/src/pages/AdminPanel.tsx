@@ -10,6 +10,7 @@ import type { Company } from '../types/Company';
 import type { HardwareItem } from '../types/HardwareItem';
 import Header from '../components/Header';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { fetchWithAuth } from '../utils/auth';
 import { API_URL } from '../utils/api';
 
 // Добавляю расширение Window для интеграции с Header
@@ -33,34 +34,7 @@ interface AdminPanelProps {
   onLogout: () => void;
 }
 
-// Универсальная функция fetch с авто-рефрешем токена
-async function fetchWithAuth(input: RequestInfo, init?: RequestInit, retry = true, onLogoutCb?: () => void): Promise<Response> {
-  const url = typeof input === 'string' && input.startsWith('/api')
-    ? `${API_URL}${input}`
-    : input;
-  const token = localStorage.getItem('token');
-  const headers = { ...(init?.headers || {}), Authorization: `Bearer ${token || ''}` };
-  const res = await fetch(url, { ...init, headers });
 
-  if ((res.status === 401 || res.status === 400) && retry) {
-    // Попытка обновить токен
-            const refreshRes = await fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
-    if (refreshRes.ok) {
-      const { token: newToken } = await refreshRes.json();
-      if (newToken) {
-        localStorage.setItem('token', newToken);
-        // Повторяем исходный запрос с новым токеном
-        return fetchWithAuth(input, init, false, onLogoutCb);
-      }
-    }
-    // Не удалось обновить — разлогин
-    localStorage.removeItem('token');
-    if (onLogoutCb) onLogoutCb();
-    throw new Error('Не удалось обновить токен');
-  }
-
-  return res;
-}
 
 const AdminPanel: React.FC<AdminPanelProps> = ({
   user,
@@ -108,7 +82,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     effectiveCompanyId, 
     selectedCompanyId, 
     companiesCount: companies.length,
-    userCompanyId: user?.companyId 
+    userCompanyId: user?.companyId,
+    allCompanies: companies.map(c => ({ id: c._id, name: c.name }))
   });
 
   // --- Синхронизация секции с query-параметрами ---
@@ -171,26 +146,70 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     setIsLoadingData(true);
     try {
       // Загружаем пользователей
-      let usersUrl = '/users';
-      if (effectiveCompanyId && effectiveCompanyId !== 'all') {
+      let usersUrl = `${API_URL}/users`;
+      // Для superadmin передаем companyId в query, для admin/user сервер использует данные из токена
+      if (user.role === 'superadmin' && effectiveCompanyId && effectiveCompanyId !== 'all') {
         usersUrl += `?companyId=${effectiveCompanyId}`;
       }
       
-      const usersPromise = fetchWithAuth(usersUrl, undefined, true, onLogout)
-        .then((res: unknown) => (res as Response).json())
+      console.log('Loading users:', { usersUrl, effectiveCompanyId, userRole: user.role });
+      
+      const usersPromise = fetchWithAuth(usersUrl, undefined, true)
+        .then((res: unknown) => {
+          console.log('Users response:', res);
+          const response = res as Response;
+          if (response.status === 401) {
+            console.error('Unauthorized - redirecting to login');
+            onLogout();
+            return [];
+          }
+          return response.json();
+        })
         .then((data: unknown) => {
+          console.log('Users data received:', data);
           if (Array.isArray(data)) {
+            console.log('Users detailed:', data.map(u => ({ 
+              id: u._id, 
+              username: u.username, 
+              email: u.email, 
+              role: u.role,
+              companyId: u.companyId 
+            })));
             setUsers(data);
+            console.log('Users set:', data.length, 'users');
+          } else {
+            console.log('Users data is not array:', data);
+            setUsers([]);
           }
         })
-        .catch(() => setUsers([]));
+        .catch((error) => {
+          console.error('Error loading users:', error);
+          setUsers([]);
+        });
 
-      // Загружаем фурнитуру для всех компаний
-      console.log('Loading hardware for companies:', companies.map(c => ({ id: c._id, name: c.name })));
-      const hardwarePromises = companies.map(async (company) => {
+      // Загружаем фурнитуру только для нужных компаний
+      let companiesToLoad: Company[] = [];
+      if (user.role === 'superadmin') {
+        // Superadmin - загружаем для всех компаний
+        companiesToLoad = companies;
+      } else {
+        // Admin/User - загружаем только для своей компании
+        const userCompany = companies.find(c => c._id === effectiveCompanyId);
+        if (userCompany) {
+          companiesToLoad = [userCompany];
+        }
+      }
+      
+      console.log('Loading hardware for companies:', companiesToLoad.map(c => ({ id: c._id, name: c.name })));
+      const hardwarePromises = companiesToLoad.map(async (company) => {
         try {
           console.log(`Loading hardware for company ${company.name} (${company._id})`);
-          const res = await fetchWithAuth(`/hardware?companyId=${company._id}`, undefined, true, onLogout);
+          const res = await fetchWithAuth(`${API_URL}/hardware?companyId=${company._id}`, undefined, true);
+          if (res.status === 401) {
+            console.error('Unauthorized - redirecting to login');
+            onLogout();
+            return { companyId: company._id, data: [] };
+          }
           const data = await res.json();
           console.log(`Hardware loaded for ${company.name}:`, data);
           return { companyId: company._id, data: Array.isArray(data) ? data : [] };
@@ -239,15 +258,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   // Функции для обновления данных при необходимости
   const refreshUsers = async () => {
-    let usersUrl = '/users';
-    if (effectiveCompanyId && effectiveCompanyId !== 'all') {
+    let usersUrl = `${API_URL}/users`;
+    // Для superadmin передаем companyId в query, для admin/user сервер использует данные из токена
+    if (user.role === 'superadmin' && effectiveCompanyId && effectiveCompanyId !== 'all') {
       usersUrl += `?companyId=${effectiveCompanyId}`;
     }
+    console.log('Refreshing users:', { usersUrl, effectiveCompanyId, userRole: user.role });
     try {
-      const res = await fetchWithAuth(usersUrl, undefined, true, onLogout);
+      const res = await fetchWithAuth(usersUrl, undefined, true);
+      if (res.status === 401) {
+        console.error('Unauthorized - redirecting to login');
+        onLogout();
+        return;
+      }
       const data = await res.json();
+      console.log('Refresh users data received:', data);
       if (Array.isArray(data)) {
         setUsers(data);
+        console.log('Users refreshed:', data.length, 'users');
+      } else {
+        console.log('Refresh users data is not array:', data);
+        setUsers([]);
       }
     } catch (error) {
       console.error('Ошибка обновления пользователей:', error);
@@ -256,7 +287,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const refreshHardware = async (companyId: string) => {
     try {
-      const res = await fetchWithAuth(`/hardware?companyId=${companyId}`, undefined, true, onLogout);
+      const res = await fetchWithAuth(`${API_URL}/hardware?companyId=${companyId}`, undefined, true);
+      if (res.status === 401) {
+        console.error('Unauthorized - redirecting to login');
+        onLogout();
+        return;
+      }
       const data = await res.json();
       setHardwareByCompany(prev => ({ 
         ...prev, 
@@ -422,7 +458,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             <UsersTab
               users={users}
               companies={companies}
-              selectedCompanyId={selectedCompanyId}
+              selectedCompanyId={effectiveCompanyId}
               userRole={user.role}
               fetchWithAuth={fetchWithAuth}
               onRefreshUsers={refreshUsers}

@@ -750,7 +750,7 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
           fontSize: 16, 
           fontWeight: 600, 
           margin: 0,
-          color: '#333'
+          color: '#000'
         }}>
           {status.name}
         </h3>
@@ -1330,7 +1330,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
               cursor: 'pointer'
             }}
           >
-            <span style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ display: 'flex', alignItems: 'center', color: '#000' }}>
               <div 
                 style={{ 
                   width: 12, 
@@ -1340,13 +1340,16 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   marginRight: 8 
                 }} 
               />
-              {statuses[selectedStatusIndex]?.name || 'Выберите статус'}
+              <span style={{ color: '#000' }}>
+                {statuses[selectedStatusIndex]?.name || 'Выберите статус'}
+              </span>
               <span style={{ 
                 marginLeft: 8,
                 background: '#e0e0e0',
                 borderRadius: 12,
                 padding: '2px 6px',
-                fontSize: 11
+                fontSize: 11,
+                color: '#000'
               }}>
                 {projectsByStatus[statuses[selectedStatusIndex]?._id]?.length || 0}
               </span>
@@ -1388,7 +1391,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     borderBottom: index < statuses.length - 1 ? '1px solid #f0f0f0' : 'none'
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', color: '#000' }}>
                     <div 
                       style={{ 
                         width: 12, 
@@ -1398,13 +1401,16 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         marginRight: 8 
                       }} 
                     />
-                    {status.name}
+                    <span style={{ color: '#000' }}>
+                      {status.name}
+                    </span>
                   </span>
                   <span style={{ 
                     background: '#e0e0e0',
                     borderRadius: 12,
                     padding: '2px 6px',
-                    fontSize: 11
+                    fontSize: 11,
+                    color: '#000'
                   }}>
                     {projectsByStatus[status._id]?.length || 0}
                   </span>
@@ -1556,6 +1562,24 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         /* Контейнер для grid */
         .kanban-grid {
           overflow: visible !important;
+        }
+        
+        /* Мобильные стили для видимости текста статусов */
+        @media (max-width: 768px) {
+          .status-menu span,
+          .status-menu div,
+          .kanban-column h3,
+          .kanban-column span {
+            color: #000 !important;
+          }
+          
+          .status-menu button {
+            color: #000 !important;
+          }
+          
+          .status-menu div[style*="background"] {
+            color: #000 !important;
+          }
         }
       `}</style>
     </>

@@ -28,6 +28,12 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
     : (companies.find(c => c._id === selectedCompanyId)?.name || '');
 
   // Универсальная фильтрация пользователей по выбранной компании и исключение суперадминов
+  console.log('UsersTab filtering users:', { 
+    selectedCompanyId, 
+    usersCount: users.length, 
+    users: users.map(u => ({ id: u._id, username: u.username, companyId: u.companyId, role: u.role }))
+  });
+  
   const filteredUsers = (selectedCompanyId && selectedCompanyId !== 'all'
     ? users.filter(u =>
         ((typeof u.companyId === 'object' && u.companyId?._id?.toString() === selectedCompanyId?.toString()) ||
@@ -35,6 +41,11 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
       )
     : users
   ).filter(u => u.role !== 'superadmin');
+  
+  console.log('UsersTab filtered users:', { 
+    filteredCount: filteredUsers.length, 
+    filteredUsers: filteredUsers.map(u => ({ id: u._id, username: u.username, companyId: u.companyId, role: u.role }))
+  });
 
   const handleAddUser = () => {
     setShowAddUser(true);
@@ -220,8 +231,15 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
         })
       ) : (
         <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 16 }}>
-          {users.length === 0 ? (
-            <div style={{ color: '#888' }}>Нет пользователей</div>
+          {filteredUsers.length === 0 ? (
+            <div style={{ color: '#888' }}>
+              Нет пользователей
+              {users.length > 0 && (
+                <div style={{ fontSize: '12px', marginTop: '8px' }}>
+                  (Всего пользователей: {users.length}, отфильтровано для компании: {selectedCompanyId})
+                </div>
+              )}
+            </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>

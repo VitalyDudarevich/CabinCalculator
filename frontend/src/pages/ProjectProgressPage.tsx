@@ -50,6 +50,45 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
   const [customDateFrom, setCustomDateFrom] = useState('');
   const [customDateTo, setCustomDateTo] = useState('');
+  
+  // Состояние для мобильного режима
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Отслеживание изменения размера экрана
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile(); // Проверяем при монтировании
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Добавляем CSS стили для правильного скролла на мобильных устройствах
+  useEffect(() => {
+    if (isMobile) {
+      // Добавляем стили для обеспечения скролла на iOS
+      const style = document.createElement('style');
+      style.textContent = `
+        body {
+          overflow: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          height: auto !important;
+        }
+        html {
+          overflow: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          height: auto !important;
+        }
+        * {
+          -webkit-overflow-scrolling: touch;
+        }
+      `;
+      document.head.appendChild(style);
+      
+      return () => {
+        document.head.removeChild(style);
+      };
+    }
+  }, [isMobile]);
 
   // Эффективные ID для админа/пользователя
   let effectiveCompanyId = selectedCompanyId;
@@ -154,15 +193,17 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
     // Основной контейнер страницы с учетом фиксированного Header'а
     <div style={{ 
       // Позиционирование с учетом фиксированного header'а высотой 56px
-      position: 'fixed',
-      top: 56,
-      left: 0,
-      right: 0,
-      bottom: 0,
+      position: isMobile ? 'relative' : 'fixed',
+      top: isMobile ? 0 : 56,
+      left: isMobile ? 0 : 0,
+      right: isMobile ? 0 : 0,
+      bottom: isMobile ? 0 : 0,
       background: '#ffffff',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden'
+      overflow: isMobile ? 'visible' : 'hidden',
+      minHeight: isMobile ? 'calc(100vh - 56px)' : 'auto',
+      paddingTop: isMobile ? '56px' : 0
     }}>
       {/* Заголовок страницы */}
       <div style={{ 
@@ -174,22 +215,28 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
         {/* Заголовок слева, поиск и фильтры справа */}
         <div style={{ 
           display: 'flex', 
-          alignItems: 'center', 
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 12 : 0,
+          alignItems: isMobile ? 'stretch' : 'center', 
           justifyContent: 'space-between'
         }}>
-          {/* Заголовок слева */}
-          <h1 style={{ 
-            fontSize: 22,
-            fontWeight: 700, 
-            margin: 0,
-            color: '#333',
-            flexShrink: 0
+          {/* Первая строка - заголовок и кнопка создания */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
           }}>
-            Прогресс Проектов
-          </h1>
-          
-          {/* Поиск и фильтры справа */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {/* Заголовок слева */}
+            <h1 style={{ 
+              fontSize: 22,
+              fontWeight: 700, 
+              margin: 0,
+              color: '#333',
+              flexShrink: 0
+            }}>
+              Прогресс Проектов
+            </h1>
+            
             {/* Кнопка "Новый проект" */}
             <button
               onClick={() => {
@@ -199,20 +246,35 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 setIsEditModalOpen(true);
               }}
               style={{
-                padding: '8px 16px',
-                borderRadius: 6,
+                padding: isMobile ? '10px' : '8px 16px',
+                borderRadius: isMobile ? '50%' : 6,
                 background: '#646cff',
                 color: '#fff',
                 border: 'none',
                 fontWeight: 600,
-                fontSize: 14,
+                fontSize: isMobile ? 18 : 14,
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                width: isMobile ? '44px' : 'auto',
+                height: isMobile ? '44px' : 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
               }}
+              title={isMobile ? 'Новый проект' : undefined}
             >
-              Новый проект
+              {isMobile ? '+' : 'Новый проект'}
             </button>
-            
+          </div>
+          
+          {/* Вторая строка (на мобайле) - Поиск и фильтры */}
+          <div style={{ 
+            display: 'flex', 
+            gap: 12, 
+            alignItems: 'center',
+            flexWrap: 'wrap'
+          }}>
             {/* Фильтр по дате */}
             <select
               value={dateFilter}
@@ -222,7 +284,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 borderRadius: 6,
                 border: '1px solid #ccc',
                 fontSize: 14,
-                minWidth: '120px'
+                minWidth: '120px',
+                flex: isMobile ? '1' : 'none'
               }}
             >
               <option value="all">Все даты</option>
@@ -243,7 +306,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                     padding: '8px 12px',
                     borderRadius: 6,
                     border: '1px solid #ccc',
-                    fontSize: 14
+                    fontSize: 14,
+                    flex: isMobile ? '1' : 'none'
                   }}
                 />
                 <span style={{ color: '#666' }}>—</span>
@@ -255,14 +319,19 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                     padding: '8px 12px',
                     borderRadius: 6,
                     border: '1px solid #ccc',
-                    fontSize: 14
+                    fontSize: 14,
+                    flex: isMobile ? '1' : 'none'
                   }}
                 />
               </>
             )}
             
             {/* Поиск с иконкой лупы */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ 
+              position: 'relative',
+              flex: isMobile ? '1' : 'none',
+              minWidth: isMobile ? '200px' : 'auto'
+            }}>
               <svg
                 style={{
                   position: 'absolute',
@@ -298,7 +367,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
-                  width: '280px',
+                  width: '100%',
                   padding: '8px 12px 8px 36px',
                   borderRadius: 6,
                   border: '1px solid #ccc',
@@ -313,10 +382,11 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
       
       {/* Канбан-доска напрямую без белой подложки */}
       <div style={{
-        flex: 1, // Занимаем всё оставшееся место
+        flex: isMobile ? 'none' : 1, // На мобайле не занимаем оставшееся место
         overflowX: 'auto', // РАЗРЕШАЕМ горизонтальный скролл
-        overflowY: 'hidden', // ЗАПРЕЩАЕМ вертикальный скролл
-        position: 'relative'
+        overflowY: isMobile ? 'visible' : 'hidden', // На мобайле разрешаем вертикальный скролл
+        position: 'relative',
+        minHeight: isMobile ? '400px' : 'auto' // Минимальная высота на мобайле
       }}>
         <KanbanBoard 
           key={kanbanKey} // Принудительно перерендерим компонент при изменении

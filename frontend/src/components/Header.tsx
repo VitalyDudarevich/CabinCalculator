@@ -55,11 +55,11 @@ const Header: React.FC<HeaderProps> = ({
   const tabs = [];
   if (user && (user.role === 'admin' || user.role === 'superadmin')) {
     tabs.push({ label: 'Калькулятор', path: '/calculator' });
-    tabs.push({ label: 'Прогресс Проектов', path: '/project-progress' });
+    tabs.push({ label: 'Проекты', path: '/project-progress' });
     tabs.push({ label: 'Админ-панель', path: '/admin' });
   } else if (user && user.role === 'user') {
     tabs.push({ label: 'Калькулятор', path: '/calculator' });
-    tabs.push({ label: 'Прогресс Проектов', path: '/project-progress' });
+    tabs.push({ label: 'Проекты', path: '/project-progress' });
   }
 
   // --- Админские секции для бургер-меню ---
@@ -299,7 +299,7 @@ const Header: React.FC<HeaderProps> = ({
                   transition: 'background 0.15s, color 0.15s',
                 }}
               >
-                Прогресс
+                Проекты
               </button>
               <button
                 onClick={() => navigate('/admin')}
@@ -353,7 +353,7 @@ const Header: React.FC<HeaderProps> = ({
                   boxShadow: '0 1px 4px #646cff22',
                 }}
               >
-                Прогресс
+                Проекты
               </button>
             </>
           )}
