@@ -1,6 +1,7 @@
 import React from 'react';
 import ModalForm from './ModalForm';
 import type { User } from '../types/User';
+import { FaUserEdit, FaRegTrashAlt } from 'react-icons/fa';
 
 interface Company {
   _id: string;
@@ -263,12 +264,13 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
                         : (companies.find(c => c._id === u.companyId)?.name || '-')}
                     </td>
                     <td style={{ padding: 8, textAlign: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-                        <button onClick={() => handleEditUser(u)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1976d2', fontSize: 18, padding: 0 }} title="Редактировать">✏️</button>
-                        <button onClick={() => handleDeleteUser(u)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53935', fontSize: 22, padding: 0, fontWeight: 700, width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.15s' }} title="Удалить"
-                          onMouseOver={e => (e.currentTarget.style.color = '#b71c1c')}
-                          onMouseOut={e => (e.currentTarget.style.color = '#e53935')}
-                        >×</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+                        <span title="Редактировать" onClick={() => handleEditUser(u)} style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
+                          <FaUserEdit color="#888" size={16} />
+                        </span>
+                        <span title="Удалить" onClick={() => handleDeleteUser(u)} style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle', cursor: 'pointer' }}>
+                          <FaRegTrashAlt color="#888" size={16} />
+                        </span>
                       </div>
                     </td>
                   </tr>

@@ -68,6 +68,8 @@ const Header: React.FC<HeaderProps> = ({
     adminSections = [
       ...(user.role === 'superadmin' ? [{ key: 'companies', label: 'Компании' }] : []),
       { key: 'users', label: 'Пользователи' },
+      { key: 'templates', label: 'Шаблоны' },
+      { key: 'statuses', label: 'Статусы' },
       { key: 'hardware', label: 'Цены' },
       { key: 'settings', label: 'Настройки' },
     ];

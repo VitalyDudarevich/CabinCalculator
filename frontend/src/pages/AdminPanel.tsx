@@ -335,9 +335,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const sections = [
     ...(user && user.role === 'superadmin' ? [{ key: 'companies', label: 'Компании' }] : []),
     { key: 'users', label: 'Пользователи' },
-    { key: 'statuses', label: 'Статусы' },
     { key: 'hardware', label: 'Цены' },
     { key: 'templates', label: 'Шаблоны' },
+    { key: 'statuses', label: 'Статусы' },
     { key: 'settings', label: 'Настройки' },
   ];
 

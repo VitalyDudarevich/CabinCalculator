@@ -202,29 +202,32 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
       display: 'flex',
       flexDirection: 'column',
       overflow: isMobile ? 'visible' : 'hidden',
-      minHeight: isMobile ? 'calc(100vh - 56px)' : 'auto',
-      paddingTop: isMobile ? '56px' : 0
+      height: isMobile ? '100vh' : 'calc(100vh - 56px)',
+      width: isMobile ? '100vw' : 'auto',
+      paddingTop: isMobile ? '56px' : 0,
+      boxSizing: 'border-box'
     }}>
       {/* Заголовок страницы */}
       <div style={{ 
         background: '#ffffff',
         flexShrink: 0,
         zIndex: 50,
-        padding: '8px 24px 8px 24px'
+        padding: '8px'
       }}>
         {/* Заголовок слева, поиск и фильтры справа */}
         <div style={{ 
           display: 'flex', 
           flexDirection: isMobile ? 'column' : 'row',
           gap: isMobile ? 12 : 0,
-          alignItems: isMobile ? 'stretch' : 'center', 
+          alignItems: isMobile ? 'flex-start' : 'center', 
           justifyContent: 'space-between'
         }}>
           {/* Первая строка - заголовок и кнопка создания */}
           <div style={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            width: '100%'
           }}>
             {/* Заголовок слева */}
             <h1 style={{ 
@@ -246,21 +249,27 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 setIsEditModalOpen(true);
               }}
               style={{
-                padding: isMobile ? '10px' : '8px 16px',
+                padding: isMobile ? '0' : '8px 16px',
                 borderRadius: isMobile ? '50%' : 6,
-                background: '#646cff',
-                color: '#fff',
-                border: 'none',
-                fontWeight: 600,
-                fontSize: isMobile ? 18 : 14,
+                background: isMobile ? '#ffffff' : '#646cff',
+                color: isMobile ? '#646cff' : '#fff',
+                border: isMobile ? '2px solid #646cff' : 'none',
+                fontWeight: isMobile ? 200 : 600,
+                fontSize: isMobile ? 24 : 14,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
-                width: isMobile ? '44px' : 'auto',
-                height: isMobile ? '44px' : 'auto',
+                width: isMobile ? '36px' : 'auto',
+                height: isMobile ? '36px' : 'auto',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                flexShrink: 0
+                flexShrink: 0,
+                boxShadow: isMobile ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+                lineHeight: isMobile ? 0.8 : 'normal',
+                textAlign: 'center',
+                marginTop: '0',
+                marginRight: isMobile ? '8px' : '0',
+                fontFamily: isMobile ? 'Arial, sans-serif' : 'inherit'
               }}
               title={isMobile ? 'Новый проект' : undefined}
             >
@@ -273,7 +282,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             display: 'flex', 
             gap: 12, 
             alignItems: 'center',
-            flexWrap: 'wrap'
+            flexWrap: 'wrap',
+            width: '100%'
           }}>
             {/* Фильтр по дате */}
             <select
@@ -285,7 +295,9 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 border: '1px solid #ccc',
                 fontSize: 14,
                 minWidth: '120px',
-                flex: isMobile ? '1' : 'none'
+                height: '36px',
+                flex: 'none',
+                boxSizing: 'border-box'
               }}
             >
               <option value="all">Все даты</option>
@@ -307,10 +319,13 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                     borderRadius: 6,
                     border: '1px solid #ccc',
                     fontSize: 14,
-                    flex: isMobile ? '1' : 'none'
+                    height: '36px',
+                    flex: 'none',
+                    width: '140px',
+                    boxSizing: 'border-box'
                   }}
                 />
-                <span style={{ color: '#666' }}>—</span>
+                <span style={{ color: '#666', lineHeight: '36px' }}>—</span>
                 <input
                   type="date"
                   value={customDateTo}
@@ -320,7 +335,10 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                     borderRadius: 6,
                     border: '1px solid #ccc',
                     fontSize: 14,
-                    flex: isMobile ? '1' : 'none'
+                    height: '36px',
+                    flex: 'none',
+                    width: '140px',
+                    boxSizing: 'border-box'
                   }}
                 />
               </>
@@ -330,7 +348,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             <div style={{ 
               position: 'relative',
               flex: isMobile ? '1' : 'none',
-              minWidth: isMobile ? '200px' : 'auto'
+              minWidth: isMobile ? '0' : 'auto',
+              width: isMobile ? '100%' : 'auto'
             }}>
               <svg
                 style={{
@@ -372,6 +391,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                   borderRadius: 6,
                   border: '1px solid #ccc',
                   fontSize: 14,
+                  height: '36px',
                   boxSizing: 'border-box'
                 }}
               />
@@ -382,11 +402,13 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
       
       {/* Канбан-доска напрямую без белой подложки */}
       <div style={{
-        flex: isMobile ? 'none' : 1, // На мобайле не занимаем оставшееся место
+        flex: 1, // Занимаем все оставшееся место
         overflowX: 'auto', // РАЗРЕШАЕМ горизонтальный скролл
-        overflowY: isMobile ? 'visible' : 'hidden', // На мобайле разрешаем вертикальный скролл
+        overflowY: isMobile ? 'auto' : 'hidden', // На мобайле разрешаем вертикальный скролл
         position: 'relative',
-        minHeight: isMobile ? '400px' : 'auto' // Минимальная высота на мобайле
+        height: '100%', // Занимаем всю доступную высоту
+        width: '100%',
+        boxSizing: 'border-box'
       }}>
         <KanbanBoard 
           key={kanbanKey} // Принудительно перерендерим компонент при изменении
@@ -413,16 +435,17 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
           bottom: 0,
           background: 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: isMobile ? 'flex-start' : 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          padding: '20px'
+          padding: isMobile ? '0' : '20px',
+          overflow: 'auto'
         }}>
           <div style={{
             background: '#ffffff',
-            borderRadius: 12,
-            width: '95vw',
-            height: '95vh',
+            borderRadius: isMobile ? 0 : 12,
+            width: isMobile ? '100vw' : '95vw',
+            height: isMobile ? '100vh' : '95vh',
             position: 'relative',
             display: 'flex',
             overflow: 'hidden'
@@ -432,14 +455,14 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
               onClick={closeEditModal}
               style={{
                 position: 'absolute',
-                top: 16,
-                right: 16,
-                background: 'rgba(255, 255, 255, 0.9)',
-                border: '1px solid #ddd',
-                borderRadius: '50%',
-                width: 32,
-                height: 32,
-                fontSize: 18,
+                top: 18,
+                right: -20,
+                background: 'transparent',
+                border: 'none',
+                borderRadius: 0,
+                width: 48,
+                height: 48,
+                fontSize: 36,
                 cursor: 'pointer',
                 color: '#666',
                 zIndex: 1001,
@@ -456,8 +479,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             <div style={{
               position: 'absolute',
               top: 24,
-              left: 24,
-              right: 48,
+              left: 20,
+              right: 72,
               zIndex: 1002
             }}>
               <h2 style={{
@@ -473,16 +496,19 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             {/* Основной контент в две колонки */}
             <div style={{
               display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
               width: '100%',
               height: '100%',
-              gap: 16,
-              padding: '64px 16px 16px 16px'
+              gap: isMobile ? 8 : 16,
+              padding: isMobile ? '64px 0 0 0' : '64px 16px 16px 16px'
             }}>
               {/* Левая колонка - Детали расчета */}
               <div style={{
-                flex: 1,
-                height: '100%',
-                overflow: 'auto'
+                flex: isMobile ? 'none' : 1,
+                height: isMobile ? 'auto' : '100%',
+                minHeight: isMobile ? '300px' : 'auto',
+                overflow: 'auto',
+                paddingBottom: isMobile ? '20px' : '0'
               }}>
                 <CalculationDetails
                   draft={draftProjectData}
@@ -498,8 +524,10 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
               
               {/* Правая колонка - Форма калькулятора */}
               <div style={{
-                flex: '0 0 480px',
-                height: '100%',
+                flex: isMobile ? 'none' : '0 0 480px',
+                width: isMobile ? '100%' : 'auto',
+                height: isMobile ? 'auto' : '100%',
+                minHeight: isMobile ? '500px' : 'auto',
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden'
@@ -507,7 +535,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 <div style={{
                   flex: 1,
                   overflow: 'auto',
-                  paddingBottom: '80px'
+                  paddingBottom: isMobile ? '20px' : '80px'
                 }}>
                   <CalculatorForm
                     companyId={effectiveCompanyId}

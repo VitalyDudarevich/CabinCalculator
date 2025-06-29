@@ -112,6 +112,12 @@ const SortableProject: React.FC<SortableProjectProps> = ({
   const projectRef = React.useRef<HTMLDivElement>(null);
   const lastInsertionPositionRef = React.useRef<{statusId: string; position: number} | null>(null);
   
+  // Touch handling states
+  const [isTouchStarted, setIsTouchStarted] = React.useState(false);
+  const [longPressTimer, setLongPressTimer] = React.useState<number | null>(null);
+  const [isDragMode, setIsDragMode] = React.useState(false);
+  const [touchStartPos, setTouchStartPos] = React.useState<{x: number, y: number} | null>(null);
+  
   // Определяем нужно ли добавить spacing сверху или снизу
   const shouldAddSpaceAbove = insertionPosition?.statusId === statusId && insertionPosition?.position === projectIndex;
   const shouldAddSpaceBelow = insertionPosition?.statusId === statusId && insertionPosition?.position === projectIndex + 1;
@@ -120,19 +126,6 @@ const SortableProject: React.FC<SortableProjectProps> = ({
   React.useEffect(() => {
     lastInsertionPositionRef.current = insertionPosition || null;
   }, [insertionPosition]);
-
-  // Отладка spacing отключена (индикаторы удалены)
-  // if (shouldAddSpaceAbove || shouldAddSpaceBelow) {
-  //   console.log(`🔍 SPACING APPLIED for ${project.name} (index ${projectIndex}):`, {
-  //     insertionPosition: insertionPosition?.position,
-  //     shouldAddSpaceAbove,
-  //     shouldAddSpaceBelow,
-  //     marginTop: shouldAddSpaceAbove ? '80px' : '8px',
-  //     marginBottom: shouldAddSpaceBelow ? '80px' : '8px'
-  //   });
-  // }
-  
-
   
   const sortableResult = useSortable({
     id: project._id,
@@ -158,7 +151,327 @@ const SortableProject: React.FC<SortableProjectProps> = ({
   // Отключаем hover эффекты во время драга других проектов
   const shouldShowHover = isHovered && (!isDragActive || isDragging || isDraggingManual);
 
+  // Touch события для мобильного
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    setIsTouchStarted(true);
+    setTouchStartPos({ x: touch.clientX, y: touch.clientY });
+    setIsDragMode(false);
+    
+    // НЕ предотвращаем событие по умолчанию - позволяем браузеру обрабатывать скролл
+    
+    // Запускаем таймер для долгого нажатия (3 секунды)
+    const timer = setTimeout(() => {
+      console.log('🔥 LONG PRESS DETECTED - Starting drag mode for:', project.name);
+      setIsDragMode(true);
+      setIsTouchStarted(false);
+      
+      // Добавляем вибрацию если поддерживается
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      
+      // Запускаем drag операцию
+      handleTouchDragStart();
+    }, 3000);
+    
+    setLongPressTimer(timer);
+  };
 
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isTouchStarted && !isDragMode) return;
+    
+    const touch = e.touches[0];
+    const startPos = touchStartPos;
+    
+    if (startPos && isTouchStarted) {
+      const deltaX = Math.abs(touch.clientX - startPos.x);
+      const deltaY = Math.abs(touch.clientY - startPos.y);
+      
+      // Улучшенное определение направления движения
+      const isVerticalSwipe = deltaY > deltaX && deltaY > 15;
+      const isHorizontalSwipe = deltaX > deltaY && deltaX > 15;
+      const isAnySwipe = deltaX > 15 || deltaY > 15;
+      
+      // Если это свайп и мы не в drag mode - разрешаем скролл
+      if (isAnySwipe && !isDragMode) {
+        console.log('📱 SWIPE DETECTED:', {
+          deltaX,
+          deltaY,
+          isVerticalSwipe,
+          isHorizontalSwipe,
+          direction: isVerticalSwipe ? 'vertical' : isHorizontalSwipe ? 'horizontal' : 'diagonal'
+        });
+        
+        // Отменяем таймер долгого нажатия
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          setLongPressTimer(null);
+        }
+        
+        setIsTouchStarted(false);
+        setTouchStartPos(null);
+        
+        // НЕ предотвращаем событие - позволяем браузеру обработать скролл
+        return;
+      }
+    }
+    
+    // Если мы в drag mode - обрабатываем drag
+    if (isDragMode) {
+      e.preventDefault(); // Предотвращаем скролл только во время драга
+      e.stopPropagation();
+      handleTouchDragMove(touch);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Отменяем таймер если он еще активен
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    
+    const touch = e.changedTouches[0];
+    
+    // Если мы в drag mode - завершаем drag
+    if (isDragMode) {
+      console.log('🏁 TOUCH DRAG END');
+      handleTouchDragEnd(touch);
+      setIsDragMode(false);
+    } else if (isTouchStarted) {
+      // Если это был быстрый тап - открываем детали
+      console.log('👆 TAP DETECTED - Opening project details:', project.name);
+      if (onEdit) onEdit(project);
+    }
+    
+    setIsTouchStarted(false);
+    setTouchStartPos(null);
+  };
+
+  const handleTouchDragStart = () => {
+    setIsDraggingManual(true);
+    onSetDragActive?.(true);
+    
+    // Устанавливаем стили для drag mode
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+    document.body.classList.add('dragging-active');
+    
+    console.log('🔥 TOUCH DRAG STARTED:', project.name);
+  };
+
+  const handleTouchDragMove = (touch: React.Touch) => {
+    // Логика аналогична handleMouseMove, но для touch
+    const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    // Убираем все предыдущие подсветки
+    document.querySelectorAll('.kanban-column').forEach(col => {
+      const element = col as HTMLElement;
+      element.classList.remove('drag-highlight');
+    });
+    
+    // Ищем колонку под touch point
+    let dropZone = elementUnderTouch;
+    let attempts = 0;
+    
+    while (dropZone && attempts < 10) {
+      if (dropZone.classList?.contains('kanban-column')) {
+        const columnElement = dropZone as HTMLElement;
+        columnElement.classList.add('drag-highlight');
+        
+        const statusId = columnElement.getAttribute('data-status-id');
+        if (statusId) {
+          const statusProjects = projectsByStatus[statusId] || [];
+          
+          // Динамическое позиционирование на основе координат touch
+          const columnRect = columnElement.getBoundingClientRect();
+          const touchY = touch.clientY;
+          const relativeY = touchY - columnRect.top;
+          
+          const projectCards = columnElement.querySelectorAll('[data-project-id]');
+          let insertPosition = 0;
+          
+          for (let i = 0; i < projectCards.length; i++) {
+            const cardElement = projectCards[i] as HTMLElement;
+            const cardRect = cardElement.getBoundingClientRect();
+            const cardMiddle = cardRect.top - columnRect.top + cardRect.height / 2;
+            
+            if (relativeY < cardMiddle) {
+              insertPosition = i;
+              break;
+            } else {
+              insertPosition = i + 1;
+            }
+          }
+          
+          insertPosition = Math.max(0, Math.min(insertPosition, statusProjects.length));
+          
+          const currentPosition = insertionPosition;
+          const isPositionChanged = !currentPosition || 
+            currentPosition.statusId !== statusId || 
+            currentPosition.position !== insertPosition;
+          
+          if (isPositionChanged) {
+            console.log('🎯 TOUCH DRAG - INSERTION POSITION CHANGED:', { 
+              from: currentPosition,
+              to: { statusId, position: insertPosition },
+              totalProjects: statusProjects.length 
+            });
+            onInsertionPositionChange?.({ statusId, position: insertPosition });
+          }
+        }
+        break;
+      }
+      dropZone = dropZone.parentElement;
+      attempts++;
+    }
+    
+    if (attempts >= 10) {
+      onInsertionPositionChange?.(null);
+    }
+  };
+
+  const handleTouchDragEnd = async (touch: React.Touch) => {
+    // Убираем все подсветки колонок
+    document.querySelectorAll('.kanban-column').forEach(col => {
+      const element = col as HTMLElement;
+      element.classList.remove('drag-highlight');
+    });
+    
+    const savedInsertionPosition = lastInsertionPositionRef.current;
+    
+    setIsDraggingManual(false);
+    onSetDragActive?.(false);
+    onInsertionPositionChange?.(null);
+    
+    // Сбрасываем стили
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    document.body.classList.remove('dragging-active');
+    
+    // Определяем элемент для drop
+    const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+    let dropZone = elementUnderTouch;
+    let attempts = 0;
+    
+    while (dropZone && attempts < 10) {
+      const statusId = dropZone.getAttribute('data-status-id');
+      const statusName = dropZone.getAttribute('data-status-name');
+      
+      if (statusId && statusName) {
+        const insertPositionToUse = savedInsertionPosition?.statusId === statusId 
+          ? savedInsertionPosition.position 
+          : undefined;
+          
+        console.log('📍 TOUCH DROP on column:', statusName, 'with insertion position:', insertPositionToUse);
+        
+        const isSameStatus = project.statusId?._id === statusId;
+        const isDifferentPosition = insertPositionToUse !== undefined;
+        
+        if (!isSameStatus || isDifferentPosition) {
+          const positionText = insertPositionToUse !== undefined 
+            ? ` на позицию ${insertPositionToUse + 1}` 
+            : '';
+          const loadingMessage = `Перемещаем проект "${project.name}"${positionText}...`;
+          
+          // Показываем уведомление
+          const notification = document.createElement('div');
+          notification.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span>${loadingMessage}</span>
+              <button style="
+                background: none;
+                border: none;
+                color: white;
+                font-size: 16px;
+                cursor: pointer;
+                padding: 0 0 0 12px;
+                margin: 0;
+                line-height: 1;
+              " onclick="this.parentElement.parentElement.remove()">✕</button>
+            </div>
+          `;
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2196f3;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-weight: 600;
+          `;
+          document.body.appendChild(notification);
+          
+          // Перемещаем проект
+          if (onProjectMove) {
+            try {
+              await onProjectMove(project._id, statusId, statusName, insertPositionToUse);
+              
+              const successText = insertPositionToUse !== undefined 
+                ? ` на позицию ${insertPositionToUse + 1}` 
+                : '';
+              notification.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span>Проект перемещен в "${statusName}"${successText}</span>
+                  <button style="
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 16px;
+                    cursor: pointer;
+                    padding: 0 0 0 12px;
+                    margin: 0;
+                    line-height: 1;
+                  " onclick="this.parentElement.parentElement.remove()">✕</button>
+                </div>
+              `;
+              notification.style.background = '#4caf50';
+              
+              setTimeout(() => {
+                if (notification.parentNode) {
+                  document.body.removeChild(notification);
+                }
+              }, 3000);
+              
+            } catch (err) {
+              notification.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span>Ошибка: ${err instanceof Error ? err.message : 'Не удалось переместить проект'}</span>
+                  <button style="
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 16px;
+                    cursor: pointer;
+                    padding: 0 0 0 12px;
+                    margin: 0;
+                    line-height: 1;
+                  " onclick="this.parentElement.parentElement.remove()">✕</button>
+                </div>
+              `;
+              notification.style.background = '#f44336';
+              
+              setTimeout(() => {
+                if (notification.parentNode) {
+                  document.body.removeChild(notification);
+                }
+              }, 5000);
+            }
+          }
+        }
+        return;
+      }
+      
+      dropZone = dropZone.parentElement;
+      attempts++;
+    }
+    
+    console.log('❌ Invalid touch drop zone');
+  };
   
   const handleManualMouseDown = (e: React.MouseEvent) => {
     e.preventDefault(); // Предотвращаем выделение текста
@@ -489,7 +802,10 @@ const SortableProject: React.FC<SortableProjectProps> = ({
 
   // Принудительно используем нашу реализацию вместо @dnd-kit
   const testHandlers = {
-    onMouseDown: handleManualMouseDown
+    onMouseDown: handleManualMouseDown,
+    onTouchStart: handleTouchStart,
+    onTouchMove: handleTouchMove,
+    onTouchEnd: handleTouchEnd
   };
 
   return (
@@ -502,6 +818,7 @@ const SortableProject: React.FC<SortableProjectProps> = ({
       }}
       {...testHandlers}
       data-project-id={project._id}
+      data-drag-mode={isDragMode ? 'true' : 'false'}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
@@ -509,7 +826,7 @@ const SortableProject: React.FC<SortableProjectProps> = ({
         cursor: isDraggingManual ? 'grabbing' : isHovered ? 'grab' : 'pointer',
         // Убираем transition для margin во время dragActive
         transition: isDragActive ? 'margin 0.2s ease' : (isDragging || isDraggingManual) ? 'none' : 'all 0.2s ease',
-        touchAction: 'none',
+        touchAction: isDragMode ? 'none' : 'auto',
         userSelect: 'none',
         WebkitUserSelect: 'none',
         borderRadius: '8px',
@@ -548,6 +865,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   isDragging = false,
   isDraggingManual = false
 }) => {
+  const isMobile = window.innerWidth < 768;
+  
   return (
     <div
       style={{
@@ -558,7 +877,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             ? '#f0f8ff' 
             : '#ffffff',
         borderRadius: 8,
-        padding: 16,
+        padding: isMobile ? 12 : 16,
         // Улучшенная синяя рамка при hover и dragging
         border: (isOverlay || isHovered || isDraggingManual)
           ? '2px solid #2196f3' 
@@ -698,6 +1017,8 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
     background: '#f8f9fa',
     borderRadius: 12,
     padding: 12,
+    width: '100%',
+    boxSizing: 'border-box' as const,
     minHeight: 'calc(100vh - 320px)',
     maxHeight: 'calc(100vh - 320px)',
     overflowY: 'auto' as const,
@@ -729,7 +1050,8 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
         transition: 'all 0.2s ease',
       }}
     >
-      {/* Заголовок колонки */}
+      {/* Заголовок колонки - только для десктопа */}
+      {isDesktop && (
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -765,13 +1087,14 @@ const DroppableStatus: React.FC<DroppableStatusProps> = ({
           {projects.length}
         </span>
       </div>
+      )}
 
             {/* Список проектов с динамическим spacing */}
       <div style={{
         flex: 1,
         overflowY: isDesktop ? 'auto' : 'visible',
         minHeight: 0,
-        padding: 4,
+        padding: isDesktop ? 4 : '12px 0 0 0',
       }}>
         <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
           {projects.map((project, index) => (
@@ -1296,7 +1619,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div style={{ padding: '0 8px', height: '100%' }}>
+      <div style={{ 
+        padding: '8px', 
+        height: '100%', 
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'visible'
+      }}>
         {/* Уведомление об ошибке */}
         {error && (
           <div style={{
@@ -1343,8 +1672,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
               <span style={{ color: '#000' }}>
                 {statuses[selectedStatusIndex]?.name || 'Выберите статус'}
               </span>
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ 
-                marginLeft: 8,
                 background: '#e0e0e0',
                 borderRadius: 12,
                 padding: '2px 6px',
@@ -1352,9 +1682,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 color: '#000'
               }}>
                 {projectsByStatus[statuses[selectedStatusIndex]?._id]?.length || 0}
-              </span>
             </span>
             <span style={{ fontSize: 12 }}>{showStatusMenu ? '▲' : '▼'}</span>
+            </div>
           </button>
 
           {showStatusMenu && (
@@ -1454,10 +1784,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       onDragEnd={handleDragEnd}
     >
       <div className="kanban-container" style={{ 
-        padding: '0px 16px 16px 16px',
+        padding: '0px 8px 16px 8px',
         height: '100%', 
         position: 'relative',
         minHeight: '100%',
+        width: '100%',
+        boxSizing: 'border-box'
 
       }}>
         {/* Уведомление об ошибке */}
@@ -1483,10 +1815,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
             overflowY: 'hidden',
             gap: 8,
             paddingBottom: 16,
-            paddingRight: 16,
             minHeight: '200px',
             height: '100%',
-            minWidth: 'fit-content',
+            width: '100%',
             scrollbarWidth: 'thin',
             scrollbarColor: '#c1c1c1 #f1f1f1',
 
@@ -1579,6 +1910,39 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
           
           .status-menu div[style*="background"] {
             color: #000 !important;
+          }
+          
+          /* Мобильные стили для полного заполнения экрана */
+          body {
+            overflow-x: hidden !important;
+          }
+          
+          .kanban-column {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            /* Улучшенный скролл для мобильных */
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+          
+          /* Оптимизация touch взаимодействия */
+          .kanban-column > div:last-child {
+            /* Область со списком карточек */
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior: contain !important;
+          }
+          
+          /* Карточки проектов на мобильных */
+          [data-project-id] {
+            /* Позволяем скролл по умолчанию, блокируем только в drag mode */
+            touch-action: auto !important;
+          }
+          
+          [data-project-id][data-drag-mode="true"] {
+            /* В drag mode блокируем все touch события */
+            touch-action: none !important;
           }
         }
       `}</style>

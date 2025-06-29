@@ -126,8 +126,61 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', minWidth: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f6f8fa' }}>
-      <div style={{ maxWidth: 400, width: '100%', padding: 24, background: '#fff', borderRadius: 12, boxShadow: '0 2px 16px #0001' }}>
+    <>
+      <style>{`
+        .custom-checkbox {
+          position: relative;
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+        }
+        
+        .custom-checkbox input[type="checkbox"] {
+          opacity: 0;
+          width: 16px;
+          height: 16px;
+          margin: 0;
+          cursor: pointer;
+        }
+        
+        .custom-checkbox::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 16px;
+          height: 16px;
+          background: #ffffff;
+          border: 1px solid #ccc;
+          border-radius: 3px;
+          pointer-events: none;
+        }
+        
+        .custom-checkbox input[type="checkbox"]:checked ~ .custom-checkbox::before {
+          background: #646cff;
+          border-color: #646cff;
+        }
+        
+        .custom-checkbox::after {
+          content: '';
+          position: absolute;
+          top: 2px;
+          left: 5px;
+          width: 4px;
+          height: 8px;
+          border: solid white;
+          border-width: 0 2px 2px 0;
+          transform: rotate(45deg);
+          opacity: 0;
+          pointer-events: none;
+        }
+        
+        .custom-checkbox input[type="checkbox"]:checked ~ .custom-checkbox::after {
+          opacity: 1;
+        }
+      `}</style>
+      <div style={{ minHeight: '100vh', minWidth: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f6f8fa' }}>
+        <div style={{ maxWidth: 400, width: '100%', padding: 24, background: '#fff', borderRadius: 12, boxShadow: '0 2px 16px #0001' }}>
         <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Вход в систему</h2>
         
         {!localUser && (
@@ -148,6 +201,10 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
                   width: '100%', 
                   boxSizing: 'border-box',
                   opacity: loading ? 0.7 : 1,
+                  backgroundColor: '#ffffff',
+                  color: '#333333',
+                  WebkitAppearance: 'none',
+                  appearance: 'none',
                 }}
               />
             </div>
@@ -168,6 +225,10 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
                   width: '100%', 
                   boxSizing: 'border-box',
                   opacity: loading ? 0.7 : 1,
+                  backgroundColor: '#ffffff',
+                  color: '#333333',
+                  WebkitAppearance: 'none',
+                  appearance: 'none',
                 }}
               />
               <button
@@ -204,16 +265,17 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
               </button>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, cursor: 'pointer', userSelect: 'none' }}>
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                disabled={loading}
-                onChange={e => {
-                  setRememberMe(e.target.checked);
-                  localStorage.setItem('rememberMe', String(e.target.checked));
-                }}
-                style={{ accentColor: '#646cff' }}
-              />
+              <div className="custom-checkbox">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  disabled={loading}
+                  onChange={e => {
+                    setRememberMe(e.target.checked);
+                    localStorage.setItem('rememberMe', String(e.target.checked));
+                  }}
+                />
+              </div>
               Запомнить меня
             </label>
             <button
@@ -289,5 +351,6 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
         )}
       </div>
     </div>
+    </>
   );
 } 

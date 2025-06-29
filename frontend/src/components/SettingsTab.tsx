@@ -377,6 +377,68 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
           .settings-tab-root div, .settings-tab-root span, .settings-tab-root label {
             color: #333 !important;
           }
+          .settings-tab-root input[type="number"] {
+            width: 160px !important;
+            padding: 8px !important;
+            border-radius: 6px !important;
+            border: 1px solid #ccc !important;
+            font-size: 15px !important;
+            margin-top: 2px !important;
+            box-sizing: border-box !important;
+            background: #fff !important;
+            color: #333 !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+          }
+          .settings-tab-root input[type="number"]:disabled {
+            background: #f5f5f5 !important;
+            color: #888 !important;
+          }
+          .settings-tab-root select {
+            width: 160px !important;
+            padding: 8px !important;
+            border-radius: 6px !important;
+            border: 1px solid #ccc !important;
+            font-size: 15px !important;
+            margin-top: 2px !important;
+            box-sizing: border-box !important;
+            background: #fff !important;
+            color: #333 !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+          }
+          .settings-tab-root select:disabled {
+            background: #f5f5f5 !important;
+            color: #888 !important;
+          }
+          .settings-tab-root input[type="checkbox"] {
+            width: 16px !important;
+            height: 16px !important;
+            background: #fff !important;
+            border: 1px solid #ccc !important;
+            border-radius: 3px !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            accent-color: #646cff !important;
+          }
+          .settings-tab-root input[type="radio"] {
+            width: 16px !important;
+            height: 16px !important;
+            background: #fff !important;
+            border: 1px solid #ccc !important;
+            border-radius: 50% !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            accent-color: #646cff !important;
+          }
+          .settings-tab-root input[type="checkbox"]:checked {
+            background: #646cff !important;
+            border-color: #646cff !important;
+          }
+          .settings-tab-root input[type="radio"]:checked {
+            background: #646cff !important;
+            border-color: #646cff !important;
+          }
         }
       `}</style>
     </div>
