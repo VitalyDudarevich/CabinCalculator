@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест API калькулятора</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        .pending { background-color: #fff3cd; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест API калькулятора</h1>
+    
+    <div id="tests"></div>
+    
+    <script>
+        const API_URL = 'https://cabincalculator.onrender.com';
+        
+        async function runTests() {
+            const testsDiv = document.getElementById('tests');
+            
+            // Тест 1: Основной endpoint
+            const test1 = document.createElement('div');
+            test1.className = 'test pending';
+            test1.innerHTML = '<strong>Тест 1:</strong> Проверка основного endpoint...';
+            testsDiv.appendChild(test1);
+            
+            try {
+                const response1 = await fetch(API_URL);
+                const data1 = await response1.text();
+                test1.className = 'test success';
+                test1.innerHTML = `<strong>✅ Тест 1:</strong> ${API_URL} - ${data1}`;
+            } catch (error) {
+                test1.className = 'test error';
+                test1.innerHTML = `<strong>❌ Тест 1:</strong> Ошибка - ${error.message}`;
+            }
+            
+            // Тест 2: Health check
+            const test2 = document.createElement('div');
+            test2.className = 'test pending';
+            test2.innerHTML = '<strong>Тест 2:</strong> Проверка health endpoint...';
+            testsDiv.appendChild(test2);
+            
+            try {
+                const response2 = await fetch(`${API_URL}/health`);
+                const data2 = await response2.json();
+                test2.className = 'test success';
+                test2.innerHTML = `<strong>✅ Тест 2:</strong> Health check - MongoDB: ${data2.mongodb}, Uptime: ${Math.round(data2.uptime)}s`;
+            } catch (error) {
+                test2.className = 'test error';
+                test2.innerHTML = `<strong>❌ Тест 2:</strong> Health check ошибка - ${error.message}`;
+            }
+            
+            // Тест 3: API endpoint
+            const test3 = document.createElement('div');
+            test3.className = 'test pending';
+            test3.innerHTML = '<strong>Тест 3:</strong> Проверка API endpoint...';
+            testsDiv.appendChild(test3);
+            
+            try {
+                const response3 = await fetch(`${API_URL}/api/auth/check`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response3.status === 401) {
+                    test3.className = 'test success';
+                    test3.innerHTML = '<strong>✅ Тест 3:</strong> API endpoint работает (401 - ожидаемо без токена)';
+                } else {
+                    const data3 = await response3.json();
+                    test3.className = 'test success';
+                    test3.innerHTML = `<strong>✅ Тест 3:</strong> API endpoint - Status: ${response3.status}`;
+                }
+            } catch (error) {
+                test3.className = 'test error';
+                test3.innerHTML = `<strong>❌ Тест 3:</strong> API endpoint ошибка - ${error.message}`;
+            }
+            
+            // Тест 4: CORS
+            const test4 = document.createElement('div');
+            test4.className = 'test pending';
+            test4.innerHTML = '<strong>Тест 4:</strong> Проверка CORS...';
+            testsDiv.appendChild(test4);
+            
+            try {
+                const response4 = await fetch(`${API_URL}/api/companies`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': 'https://glass-calculator-bg.vercel.app',
+                        'Access-Control-Request-Method': 'GET',
+                    }
+                });
+                
+                test4.className = 'test success';
+                test4.innerHTML = `<strong>✅ Тест 4:</strong> CORS работает - Status: ${response4.status}`;
+            } catch (error) {
+                test4.className = 'test error';
+                test4.innerHTML = `<strong>❌ Тест 4:</strong> CORS ошибка - ${error.message}`;
+            }
+        }
+        
+        // Запускаем тесты при загрузке
+        window.onload = runTests;
+    </script>
+</body>
+</html> 

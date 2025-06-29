@@ -39,3 +39,71 @@
 ```sh
 docker-compose down
 ```
+
+## Развертывание на продакшене
+
+### Бэкенд (Railway / Heroku / аналогичные)
+
+1. **Создайте аккаунт на Railway.app или аналогичной платформе**
+
+2. **Подключите репозиторий** и выберите папку `backend` для развертывания
+
+3. **Настройте переменные окружения** (используйте пример из `backend/env.example`):
+
+   ```
+   NODE_ENV=production
+   PORT=5000
+   MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/calculator
+   JWT_SECRET=your_jwt_secret_here
+   ALLOWED_ORIGINS=https://glass-calculator-bg.vercel.app
+   ```
+
+4. **Настройте MongoDB Atlas** (или аналогичную облачную базу):
+
+   - Создайте кластер на [MongoDB Atlas](https://cloud.mongodb.com/)
+   - Получите connection string и добавьте в `MONGODB_URI`
+   - Разрешите подключения от Railway в Network Access
+
+5. **После развертывания получите URL бэкенда** (например, `https://your-app.railway.app`)
+
+### Фронтенд (Vercel)
+
+1. **Настройте переменную окружения `VITE_API_URL`** в настройках Vercel:
+
+   ```
+   VITE_API_URL=https://your-backend-url.railway.app
+   ```
+
+2. **Пересоберите и разверните фронтенд**
+
+### Альтернативные платформы для бэкенда:
+
+- **Railway**: Простое развертывание из GitHub
+- **Heroku**: Популярная платформа (требует карту)
+- **DigitalOcean App Platform**: Доступные цены
+- **AWS/GCP/Azure**: Более сложная настройка, но больше возможностей
+
+### Проверка работоспособности
+
+После развертывания проверьте:
+
+1. `https://your-backend-url/health` - статус бэкенда
+2. `https://your-frontend-url` - фронтенд загружается
+3. Авторизация и API запросы работают корректно
+
+## Устранение проблем
+
+### Ошибки CORS
+
+- Убедитесь, что URL фронтенда добавлен в `ALLOWED_ORIGINS`
+- Проверьте logs бэкенда на предмет ошибок CORS
+
+### Ошибки подключения к БД
+
+- Проверьте `MONGODB_URI` на корректность
+- Убедитесь, что IP Railway/Heroku разрешен в MongoDB Atlas
+
+### API недоступен
+
+- Проверьте health check: `https://your-backend-url/health`
+- Убедитесь, что переменная `VITE_API_URL` правильно настроена в Vercel

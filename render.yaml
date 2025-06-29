@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: glass-calculator-backend
+    env: node
+    region: frankfurt # или другой ближайший регион
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false # будет задано через веб-интерфейс
+      - key: JWT_SECRET
+        sync: false # будет задано через веб-интерфейс
+      - key: ALLOWED_ORIGINS
+        value: https://glass-calculator-bg.vercel.app

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест данных API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ddd; background: #f9f9f9; }
+        .error { background-color: #f8d7da; }
+        .success { background-color: #d4edda; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .input-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { padding: 8px; width: 300px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Проверка данных API</h1>
+    
+    <div class="input-group">
+        <label>Токен авторизации:</label>
+        <input type="text" id="tokenInput" placeholder="Вставьте токен из localStorage">
+        <button onclick="getTokenFromStorage()">Получить из браузера</button>
+    </div>
+    
+    <div class="input-group">
+        <label>Company ID:</label>
+        <input type="text" id="companyIdInput" placeholder="ID компании">
+    </div>
+    
+    <button onclick="testGlassAPI()">Проверить Glass API</button>
+    <button onclick="testHardwareAPI()">Проверить Hardware API</button>
+    <button onclick="testCompaniesAPI()">Проверить Companies API</button>
+    <button onclick="testAllAPIs()">Проверить все</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        const API_URL = 'https://cabincalculator.onrender.com/api';
+        
+        function getTokenFromStorage() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                document.getElementById('tokenInput').value = token;
+                addResult('success', 'Токен найден в localStorage');
+            } else {
+                addResult('error', 'Токен не найден в localStorage');
+            }
+        }
+        
+        function addResult(type, title, content = '') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = `
+                <strong>${title}</strong>
+                ${content ? `<pre>${content}</pre>` : ''}
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        async function makeAuthenticatedRequest(endpoint) {
+            const token = document.getElementById('tokenInput').value;
+            const companyId = document.getElementById('companyIdInput').value;
+            
+            if (!token) {
+                throw new Error('Нужен токен авторизации');
+            }
+            
+            const url = companyId ? 
+                `${API_URL}${endpoint}?companyId=${companyId}` : 
+                `${API_URL}${endpoint}`;
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            return {
+                status: response.status,
+                ok: response.ok,
+                data: data
+            };
+        }
+        
+        async function testGlassAPI() {
+            try {
+                addResult('', '🔍 Проверяю Glass API...');
+                const result = await makeAuthenticatedRequest('/glass');
+                
+                if (result.ok) {
+                    addResult('success', 
+                        `✅ Glass API - Статус: ${result.status}`, 
+                        `Найдено записей: ${result.data.length}\n\n${JSON.stringify(result.data, null, 2)}`
+                    );
+                } else {
+                    addResult('error', 
+                        `❌ Glass API - Ошибка ${result.status}`, 
+                        JSON.stringify(result.data, null, 2)
+                    );
+                }
+            } catch (error) {
+                addResult('error', '❌ Glass API - Ошибка запроса', error.message);
+            }
+        }
+        
+        async function testHardwareAPI() {
+            try {
+                addResult('', '🔍 Проверяю Hardware API...');
+                const result = await makeAuthenticatedRequest('/hardware');
+                
+                if (result.ok) {
+                    addResult('success', 
+                        `✅ Hardware API - Статус: ${result.status}`, 
+                        `Найдено записей: ${result.data.length}\n\n${JSON.stringify(result.data, null, 2)}`
+                    );
+                } else {
+                    addResult('error', 
+                        `❌ Hardware API - Ошибка ${result.status}`, 
+                        JSON.stringify(result.data, null, 2)
+                    );
+                }
+            } catch (error) {
+                addResult('error', '❌ Hardware API - Ошибка запроса', error.message);
+            }
+        }
+        
+        async function testCompaniesAPI() {
+            try {
+                addResult('', '🔍 Проверяю Companies API...');
+                const result = await makeAuthenticatedRequest('/companies');
+                
+                if (result.ok) {
+                    addResult('success', 
+                        `✅ Companies API - Статус: ${result.status}`, 
+                        `Найдено компаний: ${result.data.length}\n\n${JSON.stringify(result.data, null, 2)}`
+                    );
+                    
+                    // Автоматически заполняем первый companyId
+                    if (result.data.length > 0) {
+                        const firstCompanyId = result.data[0]._id;
+                        document.getElementById('companyIdInput').value = firstCompanyId;
+                        addResult('success', `📋 Автоматически установлен Company ID: ${firstCompanyId}`);
+                    }
+                } else {
+                    addResult('error', 
+                        `❌ Companies API - Ошибка ${result.status}`, 
+                        JSON.stringify(result.data, null, 2)
+                    );
+                }
+            } catch (error) {
+                addResult('error', '❌ Companies API - Ошибка запроса', error.message);
+            }
+        }
+        
+        async function testAllAPIs() {
+            // Очищаем результаты
+            document.getElementById('results').innerHTML = '';
+            
+            // Сначала получаем токен и компании
+            getTokenFromStorage();
+            await testCompaniesAPI();
+            
+            // Затем тестируем данные
+            await testGlassAPI();
+            await testHardwareAPI();
+        }
+        
+        // Автоматически получаем токен при загрузке
+        window.onload = () => {
+            getTokenFromStorage();
+        };
+    </script>
+</body>
+</html> 

@@ -238,6 +238,16 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       console.log('CalculatorForm: используем переданные данные', propsSettings);
       console.log('📊 Status list from settings:', propsSettings.statusList);
       
+      // ОТЛАДКА: проверяем структуру glassList
+      console.log('🔍 ОТЛАДКА glassList:', propsSettings.glassList);
+      console.log('🔍 ОТЛАДКА glassList Array?:', Array.isArray(propsSettings.glassList));
+      if (Array.isArray(propsSettings.glassList)) {
+        console.log('🔍 ОТЛАДКА glassList.length:', propsSettings.glassList.length);
+        propsSettings.glassList.forEach((glass, index) => {
+          console.log(`🔍 ОТЛАДКА glass[${index}]:`, glass);
+        });
+      }
+      
       // Преобразуем данные hardwareList чтобы добавить _id если его нет
       const hardwareData = Array.isArray(propsSettings.hardwareList) 
         ? propsSettings.hardwareList.map((item, index) => ({
@@ -248,10 +258,13 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           }))
         : [];
       setHardwareList(hardwareData);
+      
       // Собираем уникальные цвета стекла для выпадающего списка
       const uniqueColors = Array.from(new Set((Array.isArray(propsSettings.glassList) ? propsSettings.glassList : []).map((g: unknown) => (g as { color?: string }).color).filter((c: unknown): c is string => Boolean(c))));
+      console.log('🔍 ОТЛАДКА uniqueColors:', uniqueColors);
       setGlassColors(uniqueColors);
       setGlassColor(uniqueColors[0] || '');
+      console.log('🔍 ОТЛАДКА первый цвет:', uniqueColors[0] || 'НЕТ ЦВЕТОВ');
     } else {
       console.log('CalculatorForm: данные еще не загружены');
       setHardwareList([]);
