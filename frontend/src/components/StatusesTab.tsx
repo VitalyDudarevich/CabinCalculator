@@ -168,9 +168,7 @@ const SortableStatusCard: React.FC<SortableStatusCardProps> = ({
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: status.color,
-                border: '2px solid #fff',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                background: status.color
               }}
             />
           )}

@@ -183,9 +183,16 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
   if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   return (
-    <div style={{
+    <div className="base-costs-tab-root" style={{
+      maxWidth: 900,
+      margin: '0 auto',
+      background: '#fff',
+      borderRadius: 12,
+      boxShadow: '0 1px 4px #0001',
+      padding: 24,
       minHeight: 500,
-      width: '100%'
+      width: '100%',
+      boxSizing: 'border-box'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>Базовая стоимость конструкций</h2>
@@ -225,8 +232,8 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
         {success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
         {baseCosts.length === 0 && <div style={{ color: '#bbb', fontStyle: 'italic', marginBottom: 8 }}>Нет базовых стоимостей</div>}
       {baseCosts.map((item, idx) => (
-        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, position: 'relative' }}>
-          <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, position: 'relative', minHeight: 60 }}>
+          <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 15, fontWeight: 500 }}>
             {item.name}:
             <input
               type="number"
@@ -235,7 +242,7 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
               value={item.value === null ? '' : item.value}
               onChange={e => handleChangeBaseCost(idx, e.target.value)}
               disabled={!editMode}
-              style={{ width: 140, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, marginTop: 2 }}
+              style={{ width: 200, padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, marginTop: 2, background: !editMode ? '#f5f5f5' : '#fff', boxSizing: 'border-box', color: !editMode ? '#888' : undefined }}
             />
           </label>
           {editMode && (
@@ -247,13 +254,13 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
       ))}
       {editMode && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
             <input
               type="text"
               placeholder="Название базовой стоимости"
               value={addBaseName}
               onChange={e => { setAddBaseName(e.target.value); setAddError(''); }}
-              style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, flex: 2 }}
+              style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, width: 300, boxSizing: 'border-box' }}
             />
             <input
               type="number"
@@ -262,24 +269,41 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
               placeholder="Значение"
               value={addBaseValue}
               onChange={e => setAddBaseValue(e.target.value === '' ? '' : Number(e.target.value))}
-              style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, width: 120 }}
+              style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', fontSize: 15, width: 150, boxSizing: 'border-box' }}
             />
-            <button type="button" onClick={handleAddBaseCost} style={{ padding: '8px 16px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 500, fontSize: 15, cursor: 'pointer' }}>Добавить</button>
+            <button type="button" onClick={handleAddBaseCost} style={{ padding: '8px 16px', borderRadius: 8, background: '#646cff', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}>Добавить</button>
           </div>
           {addError && <div style={{ color: 'crimson', marginTop: 4 }}>{addError}</div>}
         </>
       )}
       </div>
       <style>{`
+        @media (max-width: 768px) {
+          .base-costs-tab-root {
+            max-width: 100% !important;
+            margin: 0 8px !important;
+            padding: 16px !important;
+          }
+          .base-costs-tab-root > div:first-child {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+          .base-costs-tab-root > div:first-child > div {
+            display: flex !important;
+            gap: 8px !important;
+          }
+        }
         @media (max-width: 600px) {
           /* Мобильные стили для видимости текста */
-          div,
-          h1, h2, h3,
-          span, label {
+          .base-costs-tab-root,
+          .base-costs-tab-root div,
+          .base-costs-tab-root h1, .base-costs-tab-root h2, .base-costs-tab-root h3,
+          .base-costs-tab-root span, .base-costs-tab-root label {
             color: #333 !important;
           }
-          input[type="number"] {
-            width: 160px !important;
+          .base-costs-tab-root input[type="number"] {
+            width: 200px !important;
             padding: 8px !important;
             border-radius: 6px !important;
             border: 1px solid #ccc !important;
@@ -289,11 +313,11 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
             background: #fff !important;
             color: #333 !important;
           }
-          input[type="number"]:disabled {
+          .base-costs-tab-root input[type="number"]:disabled {
             background: #f5f5f5 !important;
             color: #888 !important;
           }
-          input[type="text"] {
+          .base-costs-tab-root input[type="text"] {
             padding: 8px !important;
             border-radius: 6px !important;
             border: 1px solid #ccc !important;
@@ -301,6 +325,7 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
             background: #fff !important;
             color: #333 !important;
             box-sizing: border-box !important;
+            width: 280px !important;
           }
         }
       `}</style>
