@@ -118,6 +118,8 @@ exports.updateStatus = async (req, res) => {
       }
     }
 
+    const originalName = status.name;
+
     // Обновляем поля
     if (name) status.name = name;
     if (color) status.color = color;
@@ -126,9 +128,31 @@ exports.updateStatus = async (req, res) => {
 
     await status.save();
 
-    // Если статус был деактивирован, нужно обновить проекты с этим статусом
+    // Если изменилось название статуса, обновляем все проекты с этим статусом
+    if (name && name !== originalName) {
+      const projects = await Project.find({ statusId: statusId });
+
+      for (const project of projects) {
+        // Обновляем текущий статус проекта
+        project.status = name;
+
+        // Добавляем запись в историю статусов о том, что статус был переименован
+        if (!project.statusHistory) {
+          project.statusHistory = [];
+        }
+
+        project.statusHistory.push({
+          status: name,
+          changedAt: new Date(),
+          note: `Статус переименован с "${originalName}" на "${name}"`,
+        });
+
+        await project.save();
+      }
+    }
+
+    // Если статус был деактивирован, обновляем проекты
     if (isActive === false) {
-      // Найдем статус "Рассчет" как fallback
       const fallbackStatus = await Status.findOne({
         name: 'Рассчет',
         companyId: status.companyId,
@@ -136,13 +160,24 @@ exports.updateStatus = async (req, res) => {
       });
 
       if (fallbackStatus) {
-        await Project.updateMany(
-          { statusId: statusId },
-          {
-            statusId: fallbackStatus._id,
-            status: fallbackStatus.name, // Для обратной совместимости
-          },
-        );
+        const projects = await Project.find({ statusId: statusId });
+
+        for (const project of projects) {
+          project.statusId = fallbackStatus._id;
+          project.status = fallbackStatus.name;
+
+          if (!project.statusHistory) {
+            project.statusHistory = [];
+          }
+
+          project.statusHistory.push({
+            status: fallbackStatus.name,
+            changedAt: new Date(),
+            note: `Статус "${originalName}" был деактивирован, проект перемещен в статус "${fallbackStatus.name}"`,
+          });
+
+          await project.save();
+        }
       }
     }
 
@@ -169,46 +204,20 @@ exports.deleteStatus = async (req, res) => {
       return res.status(404).json({ error: 'Status not found' });
     }
 
-    // Проверяем, что это не системный статус
-    if (status.isDefault) {
-      return res.status(403).json({
-        error: 'Cannot delete default system status',
-      });
-    }
-
     // Проверяем, есть ли проекты с этим статусом
     const projectsCount = await Project.countDocuments({ statusId: statusId });
 
     if (projectsCount > 0) {
-      // Найдем статус "Рассчет" как fallback
-      const fallbackStatus = await Status.findOne({
-        name: 'Рассчет',
-        companyId: status.companyId,
-        isActive: true,
+      return res.status(400).json({
+        error: `Cannot delete status: ${projectsCount} project(s) are using this status. Please move all projects to another status first.`,
+        projectsCount,
       });
-
-      if (!fallbackStatus) {
-        return res.status(400).json({
-          error:
-            'Cannot delete status: no fallback status available and projects are using this status',
-        });
-      }
-
-      // Переносим все проекты на fallback статус
-      await Project.updateMany(
-        { statusId: statusId },
-        {
-          statusId: fallbackStatus._id,
-          status: fallbackStatus.name,
-        },
-      );
     }
 
     await Status.findByIdAndDelete(statusId);
 
     res.json({
       message: 'Status deleted successfully',
-      projectsMoved: projectsCount,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

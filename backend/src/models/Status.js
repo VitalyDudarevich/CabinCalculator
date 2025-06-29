@@ -50,10 +50,9 @@ statusSchema.statics.getDefaultStatuses = function () {
     { name: 'Рассчет', color: '#bdbdbd', order: 1, isDefault: true },
     { name: 'Согласован', color: '#1976d2', order: 2, isDefault: true },
     { name: 'Заказан', color: '#ffa000', order: 3, isDefault: true },
-    { name: 'Стекло Доставлено', color: '#00bcd4', order: 4, isDefault: true },
-    { name: 'Установка', color: '#7b1fa2', order: 5, isDefault: true },
-    { name: 'Установлено', color: '#388e3c', order: 6, isDefault: true },
-    { name: 'Оплачено', color: '#2e7d32', order: 7, isDefault: true },
+    { name: 'Стекло доставлено', color: '#00bcd4', order: 4, isDefault: true },
+    { name: 'Установлено', color: '#388e3c', order: 5, isDefault: true },
+    { name: 'Оплачено', color: '#2e7d32', order: 6, isDefault: true },
   ];
 };
 

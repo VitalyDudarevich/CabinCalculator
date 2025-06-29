@@ -4,6 +4,7 @@ import CompaniesTab from '../components/CompaniesTab';
 import UsersTab from '../components/UsersTab';
 import HardwareTab from '../components/HardwareTab';
 import TemplatesTab from '../components/TemplatesTab';
+import StatusesTab from '../components/StatusesTab';
 // import HardwareTab from '../components/HardwareTab'; // если понадобится
 import type { User } from '../types/User';
 import type { Company } from '../types/Company';
@@ -334,6 +335,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const sections = [
     ...(user && user.role === 'superadmin' ? [{ key: 'companies', label: 'Компании' }] : []),
     { key: 'users', label: 'Пользователи' },
+    { key: 'statuses', label: 'Статусы' },
     { key: 'hardware', label: 'Цены' },
     { key: 'templates', label: 'Шаблоны' },
     { key: 'settings', label: 'Настройки' },
@@ -462,6 +464,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               userRole={user.role}
               fetchWithAuth={fetchWithAuth}
               onRefreshUsers={refreshUsers}
+            />
+          ) : section === 'statuses' ? (
+            <StatusesTab
+              selectedCompanyId={effectiveCompanyId}
+              fetchWithAuth={fetchWithAuth}
+              onRefreshStatuses={() => {
+                // Здесь можно добавить дополнительную логику обновления
+                console.log('Statuses updated, refreshing related data...');
+              }}
             />
           ) : section === 'hardware' ? (
             <HardwareTab
