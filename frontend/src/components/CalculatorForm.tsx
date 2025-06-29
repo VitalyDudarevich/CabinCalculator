@@ -808,7 +808,9 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     }
     
     // Находим statusId по названию статуса
-    const selectedStatus = propsSettings?.statusList?.find(s => s.name === status);
+    const selectedStatus = Array.isArray(propsSettings?.statusList) 
+      ? propsSettings.statusList.find(s => s.name === status) 
+      : undefined;
     const statusId = selectedStatus?._id;
     
     console.log('🎯 Status data:', { 
@@ -1155,7 +1157,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             <option value="corner">Угловая раздвижная</option>
             <option value="unique">Уникальная конфигурация</option>
             <option value="partition">Перегородка</option>
-            {templates.filter(template => !template.isSystem).length > 0 && (
+            {Array.isArray(templates) && templates.filter(template => !template.isSystem).length > 0 && (
               <optgroup label="Пользовательские шаблоны">
                 {templates.filter(template => !template.isSystem).map(template => (
                   <option key={template._id} value={`template-${template._id}`}>
@@ -1774,7 +1776,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
                     onChange={e => handleGlassChange(idx, 'color', e.target.value)}
                     style={{ width: '100%' }}>
                     <option value="" disabled hidden></option>
-                    {glassColors.map(color => <option key={color} value={color}>{color}</option>)}
+                    {glassColors.length > 0 && glassColors.map(color => <option key={color} value={color}>{color}</option>)}
                   </select>
                   <label htmlFor={`glass-color-${idx}`}>Цвет стекла</label>
                 </div>
