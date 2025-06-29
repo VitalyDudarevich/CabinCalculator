@@ -38,7 +38,7 @@ exports.getStatusById = async (req, res) => {
 // Создать новый статус
 exports.createStatus = async (req, res) => {
   try {
-    const { name, color, companyId, order } = req.body;
+    const { name, color, companyId, order, isCompletedForAnalytics } = req.body;
 
     // Валидация обязательных полей
     if (!name || !color || !companyId) {
@@ -74,6 +74,7 @@ exports.createStatus = async (req, res) => {
       companyId,
       order: statusOrder,
       isDefault: false, // Пользовательские статусы не являются default
+      isCompletedForAnalytics: isCompletedForAnalytics || false,
     });
 
     await status.save();
@@ -94,7 +95,7 @@ exports.createStatus = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const statusId = req.params.id;
-    const { name, color, order } = req.body;
+    const { name, color, order, isCompletedForAnalytics } = req.body;
 
     const status = await Status.findById(statusId);
 
@@ -123,6 +124,8 @@ exports.updateStatus = async (req, res) => {
     if (name) status.name = name;
     if (color) status.color = color;
     if (typeof order === 'number') status.order = order;
+    if (typeof isCompletedForAnalytics === 'boolean')
+      status.isCompletedForAnalytics = isCompletedForAnalytics;
 
     await status.save();
 

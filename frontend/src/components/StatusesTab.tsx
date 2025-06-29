@@ -28,6 +28,7 @@ interface Status {
   companyId: string;
   isDefault: boolean;
   isActive: boolean;
+  isCompletedForAnalytics?: boolean;
   projectCount?: number;
   createdAt: string;
   updatedAt: string;
@@ -177,35 +178,81 @@ const SortableStatusCard: React.FC<SortableStatusCardProps> = ({
         {/* Название статуса */}
         <div style={{ flex: 1 }}>
           {isEditing ? (
-            <input
-              type="text"
-              value={editingStatus.name}
-              onChange={(e) => setEditingStatus({ ...editingStatus, name: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '2px solid #646cff',
-                borderRadius: 8,
-                fontSize: 16,
-                fontWeight: 600,
-                color: '#000',
-                background: '#fff',
-                outline: 'none'
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input
+                type="text"
+                value={editingStatus.name}
+                onChange={(e) => setEditingStatus({ ...editingStatus, name: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '2px solid #646cff',
+                  borderRadius: 8,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: '#000',
+                  background: '#fff',
+                  outline: 'none'
+                }}
+                placeholder="Название статуса"
+                autoFocus
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              />
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 14,
+                color: '#666',
+                cursor: 'pointer'
               }}
-              placeholder="Название статуса"
-              autoFocus
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-            />
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={editingStatus.isCompletedForAnalytics || false}
+                  onChange={(e) => setEditingStatus({ 
+                    ...editingStatus, 
+                    isCompletedForAnalytics: e.target.checked 
+                  })}
+                  style={{ 
+                    width: 16, 
+                    height: 16,
+                    accentColor: '#646cff'
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                />
+                <span>Завершенный для аналитики</span>
+              </label>
+            </div>
           ) : (
-            <h3 style={{ 
-              margin: 0, 
-              fontSize: 18, 
-              fontWeight: 600, 
-              color: '#000' 
-            }}>
-              {status.name}
-            </h3>
+            <div>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: 18, 
+                fontWeight: 600, 
+                color: '#000' 
+              }}>
+                {status.name}
+              </h3>
+              {status.isCompletedForAnalytics && (
+                <div style={{
+                  display: 'inline-block',
+                  marginTop: 4,
+                  padding: '2px 8px',
+                  background: '#e8f5e8',
+                  color: '#2e7d32',
+                  borderRadius: 12,
+                  fontSize: 12,
+                  fontWeight: 500
+                }}>
+                  ✓ Завершенный
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -461,7 +508,8 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
         body: JSON.stringify({
           name: editingStatus.name,
           color: editingStatus.color,
-          order: editingStatus.order
+          order: editingStatus.order,
+          isCompletedForAnalytics: editingStatus.isCompletedForAnalytics || false
         })
       });
 

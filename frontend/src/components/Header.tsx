@@ -56,6 +56,7 @@ const Header: React.FC<HeaderProps> = ({
   if (user && (user.role === 'admin' || user.role === 'superadmin')) {
     tabs.push({ label: 'Калькулятор', path: '/calculator' });
     tabs.push({ label: 'Проекты', path: '/project-progress' });
+    tabs.push({ label: 'Аналитика', path: '/analytics' });
     tabs.push({ label: 'Админ-панель', path: '/admin' });
   } else if (user && user.role === 'user') {
     tabs.push({ label: 'Калькулятор', path: '/calculator' });
@@ -302,6 +303,23 @@ const Header: React.FC<HeaderProps> = ({
                 }}
               >
                 Проекты
+              </button>
+              <button
+                onClick={() => navigate('/analytics')}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: 8,
+                  background: location.pathname === '/analytics' ? '#646cff' : '#fff',
+                  color: location.pathname === '/analytics' ? '#fff' : '#646cff',
+                  border: '2px solid #646cff',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginRight: 8,
+                  boxShadow: '0 1px 4px #646cff22',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+              >
+                Аналитика
               </button>
               <button
                 onClick={() => navigate('/admin')}

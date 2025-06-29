@@ -107,8 +107,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
       const payload = {
         companyId: company?._id,
         currency: settings.currency,
-        usdRate: settings.usdRate === '' ? 0 : Math.round(parseFloat(settings.usdRate) * 100) / 100,
-        rrRate: settings.rrRate === '' ? 0 : Math.round(parseFloat(settings.rrRate) * 100) / 100,
+        usdRate: settings.usdRate === '' ? 0 : Math.round(parseFloat(settings.usdRate) * 10000) / 10000,
+        rrRate: settings.rrRate === '' ? 0 : Math.round(parseFloat(settings.rrRate) * 10000) / 10000,
         showUSD: settings.showUSD,
         showRR: settings.showRR,
         baseIsPercent: settings.baseIsPercent,
@@ -234,7 +234,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                 Курс USD:
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.0001"
                   min="0"
                   value={settings.usdRate == null ? '' : settings.usdRate}
                   onChange={e => setSettings(prev => ({ ...prev, usdRate: e.target.value }))}
@@ -259,7 +259,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                 Курс RR:
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.0001"
                   min="0"
                   value={settings.rrRate == null ? '' : settings.rrRate}
                   onChange={e => setSettings(prev => ({ ...prev, rrRate: e.target.value }))}

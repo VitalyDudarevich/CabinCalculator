@@ -4,6 +4,7 @@ import AuthPage from './pages/AuthPage';
 import AdminPanel from './pages/AdminPanel';
 import CalculatorPageWrapper from './pages/CalculatorPage';
 import ProjectProgressPage from './pages/ProjectProgressPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import Header from './components/Header';
 import type { Company } from './types/Company';
 import type { User } from './types/User';
@@ -237,6 +238,15 @@ export default function App() {
                 setSelectedCompanyId={setSelectedCompanyId}
                 setCompanies={setCompanies}
                 onLogout={handleLogout}
+              />
+            } />
+          )}
+          
+          {(user.role === 'admin' || user.role === 'superadmin') && (
+            <Route path="/analytics" element={
+              <AnalyticsPage 
+                user={user} 
+                selectedCompanyId={selectedCompanyId}
               />
             } />
           )}

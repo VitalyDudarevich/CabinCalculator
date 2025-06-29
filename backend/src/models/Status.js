@@ -31,6 +31,11 @@ const statusSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isCompletedForAnalytics: {
+      type: Boolean,
+      default: false,
+      description: 'Учитывать ли этот статус как завершенный в аналитике',
+    },
   },
   {
     timestamps: true,
@@ -47,12 +52,48 @@ statusSchema.index({ isActive: 1 });
 // Статический метод для получения статусов по умолчанию
 statusSchema.statics.getDefaultStatuses = function () {
   return [
-    { name: 'Рассчет', color: '#bdbdbd', order: 1, isDefault: true },
-    { name: 'Согласован', color: '#1976d2', order: 2, isDefault: true },
-    { name: 'Заказан', color: '#ffa000', order: 3, isDefault: true },
-    { name: 'Стекло доставлено', color: '#00bcd4', order: 4, isDefault: true },
-    { name: 'Установлено', color: '#388e3c', order: 5, isDefault: true },
-    { name: 'Оплачено', color: '#2e7d32', order: 6, isDefault: true },
+    {
+      name: 'Рассчет',
+      color: '#bdbdbd',
+      order: 1,
+      isDefault: true,
+      isCompletedForAnalytics: false,
+    },
+    {
+      name: 'Согласован',
+      color: '#1976d2',
+      order: 2,
+      isDefault: true,
+      isCompletedForAnalytics: false,
+    },
+    {
+      name: 'Заказан',
+      color: '#ffa000',
+      order: 3,
+      isDefault: true,
+      isCompletedForAnalytics: false,
+    },
+    {
+      name: 'Стекло доставлено',
+      color: '#00bcd4',
+      order: 4,
+      isDefault: true,
+      isCompletedForAnalytics: false,
+    },
+    {
+      name: 'Установлено',
+      color: '#388e3c',
+      order: 5,
+      isDefault: true,
+      isCompletedForAnalytics: false,
+    },
+    {
+      name: 'Оплачено',
+      color: '#2e7d32',
+      order: 6,
+      isDefault: true,
+      isCompletedForAnalytics: true,
+    },
   ];
 };
 
