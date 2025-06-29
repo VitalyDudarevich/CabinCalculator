@@ -66,6 +66,7 @@ interface CalculationDetailsProps {
   onTotalChange?: (total: number, deliveryPrice: number, installPrice: number) => void;
   exactHeight?: boolean;
   onExactHeightChange?: (checked: boolean) => void;
+  isEditing?: boolean; // Флаг режима редактирования
 }
 
 const configLabels: Record<string, string> = {
@@ -98,7 +99,7 @@ const normalizeName = (name: string) =>
 
 console.log('CalculationDetails: компонент монтируется');
 
-const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyId, settings: propsSettings, onTotalChange, exactHeight, onExactHeightChange }) => {
+const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyId, settings: propsSettings, onTotalChange, exactHeight, onExactHeightChange, isEditing }) => {
   console.log('CalculationDetails: companyId проп:', companyId);
   console.log('CalculationDetails: draft:', draft);
   console.log('CalculationDetails: propsSettings:', propsSettings);
@@ -562,12 +563,13 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
 
   return (
     <div className="calculation-details-container" style={{ 
-      padding: 24,
+      padding: '24px 24px 80px 24px',
       minWidth: 320, 
       flex: 1,
       color: '#000',
       overflowX: 'hidden',
-      maxWidth: '100%'
+      maxWidth: '100%',
+      boxSizing: 'border-box'
     }}>
       <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 16, color: '#000' }}>Детали расчёта</h2>
       {draft && Object.keys(draft).length > 0 ? (
@@ -609,11 +611,15 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             <div style={{ margin: '8px 0 0 0' }}>
               <b>Стёкла:</b>
               <ul style={{ margin: '6px 0 0 0', paddingLeft: 24 }}>
-                {draft.uniqueGlasses.map((glass, idx) => (
-                  <li key={idx}>
-                    {glass.name}: {glass.color} {glass.thickness} мм: {glass.width} × {glass.height}
-                  </li>
-                ))}
+                {draft.uniqueGlasses.map((glass, idx) => {
+                  const heightValue = exactHeight ? Number(glass.height) - 3 : Number(glass.height);
+                  const heightSuffix = exactHeight ? ' (нестандартная высота -3мм)' : '';
+                  return (
+                    <li key={idx}>
+                      {glass.name}: {glass.color} {glass.thickness} мм: {glass.width} × {heightValue} мм{heightSuffix}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -694,7 +700,20 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           {draft.hardwareColor && <div><b>Цвет фурнитуры:</b> {hardwareColorLabels[draft.hardwareColor] || draft.hardwareColor}</div>}
           {/* Для перегородки — размер стекла */}
           {draft.config === 'partition' && draft.width && draft.height && (
-            <div><b>Размер стекла:</b> {draft.width} × {draft.height} мм</div>
+            <div><b>Размер стекла:</b> {draft.width} × {exactHeight ? Number(draft.height) - 3 : Number(draft.height)} мм</div>
+          )}
+          {/* Чекбокс нестандартной высоты для перегородки */}
+          {draft.config === 'partition' && (
+            <div style={{ margin: '8px 0' }}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!exactHeight}
+                  onChange={e => onExactHeightChange?.(e.target.checked)}
+                />{' '}
+                Нестандартная высота
+              </label>
+            </div>
           )}
 
           {/* Для стекляшки — общий размер стекла */}
@@ -776,9 +795,129 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
               </label>
             </div>
           )}
+          {/* Кнопка копирования для производства - только при редактировании */}
+          {draft && (draft.glassColor || draft.width || draft.height) && isEditing && (
+            <div style={{ margin: '18px 0 12px 0' }}>
+              <button
+                onClick={() => {
+                                     // Собираем информацию для производства
+                   const productionInfo = [];
+                   
+                   // Для уникальной конфигурации не добавляем общие параметры стекла
+                   if (draft.config !== 'unique') {
+                     if (draft.glassColor) {
+                       productionInfo.push(`Цвет стекла: ${draft.glassColor}`);
+                     }
+                     
+                     if (draft.glassThickness) {
+                       productionInfo.push(`Толщина стекла: ${draft.glassThickness} мм`);
+                     }
+                   }
+                  
+                  // Размеры стекла в зависимости от конфигурации
+                  if (draft.config === 'glass' && draft.width && draft.height) {
+                    const height = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                    productionInfo.push(`Размеры стекла: ${draft.width} × ${height} мм`);
+                  } else if (['straight', 'straight-glass', 'straight-opening'].includes(String(draft.config))) {
+                    if (draft.showGlassSizes && draft.stationaryWidth && draft.doorWidth && draft.height) {
+                      const stationaryHeight = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                      const doorHeight = exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8;
+                      const stationaryWidth = Number(draft.stationaryWidth) - Number(draft.doorWidth) + 30;
+                      productionInfo.push(`Размеры стекла:`);
+                      productionInfo.push(`- Стационар: ${stationaryWidth} × ${stationaryHeight} мм`);
+                      productionInfo.push(`- Дверь: ${draft.doorWidth} × ${doorHeight} мм`);
+                    } else if (!draft.showGlassSizes && draft.width && draft.height) {
+                      const stationaryHeight = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                      const doorHeight = exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8;
+                      const glassWidth = Math.round((Number(draft.width) + 30) / 2);
+                      productionInfo.push(`Размеры стекла:`);
+                      productionInfo.push(`- Стационар: ${glassWidth} × ${stationaryHeight} мм`);
+                      productionInfo.push(`- Дверь: ${glassWidth} × ${doorHeight} мм`);
+                    }
+                  } else if (draft.config === 'corner' && draft.width && draft.length && draft.height) {
+                    const stationaryHeight = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                    const doorHeight = exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8;
+                    productionInfo.push(`Размеры стекла:`);
+                    productionInfo.push(`- Стационар 1: ${Math.round(Number(draft.width) / 2)} × ${stationaryHeight} мм`);
+                    productionInfo.push(`- Дверь 1: ${Math.round(Number(draft.width) / 2)} × ${doorHeight} мм`);
+                    productionInfo.push(`- Стационар 2: ${Math.round(Number(draft.length) / 2)} × ${stationaryHeight} мм`);
+                    productionInfo.push(`- Дверь 2: ${Math.round(Number(draft.length) / 2)} × ${doorHeight} мм`);
+                  } else if (draft.config === 'partition' && draft.width && draft.height) {
+                    const height = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                    const heightSuffix = exactHeight ? ' (нестандартная высота -3мм)' : '';
+                    productionInfo.push(`Размеры стекла: ${draft.width} × ${height} мм${heightSuffix}`);
+                                     } else if (draft.config === 'unique' && Array.isArray(draft.uniqueGlasses)) {
+                     productionInfo.push(`Размеры стекла:`);
+                     draft.uniqueGlasses.forEach((glass) => {
+                       // Учитываем нестандартную высоту для уникальной конфигурации
+                       const heightValue = exactHeight ? Number(glass.height) - 3 : Number(glass.height);
+                       const heightSuffix = exactHeight ? ' (нестандартная высота -3мм)' : '';
+                       productionInfo.push(`${glass.name}: ${glass.color} ${glass.thickness} мм: ${glass.width} × ${heightValue}${heightSuffix}`);
+                     });
+                  } else if (draft.config && draft.config.startsWith('template-') && draft.selectedTemplate && draft.templateGlasses) {
+                    productionInfo.push(`Размеры стекла:`);
+                    if (draft.selectedTemplate.glassConfig && Array.isArray(draft.selectedTemplate.glassConfig)) {
+                      draft.selectedTemplate.glassConfig.forEach((glassConf: any, idx: number) => {
+                        const glassData = draft.templateGlasses![idx];
+                        if (glassData && glassData.width && glassData.height) {
+                          const typeLabels: { [key: string]: string } = {
+                            'stationary': 'Стационар',
+                            'swing_door': 'Распашная дверь',
+                            'sliding_door': 'Раздвижная дверь'
+                          };
+                          const typeLabel = typeLabels[glassConf.type] || glassConf.type;
+                          
+                          if (glassConf.type === 'swing_door' && draft.selectedTemplate.sizeAdjustments) {
+                            const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
+                            const thresholdReduction = draft.selectedTemplate.sizeAdjustments.thresholdReduction || 15;
+                            const exactHeightReduction = exactHeight ? 3 : 0;
+                            const correctedHeight = Number(glassData.height) - doorReduction - (glassData.hasThreshold ? thresholdReduction : 0) - exactHeightReduction;
+                            productionInfo.push(`- ${glassConf.name} (${typeLabel}): ${glassData.width} × ${correctedHeight} мм${glassData.hasThreshold ? ' (с порожком)' : ''}${exactHeight ? ' (нестандартная высота)' : ''}`);
+                          } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate.sizeAdjustments) {
+                            const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
+                            const exactHeightReduction = exactHeight ? 3 : 0;
+                            const correctedHeight = Number(glassData.height) - doorReduction - exactHeightReduction;
+                            productionInfo.push(`- ${glassConf.name} (${typeLabel}): ${glassData.width} × ${correctedHeight} мм${exactHeight ? ' (нестандартная высота)' : ''}`);
+                          } else {
+                            const exactHeightReduction = exactHeight ? 3 : 0;
+                            const correctedHeight = exactHeightReduction > 0 ? Number(glassData.height) - exactHeightReduction : Number(glassData.height);
+                            productionInfo.push(`- ${glassConf.name} (${typeLabel}): ${glassData.width} × ${correctedHeight} мм${exactHeight ? ' (нестандартная высота)' : ''}`);
+                          }
+                        }
+                      });
+                    }
+                  }
+                  
+                  const textToCopy = productionInfo.join('\n');
+                  
+                  // Копируем в буфер обмена
+                  navigator.clipboard.writeText(textToCopy).then(() => {
+                    // Можно добавить уведомление об успешном копировании
+                    console.log('Информация для производства скопирована в буфер обмена');
+                  }).catch(err => {
+                    console.error('Ошибка при копировании:', err);
+                  });
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  background: '#fff',
+                  color: '#28a745',
+                  border: '2px solid #28a745',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  marginBottom: 12
+                }}
+              >
+                Копировать для производства
+              </button>
+            </div>
+          )}
+          
           {/* Универсальная разбивка стоимости */}
           {positions && positions.length > 0 && (
-            <div style={{ margin: '18px 0 0 0', color: '#000' }}>
+            <div style={{ margin: '6px 0 0 0', color: '#000' }}>
               <b style={{ color: '#000' }}>Разбивка стоимости:</b>
               <ul style={{ margin: '6px 0 0 0', paddingLeft: 0, listStyle: 'none' }}>
                 {positions.map((pos, idx) => (
@@ -839,6 +978,191 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                     ? (draft.priceHistory[draft.priceHistory.length - 1].price / parseFloat(settings.rrRate)).toFixed(2)
                     : (total / parseFloat(settings.rrRate)).toFixed(2)} ₽
                 </div>
+              )}
+              
+              {/* Кнопка копирования для заказчика - только при редактировании */}
+              {isEditing && (
+              <div style={{ marginTop: 16 }}>
+                <button
+                                    onClick={() => {
+                    const clientInfo = [];
+                    
+                    // Название проекта с конфигурацией
+                    if (draft.projectName || draft.config) {
+                      const configLabel = configLabels[String(draft.config ?? '')] || '';
+                      if (draft.projectName && configLabel) {
+                        clientInfo.push(`Проект: ${draft.projectName} (${configLabel})`);
+                      } else if (draft.projectName) {
+                        clientInfo.push(`Проект: ${draft.projectName}`);
+                      } else if (configLabel) {
+                        clientInfo.push(`Проект: ${configLabel}`);
+                      }
+                    }
+                    
+                    // Цвет стекла
+                    if (draft.glassColor) {
+                      clientInfo.push(`Цвет стекла: ${draft.glassColor}`);
+                    }
+                    
+                    // Толщина стекла
+                    if (draft.glassThickness) {
+                      clientInfo.push(`Толщина стекла: ${draft.glassThickness} мм`);
+                    }
+                    
+                    // Размеры стекла - в зависимости от конфигурации
+                    if (draft.config === 'glass' && draft.width && draft.height) {
+                      const height = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                      clientInfo.push(`Размеры стекла: ${draft.width} × ${height} мм`);
+                    } else if (['straight', 'straight-glass', 'straight-opening'].includes(String(draft.config))) {
+                      if (draft.showGlassSizes && draft.stationaryWidth && draft.doorWidth && draft.height) {
+                        clientInfo.push(`Размеры проёма: ${draft.stationaryWidth} × ${draft.height} мм`);
+                      } else if (draft.width && draft.height) {
+                        clientInfo.push(`Размеры проёма: ${draft.width} × ${draft.height} мм`);
+                      }
+                    } else if (draft.config === 'corner' && draft.width && draft.length && draft.height) {
+                      clientInfo.push(`Размеры: ${draft.width} × ${draft.length} × ${draft.height} мм`);
+                    } else if (draft.config === 'partition' && draft.width && draft.height) {
+                      const height = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                      clientInfo.push(`Размеры стекла: ${draft.width} × ${height} мм`);
+                    } else if (draft.config === 'unique' && Array.isArray(draft.uniqueGlasses) && draft.uniqueGlasses.length > 0) {
+                      clientInfo.push('Размеры стекол:');
+                      draft.uniqueGlasses.forEach((glass) => {
+                        const heightValue = exactHeight ? Number(glass.height) - 3 : Number(glass.height);
+                        clientInfo.push(`${glass.name}: ${glass.width} × ${heightValue} мм`);
+                      });
+                    }
+                    
+                    // Детальная информация о всех стеклах
+                    if (draft.config && draft.width && draft.height) {
+                      clientInfo.push(''); // Пустая строка для разделения
+                      
+                      if (draft.config === 'glass') {
+                        // Стекляшка - одно стекло
+                        const height = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                        clientInfo.push('Стекла:');
+                        clientInfo.push(`Стекло: ${draft.width} × ${height} мм`);
+                      } else if (['straight', 'straight-glass', 'straight-opening'].includes(String(draft.config))) {
+                        // Прямые раздвижные
+                        clientInfo.push('Стекла:');
+                        if (draft.showGlassSizes && draft.stationaryWidth && draft.doorWidth && draft.height) {
+                          const stationaryHeight = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                          const doorHeight = exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8;
+                          const stationaryWidth = Number(draft.stationaryWidth) - Number(draft.doorWidth) + 30;
+                          clientInfo.push(`Стационар: ${stationaryWidth} × ${stationaryHeight} мм`);
+                          clientInfo.push(`Дверь: ${draft.doorWidth} × ${doorHeight} мм`);
+                        } else if (draft.width && draft.height) {
+                          const stationaryHeight = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                          const doorHeight = exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8;
+                          const glassWidth = Math.round((Number(draft.width) + 30) / 2);
+                          clientInfo.push(`Стационар: ${glassWidth} × ${stationaryHeight} мм`);
+                          clientInfo.push(`Дверь: ${glassWidth} × ${doorHeight} мм`);
+                        }
+                      } else if (draft.config === 'corner' && draft.width && draft.length && draft.height) {
+                        // Угловая раздвижная
+                        const stationaryHeight = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                        const doorHeight = exactHeight ? Number(draft.height) - 11 : Number(draft.height) - 8;
+                        clientInfo.push('Стекла:');
+                        clientInfo.push(`Стационар 1: ${Math.round(Number(draft.width) / 2)} × ${stationaryHeight} мм`);
+                        clientInfo.push(`Дверь 1: ${Math.round(Number(draft.width) / 2)} × ${doorHeight} мм`);
+                        clientInfo.push(`Стационар 2: ${Math.round(Number(draft.length) / 2)} × ${stationaryHeight} мм`);
+                        clientInfo.push(`Дверь 2: ${Math.round(Number(draft.length) / 2)} × ${doorHeight} мм`);
+                      } else if (draft.config === 'partition') {
+                        // Перегородка - одно стекло
+                        const height = exactHeight ? Number(draft.height) - 3 : Number(draft.height);
+                        clientInfo.push('Стекла:');
+                        clientInfo.push(`Стекло: ${draft.width} × ${height} мм`);
+                      } else if (draft.config === 'unique' && Array.isArray(draft.uniqueGlasses) && draft.uniqueGlasses.length > 0) {
+                        // Уникальная конфигурация - уже обработана выше, ничего не добавляем
+                      } else if (draft.config && draft.config.startsWith('template-') && draft.selectedTemplate && draft.templateGlasses) {
+                        // Шаблоны
+                        clientInfo.push('Стекла:');
+                        if (draft.selectedTemplate.glassConfig && Array.isArray(draft.selectedTemplate.glassConfig)) {
+                          draft.selectedTemplate.glassConfig.forEach((glassConf: any, idx: number) => {
+                            const glassData = draft.templateGlasses![idx];
+                            if (glassData && glassData.width && glassData.height) {
+                              const typeLabels: { [key: string]: string } = {
+                                'stationary': 'Стационар',
+                                'swing_door': 'Дверь',
+                                'sliding_door': 'Дверь'
+                              };
+                              const typeLabel = typeLabels[glassConf.type] || 'Стекло';
+                              
+                              if (glassConf.type === 'swing_door' && draft.selectedTemplate.sizeAdjustments) {
+                                const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
+                                const thresholdReduction = draft.selectedTemplate.sizeAdjustments.thresholdReduction || 15;
+                                const exactHeightReduction = exactHeight ? 3 : 0;
+                                const correctedHeight = Number(glassData.height) - doorReduction - (glassData.hasThreshold ? thresholdReduction : 0) - exactHeightReduction;
+                                clientInfo.push(`${typeLabel} ${idx + 1}: ${glassData.width} × ${correctedHeight} мм`);
+                              } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate.sizeAdjustments) {
+                                const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
+                                const exactHeightReduction = exactHeight ? 3 : 0;
+                                const correctedHeight = Number(glassData.height) - doorReduction - exactHeightReduction;
+                                clientInfo.push(`${typeLabel} ${idx + 1}: ${glassData.width} × ${correctedHeight} мм`);
+                              } else {
+                                const exactHeightReduction = exactHeight ? 3 : 0;
+                                const correctedHeight = exactHeightReduction > 0 ? Number(glassData.height) - exactHeightReduction : Number(glassData.height);
+                                clientInfo.push(`${typeLabel} ${idx + 1}: ${glassData.width} × ${correctedHeight} мм`);
+                              }
+                            }
+                          });
+                        }
+                      }
+                    }
+                    
+                    // Цвет фурнитуры
+                    if (draft.hardwareColor) {
+                      const hardwareColorLabels: { [key: string]: string } = {
+                        'chrome': 'Хром',
+                        'black': 'Черный',
+                        'matte': 'Матовый',
+                        'gold': 'Золотой',
+                        'painted': 'Крашенный'
+                      };
+                      clientInfo.push(`Цвет фурнитуры: ${hardwareColorLabels[draft.hardwareColor] || draft.hardwareColor}`);
+                    }
+                    
+                    // Вся необходимая фурнитура (словами) - сразу под цветом фурнитуры
+                    clientInfo.push('Вся необходимая фурнитура для изделия включена в стоимость');
+                    
+                    // Выбранные услуги (без цен)
+                    if (draft.projectServices && Array.isArray(draft.projectServices) && draft.projectServices.length > 0) {
+                      clientInfo.push(''); // Пустая строка для разделения
+                      clientInfo.push('Услуги:');
+                      draft.projectServices.forEach(service => {
+                        clientInfo.push(`- ${service.name}`);
+                      });
+                    }
+                    
+                    // Общая стоимость
+                    const finalPrice = draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
+                      ? draft.priceHistory[draft.priceHistory.length - 1].price
+                      : total;
+                    clientInfo.push(`\nОбщая стоимость: ${finalPrice.toFixed(2)} ${settings.currency}`);
+                    
+                    const textToCopy = clientInfo.join('\n');
+                    
+                    // Копируем в буфер обмена
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                      console.log('Информация для заказчика скопирована в буфер обмена');
+                    }).catch(err => {
+                      console.error('Ошибка при копировании:', err);
+                    });
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 6,
+                    background: '#fff',
+                    color: '#28a745',
+                    border: '2px solid #28a745',
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    marginTop: 8
+                  }}
+                >
+                  Копировать для заказчика
+                </button>
+              </div>
               )}
             </div>
           ) : null}

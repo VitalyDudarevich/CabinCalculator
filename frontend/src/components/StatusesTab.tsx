@@ -84,11 +84,8 @@ const SortableStatusCard: React.FC<SortableStatusCardProps> = ({
   return (
     <div 
       ref={setNodeRef}
-      style={style}
-      className={isOverlay ? 'drag-overlay' : ''}
-      data-status-card={status._id}
-    >
-      <div style={{
+      style={{
+        ...style,
         background: '#fff',
         border: '1px solid #e0e0e0',
         borderRadius: 12,
@@ -96,242 +93,269 @@ const SortableStatusCard: React.FC<SortableStatusCardProps> = ({
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         transition: 'all 0.2s ease',
         overflow: 'hidden',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        userSelect: 'none',
         ...(isDragging ? {
           boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
           borderColor: '#646cff'
         } : {})
+      }}
+      className={isOverlay ? 'drag-overlay' : ''}
+      data-status-card={status._id}
+      {...attributes}
+      {...listeners}
+    >
+      {/* Заголовок с количеством проектов */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        padding: '16px 16px 0 16px',
+        marginBottom: 12
       }}>
-        {/* Область для drag & drop - вся карточка кроме кнопок */}
-        <div 
-          {...attributes}
-          {...listeners}
-          style={{
-            padding: 16,
-            cursor: isDragging ? 'grabbing' : 'grab',
-            userSelect: 'none'
-          }}
-        >
-          {/* Заголовок с количеством проектов */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            marginBottom: 12
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
+        }}>
+          <span style={{ fontSize: 12, color: '#888' }}>Проектов:</span>
+          <span style={{
+            padding: '4px 12px',
+            background: status.projectCount ? '#e3f2fd' : '#f5f5f5',
+            color: status.projectCount ? '#1976d2' : '#666',
+            borderRadius: 16,
+            fontSize: 13,
+            fontWeight: 600
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}>
-              <span style={{ fontSize: 12, color: '#888' }}>Проектов:</span>
-              <span style={{
-                padding: '4px 12px',
-                background: status.projectCount ? '#e3f2fd' : '#f5f5f5',
-                color: status.projectCount ? '#1976d2' : '#666',
-                borderRadius: 16,
-                fontSize: 13,
-                fontWeight: 600
-              }}>
-                {status.projectCount || 0}
-              </span>
-            </div>
-          </div>
+            {status.projectCount || 0}
+          </span>
+        </div>
+      </div>
 
-          {/* Основная информация о статусе */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16
-          }}>
-            {/* Цвет статуса */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}>
-              {isEditing ? (
-                <input
-                  type="color"
-                  value={editingStatus.color}
-                  onChange={(e) => setEditingStatus({ ...editingStatus, color: e.target.value })}
-                  style={{ 
-                    width: 40, 
-                    height: 40, 
-                    border: 'none', 
-                    borderRadius: 8,
-                    cursor: 'pointer'
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    background: status.color,
-                    border: '2px solid #fff',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                  }}
-                />
-              )}
-            </div>
+      {/* Основная информация о статусе */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        padding: '0 16px 12px 16px'
+      }}>
+        {/* Цвет статуса */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
+        }}>
+          {isEditing ? (
+            <input
+              type="color"
+              value={editingStatus.color}
+              onChange={(e) => setEditingStatus({ ...editingStatus, color: e.target.value })}
+              style={{ 
+                width: 40, 
+                height: 40, 
+                border: 'none', 
+                borderRadius: 8,
+                cursor: 'pointer'
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: status.color,
+                border: '2px solid #fff',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+            />
+          )}
+        </div>
 
-            {/* Название статуса и иконки действий */}
-            <div style={{ 
-              flex: 1, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between' 
+        {/* Название статуса */}
+        <div style={{ flex: 1 }}>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editingStatus.name}
+              onChange={(e) => setEditingStatus({ ...editingStatus, name: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '2px solid #646cff',
+                borderRadius: 8,
+                fontSize: 16,
+                fontWeight: 600,
+                color: '#000',
+                background: '#fff',
+                outline: 'none'
+              }}
+              placeholder="Название статуса"
+              autoFocus
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <h3 style={{ 
+              margin: 0, 
+              fontSize: 18, 
+              fontWeight: 600, 
+              color: '#000' 
             }}>
-              <div style={{ flex: 1 }}>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editingStatus.name}
-                    onChange={(e) => setEditingStatus({ ...editingStatus, name: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '2px solid #646cff',
-                      borderRadius: 8,
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: '#000',
-                      background: '#fff',
-                      outline: 'none'
-                    }}
-                    placeholder="Название статуса"
-                    autoFocus
-                  />
-                ) : (
-                  <h3 style={{ 
-                    margin: 0, 
-                    fontSize: 18, 
-                    fontWeight: 600, 
-                    color: '#000' 
-                  }}>
-                    {status.name}
-                  </h3>
-                )}
-              </div>
-
-              {/* Иконки действий рядом с названием */}
-              {!isEditing && (
-                <div style={{
-                  display: 'flex',
-                  gap: 4,
-                  marginLeft: 16
-                }}>
-                  <span 
-                    title="Редактировать" 
-                    onClick={() => onEdit(status)} 
-                    style={{ 
-                      display: 'inline-block', 
-                      width: 16, 
-                      height: 16, 
-                      verticalAlign: 'middle', 
-                      cursor: 'pointer',
-                      padding: 8,
-                      borderRadius: 6,
-                      transition: 'background 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f0f0f0';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    <FaUserEdit color="#888" size={16} />
-                  </span>
-                  <span 
-                    title="Удалить" 
-                    onClick={() => onDelete(status)} 
-                    style={{ 
-                      display: 'inline-block', 
-                      width: 16, 
-                      height: 16, 
-                      verticalAlign: 'middle', 
-                      cursor: 'pointer',
-                      padding: 8,
-                      borderRadius: 6,
-                      transition: 'background 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#ffebee';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    <FaRegTrashAlt color="#888" size={16} />
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Кнопки сохранения/отмены при редактировании */}
-          {isEditing && (
-            <div style={{
-              display: 'flex',
-              gap: 8,
-              justifyContent: 'flex-end',
-              padding: '0 16px 16px 16px',
-              borderTop: '1px solid #f0f0f0',
-              paddingTop: 12
-            }}>
-              <button
-                onClick={onCancel}
-                style={{
-                  padding: '6px 16px',
-                  borderRadius: 6,
-                  background: '#f5f5f5',
-                  color: '#666',
-                  border: '1px solid #ddd',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#e0e0e0';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f5f5f5';
-                }}
-              >
-                Отмена
-              </button>
-              <button
-                onClick={onUpdate}
-                style={{
-                  padding: '6px 16px',
-                  borderRadius: 6,
-                  background: '#4caf50',
-                  color: '#fff',
-                  border: 'none',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#45a049';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#4caf50';
-                }}
-              >
-                Сохранить
-              </button>
-            </div>
+              {status.name}
+            </h3>
           )}
         </div>
       </div>
+
+      {/* Кнопки действий с stopPropagation */}
+      {!isEditing && (
+        <div style={{
+          display: 'flex',
+          gap: 4,
+          justifyContent: 'flex-end',
+          padding: '0 16px 16px 16px',
+          borderTop: '1px solid #f0f0f0',
+          paddingTop: 8
+        }}>
+          <span 
+            title="Редактировать" 
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onEdit(status);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onEdit(status);
+            }}
+            style={{ 
+              display: 'inline-block', 
+              width: 16, 
+              height: 16, 
+              verticalAlign: 'middle', 
+              cursor: 'pointer',
+              padding: 8,
+              borderRadius: 6,
+              transition: 'background 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f0f0f0';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <FaUserEdit color="#888" size={16} />
+          </span>
+          <span 
+            title="Удалить" 
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onDelete(status);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onDelete(status);
+            }}
+            style={{ 
+              display: 'inline-block', 
+              width: 16, 
+              height: 16, 
+              verticalAlign: 'middle', 
+              cursor: 'pointer',
+              padding: 8,
+              borderRadius: 6,
+              transition: 'background 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#ffebee';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <FaRegTrashAlt color="#888" size={16} />
+          </span>
+        </div>
+      )}
+
+      {/* Кнопки сохранения/отмены при редактировании */}
+      {isEditing && (
+        <div style={{
+          display: 'flex',
+          gap: 8,
+          justifyContent: 'flex-end',
+          padding: '0 16px 16px 16px',
+          borderTop: '1px solid #f0f0f0',
+          paddingTop: 12
+        }}>
+          <button
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onCancel();
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onCancel();
+            }}
+            style={{
+              padding: '6px 16px',
+              borderRadius: 6,
+              background: '#f5f5f5',
+              color: '#666',
+              border: '1px solid #ddd',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#e0e0e0';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#f5f5f5';
+            }}
+          >
+            Отмена
+          </button>
+          <button
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onUpdate();
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onUpdate();
+            }}
+            style={{
+              padding: '6px 16px',
+              borderRadius: 6,
+              background: '#4caf50',
+              color: '#fff',
+              border: 'none',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#45a049';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#4caf50';
+            }}
+          >
+            Сохранить
+          </button>
+        </div>
+      )}
     </div>
   );
 };
+
+
 
 const StatusesTab: React.FC<StatusesTabProps> = ({
   selectedCompanyId,
@@ -349,13 +373,12 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
   const [error, setError] = useState('');
   const [activeStatus, setActiveStatus] = useState<Status | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
-  const [draggedCardWidth, setDraggedCardWidth] = useState<number | null>(null);
 
   // Настройка сенсоров для drag & drop
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Начинаем драг только после движения на 8px
+        distance: 8, // Стандартное расстояние для начала драга
       },
     }),
   );
@@ -495,43 +518,48 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
 
   // Изменение порядка статусов через drag & drop
   const handleDragStart = (event: DragStartEvent) => {
+    console.log('🎉 SUCCESS! DRAG STARTED!', event);
     const { active } = event;
     const status = statuses.find(s => s._id === active.id);
     setActiveStatus(status || null);
     
-    // Вычисляем offset курсора относительно карточки и сохраняем ширину
+    // Вычисляем offset для центрирования карточки относительно курсора
     const activatorEvent = event.activatorEvent as PointerEvent;
     if (activatorEvent) {
-      // Найдем элемент карточки по data-атрибуту
       const cardElement = document.querySelector(`[data-status-card="${active.id}"]`);
       
       if (cardElement) {
         const rect = cardElement.getBoundingClientRect();
-        const offsetX = activatorEvent.clientX - rect.left;
-        const offsetY = activatorEvent.clientY - rect.top;
+        // Центрируем карточку: курсор должен быть в центре карточки
+        const offsetX = rect.width / 2;
+        const offsetY = rect.height / 2;
         setDragOffset({ x: offsetX, y: offsetY });
-        
-        // Сохраняем ширину карточки для точного соответствия в DragOverlay
-        setDraggedCardWidth(rect.width);
+        console.log('📏 Card size:', rect.width, 'x', rect.height, 'offset:', offsetX, offsetY);
       } else {
-        // Fallback: курсор в центре карточки
-        setDragOffset({ x: 200, y: 40 }); // примерные размеры карточки
-        setDraggedCardWidth(null);
+        // Fallback: примерные размеры для центрирования
+        setDragOffset({ x: 200, y: 60 });
       }
     }
     
-    // Устанавливаем курсор grabbing на документ
+    // Устанавливаем курсор grabbing на весь документ
     document.body.style.cursor = 'grabbing';
     document.body.style.userSelect = 'none';
     document.body.classList.add('dragging-active');
+    
+    console.log('Status found:', status?.name);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
+    console.log('🏁 Drag end:', {
+      activeId: active.id,
+      overId: over?.id,
+      hasTarget: !!over
+    });
+    
     setActiveStatus(null);
     setDragOffset(null);
-    setDraggedCardWidth(null);
     
     // Сбрасываем курсор на документе
     document.body.style.cursor = '';
@@ -539,6 +567,7 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
     document.body.classList.remove('dragging-active');
     
     if (!over || active.id === over.id) {
+      console.log('❌ No drop target or same target');
       return;
     }
 
@@ -546,8 +575,11 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
     const newIndex = statuses.findIndex(status => status._id === over.id);
 
     if (oldIndex === -1 || newIndex === -1) {
+      console.log('❌ Status not found in array');
       return;
     }
+
+    console.log('🔄 Moving status from index', oldIndex, 'to index', newIndex);
 
     // Создаем копию массива для изменения порядка
     const reorderedStatuses = [...statuses];
@@ -556,7 +588,11 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
     const [movedStatus] = reorderedStatuses.splice(oldIndex, 1);
     
     // Вставляем элемент в новую позицию
-    reorderedStatuses.splice(newIndex, 0, movedStatus);
+    // Если перемещаем вниз, корректируем индекс после удаления
+    const insertIndex = oldIndex < newIndex ? newIndex - 1 : newIndex;
+    reorderedStatuses.splice(insertIndex, 0, movedStatus);
+    
+    console.log('📍 Final insert index:', insertIndex);
 
     // Обновляем локальное состояние сразу для отзывчивости
     const updatedStatuses = reorderedStatuses.map((status, index) => ({
@@ -573,12 +609,13 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
 
     try {
       const res = await fetchWithAuth('http://localhost:5000/api/statuses/reorder', {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ statusOrder })
       });
 
       if (res.ok) {
+        console.log('✅ Status order updated successfully');
         onRefreshStatuses?.();
       } else {
         console.error('Failed to reorder statuses');
@@ -698,17 +735,16 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
               </div>
             </SortableContext>
 
-            <DragOverlay>
+            <DragOverlay
+              style={{
+                transformOrigin: 'top left',
+                transform: dragOffset ? `translate(-${dragOffset.x}px, -${dragOffset.y}px)` : undefined
+              }}
+            >
               {activeStatus ? (
                 <div style={{
-                  transform: 'rotate(3deg)',
-                  opacity: 0.95,
-                  width: draggedCardWidth ? `${draggedCardWidth}px` : '100%',
-                  maxWidth: draggedCardWidth ? `${draggedCardWidth}px` : '800px',
-                  ...(dragOffset ? {
-                    marginLeft: -dragOffset.x,
-                    marginTop: -dragOffset.y
-                  } : {})
+                  transform: 'rotate(2deg)',
+                  opacity: 0.9
                 }}>
                   <SortableStatusCard
                     status={activeStatus}

@@ -543,7 +543,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 height: isMobile ? 'auto' : '100%',
                 minHeight: isMobile ? '300px' : 'auto',
                 overflow: 'auto',
-                paddingBottom: isMobile ? '20px' : '0',
+                paddingBottom: isMobile ? '80px' : '60px',
                 paddingLeft: isMobile ? '20px' : '24px'
               }}>
                 <CalculationDetails
@@ -555,6 +555,13 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                     setTotalPrice(total);
                   }}
                   exactHeight={draftProjectData?.exactHeight || false}
+                  onExactHeightChange={(checked) => {
+                    setDraftProjectData(prev => ({
+                      ...prev,
+                      exactHeight: checked
+                    }));
+                  }}
+                  isEditing={selectedProject !== null}
                 />
               </div>
               

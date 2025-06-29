@@ -12,7 +12,6 @@ exports.getStatuses = async (req, res) => {
 
     const statuses = await Status.find({
       companyId: companyId,
-      isActive: true,
     }).sort({ order: 1 });
 
     res.json(statuses);
@@ -48,9 +47,9 @@ exports.createStatus = async (req, res) => {
       });
     }
 
-    // Проверяем, что такого статуса еще нет у этой компании
+    // Проверяем, что такого статуса еще нет у этой компании (case-insensitive)
     const existingStatus = await Status.findOne({
-      name: name,
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
       companyId: companyId,
     });
 
@@ -95,7 +94,7 @@ exports.createStatus = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const statusId = req.params.id;
-    const { name, color, order, isActive } = req.body;
+    const { name, color, order } = req.body;
 
     const status = await Status.findById(statusId);
 
@@ -103,10 +102,10 @@ exports.updateStatus = async (req, res) => {
       return res.status(404).json({ error: 'Status not found' });
     }
 
-    // Проверяем, что новое имя не конфликтует с существующими
+    // Проверяем, что новое имя не конфликтует с существующими (case-insensitive)
     if (name && name !== status.name) {
       const existingStatus = await Status.findOne({
-        name: name,
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
         companyId: status.companyId,
         _id: { $ne: statusId },
       });
@@ -124,7 +123,6 @@ exports.updateStatus = async (req, res) => {
     if (name) status.name = name;
     if (color) status.color = color;
     if (typeof order === 'number') status.order = order;
-    if (typeof isActive === 'boolean') status.isActive = isActive;
 
     await status.save();
 
@@ -148,36 +146,6 @@ exports.updateStatus = async (req, res) => {
         });
 
         await project.save();
-      }
-    }
-
-    // Если статус был деактивирован, обновляем проекты
-    if (isActive === false) {
-      const fallbackStatus = await Status.findOne({
-        name: 'Рассчет',
-        companyId: status.companyId,
-        isActive: true,
-      });
-
-      if (fallbackStatus) {
-        const projects = await Project.find({ statusId: statusId });
-
-        for (const project of projects) {
-          project.statusId = fallbackStatus._id;
-          project.status = fallbackStatus.name;
-
-          if (!project.statusHistory) {
-            project.statusHistory = [];
-          }
-
-          project.statusHistory.push({
-            status: fallbackStatus.name,
-            changedAt: new Date(),
-            note: `Статус "${originalName}" был деактивирован, проект перемещен в статус "${fallbackStatus.name}"`,
-          });
-
-          await project.save();
-        }
       }
     }
 
@@ -236,7 +204,6 @@ exports.getStatusStats = async (req, res) => {
     // Получаем все статусы компании
     const statuses = await Status.find({
       companyId: companyId,
-      isActive: true,
     }).sort({ order: 1 });
 
     // Получаем статистику по проектам для каждого статуса
