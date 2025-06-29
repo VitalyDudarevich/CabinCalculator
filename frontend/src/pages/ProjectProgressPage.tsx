@@ -98,16 +98,29 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
     effectiveCompanyId = id;
   }
 
+  console.log('🔄 ProjectProgressPage RENDER:', {
+    effectiveCompanyId,
+    settingsState: settings ? 'LOADED' : 'NULL',
+    isLoadingData,
+    userRole: user?.role
+  });
+
   // Загрузка данных для калькулятора и статусов
   useEffect(() => {
+    console.log('🔄 ProjectProgressPage: Calculator data useEffect triggered, effectiveCompanyId:', effectiveCompanyId);
+    
     if (!effectiveCompanyId) {
+      console.log('❌ ProjectProgressPage: No effectiveCompanyId, setting settings to null');
       setSettings(null);
       return;
     }
 
     const loadCalculatorData = async () => {
+      console.log('🔄 ProjectProgressPage: Starting loadCalculatorData for companyId:', effectiveCompanyId);
       setIsLoadingData(true);
       try {
+        console.log('🔄 ProjectProgressPage: Making API calls...');
+        
         const [settingsRes, glassRes, hardwareRes, statusesData] = await Promise.all([
           fetchWithAuth(`${API_URL}/settings?companyId=${effectiveCompanyId}`),
           fetchWithAuth(`${API_URL}/glass?companyId=${effectiveCompanyId}`),
@@ -115,11 +128,23 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
           getStatuses(effectiveCompanyId),
         ]);
         
+        console.log('🔄 ProjectProgressPage: API responses status:', {
+          settings: settingsRes.status,
+          glass: glassRes.status,
+          hardware: hardwareRes.status
+        });
+        
         const [settingsData, glassList, hardwareList] = await Promise.all([
           settingsRes.json(),
           glassRes.json(),
           hardwareRes.json(),
         ]);
+        
+        console.log('🔄 ProjectProgressPage: Raw API data received:');
+        console.log('  📊 settingsData:', settingsData);
+        console.log('  🪟 glassList:', glassList);
+        console.log('  🔧 hardwareList:', hardwareList);
+        console.log('  📊 statusesData:', statusesData);
         
         if (Array.isArray(settingsData) && settingsData.length > 0) {
           const combinedSettings: Settings = {
@@ -128,20 +153,52 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             hardwareList,
             statusList: statusesData || [], // Добавляем статусы в settings
           };
+          console.log('✅ ProjectProgressPage: Combined settings created:', combinedSettings);
           setSettings(combinedSettings);
         } else {
-          setSettings(null);
+          console.log('❌ ProjectProgressPage: Settings data is empty or not array, creating default settings');
+          // Создаем дефолтные настройки если их нет в базе
+          const defaultSettings: Settings = {
+            currency: 'GEL',
+            usdRate: '2.7',
+            rrRate: '1.0',
+            showUSD: true,
+            showRR: false,
+            baseCosts: [],
+            baseIsPercent: false,
+            basePercentValue: 0,
+            customColorSurcharge: 0,
+            baseCostMode: 'fixed',
+            baseCostPercentage: 0,
+            glassList,
+            hardwareList,
+            statusList: statusesData || [],
+          };
+          console.log('✅ ProjectProgressPage: Default settings created:', defaultSettings);
+          setSettings(defaultSettings);
         }
       } catch (e) {
-        console.error('ProjectProgressPage: ошибка загрузки данных:', e);
+        console.error('❌ ProjectProgressPage: ошибка загрузки данных:', e);
         setSettings(null);
       } finally {
+        console.log('🔄 ProjectProgressPage: Setting isLoadingData to false');
         setIsLoadingData(false);
       }
     };
 
     loadCalculatorData();
   }, [effectiveCompanyId]);
+
+  // Дополнительная отладка для settings
+  useEffect(() => {
+    console.log('📈 ProjectProgressPage: Settings state changed:', {
+      isNull: settings === null,
+      hasGlass: !!settings?.glassList,
+      glassLength: settings?.glassList?.length,
+      hasHardware: !!settings?.hardwareList,
+      hardwareLength: settings?.hardwareList?.length
+    });
+  }, [settings]);
 
   // Обработка редактирования проекта
   const handleProjectEdit = (project: Project) => {

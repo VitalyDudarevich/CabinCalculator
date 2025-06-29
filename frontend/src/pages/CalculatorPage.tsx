@@ -49,34 +49,66 @@ const CalculatorPage: React.FC<{
     effectiveSelectedCompanyId = id;
   }
 
+  console.log('🔄 CalculatorPage RENDER:', {
+    effectiveCompanyId,
+    effectiveSelectedCompanyId,
+    settingsState: settings ? 'LOADED' : 'NULL',
+    isLoadingData,
+    userRole: user?.role
+  });
+
   // Загрузка проектов
   useEffect(() => {
+    console.log('📋 Projects useEffect triggered, effectiveSelectedCompanyId:', effectiveSelectedCompanyId);
     if (!effectiveSelectedCompanyId) {
       setProjects([]);
       return;
     }
     fetchWithAuth(`${API_URL}/projects?companyId=${effectiveSelectedCompanyId}`)
       .then(res => res.json())
-      .then(data => setProjects(Array.isArray(data) ? data : []))
-      .catch(() => setProjects([]));
+      .then(data => {
+        console.log('📋 Projects loaded:', data);
+        setProjects(Array.isArray(data) ? data : []);
+      })
+      .catch(err => {
+        console.error('📋 Projects load error:', err);
+        setProjects([]);
+      });
   }, [effectiveSelectedCompanyId]);
 
   // Загрузка данных для калькулятора (settings, glass, hardware)
   useEffect(() => {
+    console.log('🔄 Calculator data useEffect triggered, effectiveSelectedCompanyId:', effectiveSelectedCompanyId);
+    
     if (!effectiveSelectedCompanyId) {
+      console.log('❌ No effectiveSelectedCompanyId, setting settings to null');
       setSettings(null);
       return;
     }
 
     const loadCalculatorData = async () => {
+      console.log('🔄 Starting loadCalculatorData...');
       setIsLoadingData(true);
       try {
-        console.log('CalculatorPage: загружаю данные для companyId =', effectiveSelectedCompanyId);
+        console.log('🔄 Making API calls for companyId:', effectiveSelectedCompanyId);
+        
+        const settingsUrl = `${API_URL}/settings?companyId=${effectiveSelectedCompanyId}`;
+        const glassUrl = `${API_URL}/glass?companyId=${effectiveSelectedCompanyId}`;
+        const hardwareUrl = `${API_URL}/hardware?companyId=${effectiveSelectedCompanyId}`;
+        
+        console.log('🔄 API URLs:', { settingsUrl, glassUrl, hardwareUrl });
+        
         const [settingsRes, glassRes, hardwareRes] = await Promise.all([
-          fetchWithAuth(`${API_URL}/settings?companyId=${effectiveSelectedCompanyId}`),
-          fetchWithAuth(`${API_URL}/glass?companyId=${effectiveSelectedCompanyId}`),
-          fetchWithAuth(`${API_URL}/hardware?companyId=${effectiveSelectedCompanyId}`),
+          fetchWithAuth(settingsUrl),
+          fetchWithAuth(glassUrl),
+          fetchWithAuth(hardwareUrl),
         ]);
+        
+        console.log('🔄 API responses status:', {
+          settings: settingsRes.status,
+          glass: glassRes.status,
+          hardware: hardwareRes.status
+        });
         
         const [settingsData, glassList, hardwareList] = await Promise.all([
           settingsRes.json(),
@@ -84,7 +116,25 @@ const CalculatorPage: React.FC<{
           hardwareRes.json(),
         ]);
         
-        console.log('CalculatorPage: данные загружены', { settingsData, glassList, hardwareList });
+        console.log('🔄 Raw API data received:');
+        console.log('  📊 settingsData:', settingsData);
+        console.log('  🪟 glassList:', glassList);
+        console.log('  🔧 hardwareList:', hardwareList);
+        
+        // Проверяем структуру данных
+        if (Array.isArray(glassList) && glassList.length > 0) {
+          console.log('🔍 First glass item structure:', glassList[0]);
+          console.log('🔍 Glass keys:', Object.keys(glassList[0]));
+        } else {
+          console.log('❌ Glass list is empty or not array');
+        }
+        
+        if (Array.isArray(hardwareList) && hardwareList.length > 0) {
+          console.log('🔍 First hardware item structure:', hardwareList[0]);
+          console.log('🔍 Hardware keys:', Object.keys(hardwareList[0]));
+        } else {
+          console.log('❌ Hardware list is empty or not array');
+        }
         
         if (Array.isArray(settingsData) && settingsData.length > 0) {
           const combinedSettings: Settings = {
@@ -92,20 +142,55 @@ const CalculatorPage: React.FC<{
             glassList,
             hardwareList,
           };
+          
+          console.log('✅ Combined settings created:', combinedSettings);
+          console.log('🔍 Combined settings glassList length:', combinedSettings.glassList?.length);
+          console.log('🔍 Combined settings hardwareList length:', combinedSettings.hardwareList?.length);
+          
           setSettings(combinedSettings);
         } else {
-          setSettings(null);
+          console.log('❌ Settings data is empty or not array, creating default settings');
+          // Создаем дефолтные настройки если их нет в базе
+          const defaultSettings: Settings = {
+            currency: 'GEL',
+            usdRate: '2.7',
+            rrRate: '1.0',
+            showUSD: true,
+            showRR: false,
+            baseCosts: [],
+            baseIsPercent: false,
+            basePercentValue: 0,
+            customColorSurcharge: 0,
+            baseCostMode: 'fixed',
+            baseCostPercentage: 0,
+            glassList,
+            hardwareList,
+          };
+          console.log('✅ Default settings created:', defaultSettings);
+          setSettings(defaultSettings);
         }
       } catch (e) {
-        console.error('CalculatorPage: ошибка загрузки данных:', e);
+        console.error('❌ Calculator data load error:', e);
         setSettings(null);
       } finally {
+        console.log('🔄 Setting isLoadingData to false');
         setIsLoadingData(false);
       }
     };
 
     loadCalculatorData();
   }, [effectiveSelectedCompanyId]);
+
+  // Дополнительная отладка для settings
+  useEffect(() => {
+    console.log('📈 Settings state changed:', {
+      isNull: settings === null,
+      hasGlass: !!settings?.glassList,
+      glassLength: settings?.glassList?.length,
+      hasHardware: !!settings?.hardwareList,
+      hardwareLength: settings?.hardwareList?.length
+    });
+  }, [settings]);
 
   const handleEditProject = (project: Project) => {
     setSelectedProject(project);

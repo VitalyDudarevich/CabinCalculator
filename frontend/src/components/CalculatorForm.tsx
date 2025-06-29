@@ -317,16 +317,14 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       .catch(() => setServiceList([]));
   }, [effectiveCompanyId, selectedProject]);
 
-  // Загрузка шаблонов конфигураций
+  // Используем переданные шаблоны вместо отдельной загрузки
   useEffect(() => {
-    if (!effectiveCompanyId) return;
-    fetchWithAuth(`${BASE_API_URL}/templates/active?companyId=${effectiveCompanyId}`)
-      .then(res => res.json())
-      .then(data => {
-        setTemplates(Array.isArray(data) ? data : []);
-      })
-      .catch(() => setTemplates([]));
-  }, [effectiveCompanyId]);
+    if (propsSettings?.templates) {
+      setTemplates(Array.isArray(propsSettings.templates) ? propsSettings.templates : []);
+    } else {
+      setTemplates([]);
+    }
+  }, [propsSettings?.templates]);
 
   // Хелпер для обновления draft
   const updateDraft = React.useCallback(() => {

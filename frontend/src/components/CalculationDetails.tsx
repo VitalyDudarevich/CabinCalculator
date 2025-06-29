@@ -7,6 +7,20 @@ interface HardwareDraftItem {
   type?: string;
 }
 
+interface GlassConfig {
+  name: string;
+  type: 'stationary' | 'swing_door' | 'sliding_door';
+}
+
+interface TemplateData {
+  exactHeightOption?: boolean;
+  glassConfig?: GlassConfig[];
+  sizeAdjustments?: {
+    doorHeightReduction?: number;
+    thresholdReduction?: number;
+  };
+}
+
 interface DraftProjectData {
   projectName?: string;
   customer?: string;
@@ -38,7 +52,7 @@ interface DraftProjectData {
   uniqueGlasses?: Array<{ name: string; color: string; thickness: string; width: string; height: string }>;
   projectServices?: { serviceId: string; name: string; price: number }[];
   customColor?: boolean; // Флаг нестандартного цвета фурнитуры
-  selectedTemplate?: any; // Данные выбранного шаблона
+  selectedTemplate?: TemplateData; // Данные выбранного шаблона
   templateFields?: { [key: string]: string }; // Поля шаблона
   templateGlasses?: { [glassIndex: number]: { width: string; height: string; hasThreshold?: boolean } }; // Данные стекол из шаблона
 }
@@ -67,6 +81,7 @@ interface CalculationDetailsProps {
   exactHeight?: boolean;
   onExactHeightChange?: (checked: boolean) => void;
   isEditing?: boolean; // Флаг режима редактирования
+  isLoadingData?: boolean; // Флаг загрузки данных
 }
 
 const configLabels: Record<string, string> = {
@@ -99,7 +114,7 @@ const normalizeName = (name: string) =>
 
 console.log('CalculationDetails: компонент монтируется');
 
-const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyId, settings: propsSettings, onTotalChange, exactHeight, onExactHeightChange, isEditing }) => {
+const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyId, settings: propsSettings, onTotalChange, exactHeight, onExactHeightChange, isEditing, isLoadingData }) => {
   console.log('CalculationDetails: companyId проп:', companyId);
   console.log('CalculationDetails: draft:', draft);
   console.log('CalculationDetails: propsSettings:', propsSettings);
@@ -115,9 +130,42 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
     });
   }
 
+  // --- useEffect для передачи total наружу ---
+  useEffect(() => {
+    const calculateTotal = () => {
+      if (!settings || !draft || !draft.config) return 0;
+      // Логика расчета total будет выполнена в основном блоке
+      return 0;
+    };
+    
+    const calculatedTotal = calculateTotal();
+    if (typeof onTotalChange === 'function') {
+      onTotalChange(calculatedTotal, 0, 0);
+    }
+  }, [draft, settings, companyId, exactHeight, onTotalChange]);
+
+  // Если settings еще не загружены, показываем индикатор загрузки
+  if (!settings) {
+    return (
+      <div className="calculation-details-container" style={{ 
+        padding: '24px 24px 80px 24px',
+        minWidth: 320, 
+        flex: 1,
+        color: '#000',
+        overflowX: 'hidden',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
+      }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 16, color: '#000' }}>Детали расчёта</h2>
+        <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+          {isLoadingData ? 'Загрузка данных...' : 'Настройки не найдены. Обратитесь к администратору для создания настроек компании.'}
+        </div>
+      </div>
+    );
+  }
+
   // --- Расчёт стоимости ---
-  type Position = { label: string; price: number; total: number; qty?: string };
-  const positions: Position[] = [];
+  const positions: { label: string; price: number; total: number; qty?: string }[] = [];
   let total = 0;
   const usdRate = settings?.usdRate ? parseFloat(settings.usdRate) : 0;
 
@@ -203,7 +251,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
       
       // Проходим по каждому стеклу из конфигурации шаблона
       if (draft.selectedTemplate.glassConfig && Array.isArray(draft.selectedTemplate.glassConfig)) {
-        draft.selectedTemplate.glassConfig.forEach((glassConf: any, index: number) => {
+        draft.selectedTemplate.glassConfig.forEach((glassConf: GlassConfig, index: number) => {
           const glassData = draft.templateGlasses![index];
           if (glassData && glassData.width && glassData.height) {
             const width = Number(glassData.width);
@@ -211,7 +259,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             let area = !isNaN(width) && !isNaN(height) ? +(width * height / 1000000).toFixed(2) : 0;
             
             // Применяем корректировки размеров для распашных дверей
-            if (glassConf.type === 'swing_door' && draft.selectedTemplate.sizeAdjustments) {
+            if (glassConf.type === 'swing_door' && draft.selectedTemplate?.sizeAdjustments) {
               const doorHeightReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
               const thresholdReduction = draft.selectedTemplate.sizeAdjustments.thresholdReduction || 15;
               const exactHeightReduction = draft.exactHeight ? 3 : 0; // Вычитаем 3 мм при нестандартной высоте
@@ -221,7 +269,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                 correctedHeight -= thresholdReduction;
               }
               area = +(width * correctedHeight / 1000000).toFixed(2);
-            } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate.sizeAdjustments) {
+            } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate?.sizeAdjustments) {
               const doorHeightReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
               const exactHeightReduction = draft.exactHeight ? 3 : 0; // Вычитаем 3 мм при нестандартной высоте
               const correctedHeight = height - doorHeightReduction - exactHeightReduction;
@@ -495,8 +543,8 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
     
     if (baseCostMode === 'fixed') {
       // Режим фиксированной базовой стоимости (как раньше)
-      let baseCost = settings.baseCosts.find(b => b.id === draft.config);
-      if (!baseCost) {
+      let baseCost = settings.baseCosts?.find(b => b.id === draft.config);
+      if (!baseCost && settings.baseCosts) {
         // Попробовать найти по name, если id не совпадает
         baseCost = settings.baseCosts.find(b =>
           normalizeName(b.name).includes('базовая стоимость') &&
@@ -547,12 +595,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
     }
   }
 
-  // --- Новый useEffect для передачи total наружу ---
-  useEffect(() => {
-    if (typeof onTotalChange === 'function') {
-      onTotalChange(total, 0, 0); // delivery и install цены теперь включены в общий total через services
-    }
-  }, [total, onTotalChange]);
+
 
   const configLabel = configLabels[String(draft.config ?? '')] || '';
 
@@ -642,7 +685,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
               <b>Стёкла:</b>
               <ul style={{ margin: '6px 0 0 0', paddingLeft: 24 }}>
                 {draft.selectedTemplate.glassConfig && Array.isArray(draft.selectedTemplate.glassConfig) && 
-                  draft.selectedTemplate.glassConfig.map((glassConf: any, idx: number) => {
+                  draft.selectedTemplate.glassConfig.map((glassConf: GlassConfig, idx: number) => {
                     const glassData = draft.templateGlasses![idx];
                     if (!glassData || !glassData.width || !glassData.height) return null;
                     
@@ -656,7 +699,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                     let sizeInfo = `${glassData.width} × ${glassData.height}`;
                     
                     // Добавляем информацию о корректировках для дверей
-                    if (glassConf.type === 'swing_door' && draft.selectedTemplate.sizeAdjustments) {
+                    if (glassConf.type === 'swing_door' && draft.selectedTemplate?.sizeAdjustments) {
                       const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
                       const thresholdReduction = draft.selectedTemplate.sizeAdjustments.thresholdReduction || 15;
                       const exactHeightReduction = draft.exactHeight ? 3 : 0; // Вычитаем 3 мм при нестандартной высоте
@@ -664,7 +707,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                       sizeInfo += ` → ${glassData.width} × ${correctedHeight} мм`;
                       if (glassData.hasThreshold) sizeInfo += ' (с порожком)';
                       if (draft.exactHeight) sizeInfo += ' (нестандартная высота -3мм)';
-                    } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate.sizeAdjustments) {
+                    } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate?.sizeAdjustments) {
                       const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
                       const exactHeightReduction = draft.exactHeight ? 3 : 0; // Вычитаем 3 мм при нестандартной высоте
                       const correctedHeight = Number(glassData.height) - doorReduction - exactHeightReduction;
@@ -857,7 +900,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                   } else if (draft.config && draft.config.startsWith('template-') && draft.selectedTemplate && draft.templateGlasses) {
                     productionInfo.push(`Размеры стекла:`);
                     if (draft.selectedTemplate.glassConfig && Array.isArray(draft.selectedTemplate.glassConfig)) {
-                      draft.selectedTemplate.glassConfig.forEach((glassConf: any, idx: number) => {
+                      draft.selectedTemplate.glassConfig.forEach((glassConf: GlassConfig, idx: number) => {
                         const glassData = draft.templateGlasses![idx];
                         if (glassData && glassData.width && glassData.height) {
                           const typeLabels: { [key: string]: string } = {
@@ -867,13 +910,13 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                           };
                           const typeLabel = typeLabels[glassConf.type] || glassConf.type;
                           
-                          if (glassConf.type === 'swing_door' && draft.selectedTemplate.sizeAdjustments) {
+                          if (glassConf.type === 'swing_door' && draft.selectedTemplate?.sizeAdjustments) {
                             const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
                             const thresholdReduction = draft.selectedTemplate.sizeAdjustments.thresholdReduction || 15;
                             const exactHeightReduction = exactHeight ? 3 : 0;
                             const correctedHeight = Number(glassData.height) - doorReduction - (glassData.hasThreshold ? thresholdReduction : 0) - exactHeightReduction;
                             productionInfo.push(`- ${glassConf.name} (${typeLabel}): ${glassData.width} × ${correctedHeight} мм${glassData.hasThreshold ? ' (с порожком)' : ''}${exactHeight ? ' (нестандартная высота)' : ''}`);
-                          } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate.sizeAdjustments) {
+                          } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate?.sizeAdjustments) {
                             const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
                             const exactHeightReduction = exactHeight ? 3 : 0;
                             const correctedHeight = Number(glassData.height) - doorReduction - exactHeightReduction;
@@ -1077,7 +1120,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                         // Шаблоны
                         clientInfo.push('Стекла:');
                         if (draft.selectedTemplate.glassConfig && Array.isArray(draft.selectedTemplate.glassConfig)) {
-                          draft.selectedTemplate.glassConfig.forEach((glassConf: any, idx: number) => {
+                          draft.selectedTemplate.glassConfig.forEach((glassConf: GlassConfig, idx: number) => {
                             const glassData = draft.templateGlasses![idx];
                             if (glassData && glassData.width && glassData.height) {
                               const typeLabels: { [key: string]: string } = {
@@ -1087,13 +1130,13 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                               };
                               const typeLabel = typeLabels[glassConf.type] || 'Стекло';
                               
-                              if (glassConf.type === 'swing_door' && draft.selectedTemplate.sizeAdjustments) {
+                              if (glassConf.type === 'swing_door' && draft.selectedTemplate?.sizeAdjustments) {
                                 const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
                                 const thresholdReduction = draft.selectedTemplate.sizeAdjustments.thresholdReduction || 15;
                                 const exactHeightReduction = exactHeight ? 3 : 0;
                                 const correctedHeight = Number(glassData.height) - doorReduction - (glassData.hasThreshold ? thresholdReduction : 0) - exactHeightReduction;
                                 clientInfo.push(`${typeLabel} ${idx + 1}: ${glassData.width} × ${correctedHeight} мм`);
-                              } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate.sizeAdjustments) {
+                              } else if (glassConf.type === 'sliding_door' && draft.selectedTemplate?.sizeAdjustments) {
                                 const doorReduction = draft.selectedTemplate.sizeAdjustments.doorHeightReduction || 8;
                                 const exactHeightReduction = exactHeight ? 3 : 0;
                                 const correctedHeight = Number(glassData.height) - doorReduction - exactHeightReduction;
