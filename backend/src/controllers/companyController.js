@@ -3,6 +3,7 @@ const Hardware = require('../models/Hardware');
 const Service = require('../models/Service');
 const Glass = require('../models/Glass');
 const Status = require('../models/Status');
+const Template = require('../models/Template');
 
 exports.getAllCompanies = async (req, res) => {
   try {
@@ -67,6 +68,117 @@ function getDefaultServiceList(companyId) {
     { name: 'Установка', type: 'установка', price: 0, companyId },
     { name: 'Демонтаж', type: 'демонтаж', price: 0, companyId },
   ];
+}
+
+// Функция для создания системных шаблонов для новой компании
+function createSystemTemplatesForCompany(companyId) {
+  const systemTemplates = [
+    {
+      name: 'Стационарное стекло',
+      description: 'Системный шаблон для стационарного стекла',
+      type: 'glass',
+      isSystem: true,
+      glassConfig: [{ name: 'Стекло', type: 'stationary' }],
+      sizeAdjustments: { doorHeightReduction: 8, thresholdReduction: 15 },
+      fields: [],
+      defaultHardware: ['Профиль', 'Стекло-стекло', 'Стена-стекло'],
+      defaultServices: ['Доставка', 'Установка'],
+      customColorOption: false,
+      exactHeightOption: false,
+      defaultGlassColor: 'прозрачный',
+      defaultGlassThickness: '8',
+      companyId,
+      isActive: true,
+    },
+    {
+      name: 'Прямая раздвижная',
+      description: 'Системный шаблон для прямой раздвижной системы',
+      type: 'straight',
+      isSystem: true,
+      glassConfig: [
+        { name: 'Стационар', type: 'stationary' },
+        { name: 'Дверь', type: 'sliding_door' },
+      ],
+      sizeAdjustments: { doorHeightReduction: 8, thresholdReduction: 15 },
+      fields: [],
+      defaultHardware: [
+        'Профиль',
+        'Раздвижная система',
+        'Профильная труба (рельса)',
+        'Стекло-стекло',
+      ],
+      defaultServices: ['Доставка', 'Установка'],
+      customColorOption: true,
+      exactHeightOption: true,
+      defaultGlassColor: 'прозрачный',
+      defaultGlassThickness: '8',
+      companyId,
+      isActive: true,
+    },
+    {
+      name: 'Угловая раздвижная',
+      description: 'Системный шаблон для угловой раздвижной системы',
+      type: 'corner',
+      isSystem: true,
+      glassConfig: [
+        { name: 'Стационар 1', type: 'stationary' },
+        { name: 'Дверь 1', type: 'sliding_door' },
+        { name: 'Стационар 2', type: 'stationary' },
+        { name: 'Дверь 2', type: 'sliding_door' },
+      ],
+      sizeAdjustments: { doorHeightReduction: 8, thresholdReduction: 15 },
+      fields: [],
+      defaultHardware: [
+        'Профиль',
+        'Раздвижная система',
+        'Профильная труба (рельса)',
+        'уголок турба-труба прямоугольное',
+      ],
+      defaultServices: ['Доставка', 'Установка'],
+      customColorOption: true,
+      exactHeightOption: true,
+      defaultGlassColor: 'прозрачный',
+      defaultGlassThickness: '8',
+      companyId,
+      isActive: true,
+    },
+    {
+      name: 'Уникальная конфигурация',
+      description: 'Системный шаблон для уникальных конфигураций',
+      type: 'unique',
+      isSystem: true,
+      glassConfig: [],
+      sizeAdjustments: { doorHeightReduction: 8, thresholdReduction: 15 },
+      fields: [],
+      defaultHardware: ['Профиль', 'Стекло-стекло', 'Стена-стекло'],
+      defaultServices: ['Доставка', 'Установка'],
+      customColorOption: true,
+      exactHeightOption: false,
+      defaultGlassColor: 'прозрачный',
+      defaultGlassThickness: '8',
+      companyId,
+      isActive: true,
+    },
+    {
+      name: 'Перегородка',
+      description: 'Системный шаблон для стеклянных перегородок',
+      type: 'partition',
+      isSystem: true,
+      glassConfig: [{ name: 'Стекло', type: 'stationary' }],
+      sizeAdjustments: { doorHeightReduction: 8, thresholdReduction: 15 },
+      fields: [],
+      defaultHardware: ['Профиль', 'Стекло-стекло', 'Стена-стекло'],
+      defaultServices: ['Доставка', 'Установка'],
+      customColorOption: false,
+      exactHeightOption: false,
+      defaultGlassColor: 'прозрачный',
+      defaultGlassThickness: '10',
+      companyId,
+      isActive: true,
+    },
+  ];
+
+  return systemTemplates;
 }
 
 exports.createCompany = async (req, res) => {
@@ -169,7 +281,20 @@ exports.createCompany = async (req, res) => {
       // Не прерываем создание компании, но логируем ошибку
     }
 
-    // 6. Возвращаем только компанию
+    // 6. Добавляем системные шаблоны
+    try {
+      const systemTemplates = createSystemTemplatesForCompany(company._id);
+      await Template.insertMany(systemTemplates, { ordered: false });
+      console.log(`✅ Системные шаблоны созданы для компании: ${company.name}`);
+    } catch (templateError) {
+      console.error(
+        `❌ Ошибка создания системных шаблонов для компании ${company.name}:`,
+        templateError,
+      );
+      // Не прерываем создание компании, но логируем ошибку
+    }
+
+    // 7. Возвращаем только компанию
     res.status(201).json(company);
   } catch (err) {
     res.status(500).json({ error: err.message });
