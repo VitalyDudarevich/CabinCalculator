@@ -8,7 +8,7 @@ const { sendMail } = require('../utils/email');
 
 exports.login = async (req, res) => {
   try {
-    const { emailOrUsername, password } = req.body;
+    const { emailOrUsername, password, rememberMe } = req.body;
     if (!emailOrUsername || !password) {
       return res.status(400).json({ error: 'Требуются email/username и пароль' });
     }
@@ -45,15 +45,19 @@ exports.login = async (req, res) => {
       { expiresIn: '15m' },
     );
 
+    // Если "Запомнить меня" включен - токен живет 30 дней, иначе - до закрытия браузера (1 день)
+    const refreshTokenExpiry = rememberMe ? '30d' : '1d';
+    const refreshTokenExpiryMs = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+
     const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '30d',
+      expiresIn: refreshTokenExpiry,
     });
 
     // Сохраняем refreshToken в БД
     await RefreshToken.create({
       userId: user._id,
       token: refreshToken,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 дней
+      expiresAt: new Date(Date.now() + refreshTokenExpiryMs),
     });
 
     // Устанавливаем httpOnly cookie с refresh токеном
@@ -61,7 +65,7 @@ exports.login = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
+      maxAge: refreshTokenExpiryMs,
     });
 
     res.json({

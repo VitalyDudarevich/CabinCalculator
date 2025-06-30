@@ -45,7 +45,8 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
         credentials: 'include', // Важно для получения cookies
         body: JSON.stringify({ 
           emailOrUsername: form.emailOrUsername, 
-          password: form.password 
+          password: form.password,
+          rememberMe: rememberMe
         }),
       });
       
@@ -58,17 +59,24 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
         setToken(data.accessToken);
         setMessage('Успешный вход!');
         
-        // Всегда сохраняем токены для SPA навигации
-        localStorage.setItem('token', data.accessToken);
-        if (data.refreshToken) {
-          localStorage.setItem('refreshToken', data.refreshToken);
-        }
+        // Сохраняем rememberMe флаг
+        localStorage.setItem('rememberMe', String(rememberMe));
         
-        // "Запомнить меня" влияет только на флаг постоянного хранения
         if (rememberMe) {
-          localStorage.setItem('rememberMe', 'true');
+          // Если "Запомнить меня" включен - сохраняем в localStorage (постоянное хранение)
+          localStorage.setItem('token', data.accessToken);
+          if (data.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
+          }
         } else {
-          localStorage.setItem('rememberMe', 'false');
+          // Если "Запомнить меня" отключен - сохраняем в sessionStorage (удаляется при закрытии браузера)
+          sessionStorage.setItem('token', data.accessToken);
+          if (data.refreshToken) {
+            sessionStorage.setItem('refreshToken', data.refreshToken);
+          }
+          // Очищаем localStorage если там были старые токены
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
         }
       } else {
         setMessage(data.error || 'Ошибка входа');

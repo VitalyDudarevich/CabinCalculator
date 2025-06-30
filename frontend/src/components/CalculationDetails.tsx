@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
 interface HardwareDraftItem {
   hardwareId: string;
@@ -122,6 +122,8 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
   // Используем переданные данные вместо локального состояния
   const settings = propsSettings;
 
+
+
   // Логирование для диагностики companyId
   console.log('CalculationDetails companyId:', companyId);
   if (settings?.hardwareList) {
@@ -130,19 +132,9 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
     });
   }
 
-  // --- useEffect для передачи total наружу ---
-  useEffect(() => {
-    const calculateTotal = () => {
-      if (!settings || !draft || !draft.config) return 0;
-      // Логика расчета total будет выполнена в основном блоке
-      return 0;
-    };
-    
-    const calculatedTotal = calculateTotal();
-    if (typeof onTotalChange === 'function') {
-      onTotalChange(calculatedTotal, 0, 0);
-    }
-  }, [draft, settings, companyId, exactHeight, onTotalChange]);
+
+
+
 
   // Если settings еще не загружены, показываем индикатор загрузки
   if (!settings) {
@@ -599,10 +591,18 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
 
   const configLabel = configLabels[String(draft.config ?? '')] || '';
 
+  // Вызываем callback с рассчитанной ценой
+  if (onTotalChange) {
+    onTotalChange(total, 0, 0); // deliveryPrice и installPrice пока 0
+  }
+
   // ВРЕМЕННАЯ ДИАГНОСТИКА
   console.log('projectHardware:', draft.projectHardware);
   console.log('hardwareList:', settings?.hardwareList);
   console.log('positions:', positions);
+  console.log('Total calculated:', total);
+
+
 
   return (
     <div className="calculation-details-container" style={{ 
@@ -1004,22 +1004,16 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                 </div>
               )}
               <div style={{ fontWeight: 700, fontSize: 18, marginTop: 16 }}>
-                Цена: {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
-                  ? draft.priceHistory[draft.priceHistory.length - 1].price.toFixed(2)
-                  : total.toFixed(2)} {settings.currency}
+                Цена: {total.toFixed(2)} {settings.currency}
               </div>
               {settings.showUSD && usdRate > 0 && (
                 <div style={{ color: '#888', fontSize: 15, marginTop: 4 }}>
-                  ~ {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
-                    ? (draft.priceHistory[draft.priceHistory.length - 1].price / usdRate).toFixed(2)
-                    : (total / usdRate).toFixed(2)} $
+                  ~ {(total / usdRate).toFixed(2)} $
                 </div>
               )}
               {settings.showRR && settings.rrRate && parseFloat(settings.rrRate) > 0 && (
                 <div style={{ color: '#888', fontSize: 15, marginTop: 4 }}>
-                  ~ {draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
-                    ? (draft.priceHistory[draft.priceHistory.length - 1].price / parseFloat(settings.rrRate)).toFixed(2)
-                    : (total / parseFloat(settings.rrRate)).toFixed(2)} ₽
+                  ~ {(total / parseFloat(settings.rrRate)).toFixed(2)} ₽
                 </div>
               )}
               
@@ -1177,10 +1171,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
                     }
                     
                     // Общая стоимость
-                    const finalPrice = draft && draft.projectName && Array.isArray(draft.priceHistory) && draft.priceHistory.length > 0
-                      ? draft.priceHistory[draft.priceHistory.length - 1].price
-                      : total;
-                    clientInfo.push(`\nОбщая стоимость: ${finalPrice.toFixed(2)} ${settings.currency}`);
+                    clientInfo.push(`\nОбщая стоимость: ${total.toFixed(2)} ${settings.currency}`);
                     
                     const textToCopy = clientInfo.join('\n');
                     

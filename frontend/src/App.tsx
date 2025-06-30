@@ -8,7 +8,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import Header from './components/Header';
 import type { Company } from './types/Company';
 import type { User } from './types/User';
-import { fetchWithAuth, refreshAccessToken } from './utils/auth';
+import { fetchWithAuth, refreshAccessToken, getToken, getRefreshToken } from './utils/auth';
 import { API_URL } from './utils/api';
 
 
@@ -19,7 +19,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
-  const [token, setToken] = useState<string>(() => localStorage.getItem('token') || '');
+  const [token, setToken] = useState<string>(() => getToken());
   const [userLoaded, setUserLoaded] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -43,12 +43,14 @@ export default function App() {
             setUser(null);
             setToken('');
             localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
           }
         } catch (err) {
           console.error('User load error:', err);
           setUser(null);
           setToken('');
           localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
           setError('Ошибка загрузки пользователя.');
         }
       } else {
@@ -64,8 +66,8 @@ export default function App() {
   // Автоматическое восстановление токенов при старте приложения
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      const refreshToken = localStorage.getItem('refreshToken');
+      const storedToken = getToken();
+      const refreshToken = getRefreshToken();
       
       console.log('🚀 App init auth:', { 
         hasStoredToken: !!storedToken, 
@@ -89,6 +91,8 @@ export default function App() {
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('rememberMe');
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('refreshToken');
         }
       } else {
         console.log('❌ No tokens found');
@@ -161,9 +165,12 @@ export default function App() {
     setToken('');
     setCompanies([]);
     setSelectedCompanyId('');
+    // Очищаем токены из обоих хранилищ
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('rememberMe');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('refreshToken');
   };
 
   if (!userLoaded) {

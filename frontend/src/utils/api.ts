@@ -1,3 +1,5 @@
+import { fetchWithAuth } from './auth';
+
 export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api';
 
 // Интерфейсы
@@ -28,8 +30,6 @@ export const getProjects = async (params?: {
   userId?: string;
   statusId?: string;
 }): Promise<ProjectApiResponse[]> => {
-  const token = localStorage.getItem('token');
-
   const queryParams = new URLSearchParams();
   if (params?.companyId) queryParams.append('companyId', params.companyId);
   if (params?.userId) queryParams.append('userId', params.userId);
@@ -37,9 +37,8 @@ export const getProjects = async (params?: {
 
   const url = `${API_URL}/projects${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithAuth(url, {
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -53,11 +52,8 @@ export const getProjects = async (params?: {
 
 // Получить проект по ID
 export const getProjectById = async (projectId: string): Promise<ProjectApiResponse> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_URL}/projects/${projectId}`, {
+  const response = await fetchWithAuth(`${API_URL}/projects/${projectId}`, {
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -74,12 +70,9 @@ export const updateProjectStatus = async (
   projectId: string,
   statusId: string,
 ): Promise<ProjectApiResponse> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_URL}/projects/${projectId}/status`, {
+  const response = await fetchWithAuth(`${API_URL}/projects/${projectId}/status`, {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ statusId }),
@@ -101,12 +94,9 @@ export const createProject = async (projectData: {
   data: Record<string, unknown>;
   price?: number;
 }): Promise<ProjectApiResponse> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_URL}/projects`, {
+  const response = await fetchWithAuth(`${API_URL}/projects`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(projectData),
@@ -130,12 +120,9 @@ export const updateProject = async (
     data?: Record<string, unknown>;
   },
 ): Promise<ProjectApiResponse> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_URL}/projects/${projectId}`, {
+  const response = await fetchWithAuth(`${API_URL}/projects/${projectId}`, {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(projectData),
@@ -150,12 +137,9 @@ export const updateProject = async (
 
 // Удалить проект
 export const deleteProject = async (projectId: string): Promise<{ message: string }> => {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${API_URL}/projects/${projectId}`, {
+  const response = await fetchWithAuth(`${API_URL}/projects/${projectId}`, {
     method: 'DELETE',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });

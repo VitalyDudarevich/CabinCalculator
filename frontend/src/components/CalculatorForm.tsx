@@ -799,9 +799,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
     let finalPrice;
     if (manualPrice !== undefined) {
       finalPrice = manualPrice;
-    } else if (selectedProject && selectedProject.price !== undefined) {
-      finalPrice = selectedProject.price;
     } else {
+      // Всегда используем актуальную рассчитанную цену
       finalPrice = totalPrice ?? 0;
     }
     
@@ -2494,11 +2493,36 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         />
       </div>
 
-      {/* Кнопка сохранения */}
-      <div className="form-actions" style={{ margin: '12px 0 0 0' }}>
+      {/* Кнопки сохранения и отмены */}
+      <div className="form-actions" style={{ margin: '12px 0 0 0', display: 'flex', gap: '12px' }}>
+        <button
+          type="button"
+          style={{
+            flex: 1,
+            padding: '10px 0',
+            borderRadius: 8,
+            background: '#fff',
+            color: '#646cff',
+            border: '2px solid #646cff',
+            fontWeight: 600,
+            fontSize: 16,
+            cursor: 'pointer',
+          }}
+          onClick={() => {
+            if (selectedProject) {
+              // Если редактируем проект, сбрасываем изменения
+              onNewProject?.(selectedProject);
+            } else {
+              // Если создаём новый проект, очищаем форму
+              resetAllFields();
+            }
+          }}
+        >
+          ОТМЕНА
+        </button>
         <button
           style={{
-            width: '100%',
+            flex: 1,
             padding: '10px 0',
             borderRadius: 8,
             background: !selectedProject || changedFields.size > 0 ? '#646cff' : '#ccc',
