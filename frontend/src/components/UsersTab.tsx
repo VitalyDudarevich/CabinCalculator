@@ -37,10 +37,17 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
   });
   
   const filteredUsers = (selectedCompanyId && selectedCompanyId !== 'all'
-    ? users.filter(u =>
-        ((typeof u.companyId === 'object' && u.companyId?._id?.toString() === selectedCompanyId?.toString()) ||
-        (typeof u.companyId === 'string' && u.companyId === selectedCompanyId))
-      )
+    ? users.filter(u => {
+        // Для админов компании: показываем если companyId совпадает ИЛИ если companyId = null (legacy)
+        if (u.role === 'admin') {
+          return ((typeof u.companyId === 'object' && u.companyId?._id?.toString() === selectedCompanyId?.toString()) ||
+                  (typeof u.companyId === 'string' && u.companyId === selectedCompanyId) ||
+                  u.companyId === null);
+        }
+        // Для обычных пользователей: строгое соответствие companyId
+        return ((typeof u.companyId === 'object' && u.companyId?._id?.toString() === selectedCompanyId?.toString()) ||
+                (typeof u.companyId === 'string' && u.companyId === selectedCompanyId));
+      })
     : users
   ).filter(u => u.role !== 'superadmin');
   
@@ -197,9 +204,12 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
         submitText="Добавить"
         companyNameError={userFormError}
       />
-      {userRole === 'superadmin' && !selectedCompanyId ? (
+      {userRole === 'superadmin' && (!selectedCompanyId || selectedCompanyId === 'all') ? (
         companies.map(comp => {
-          const companyUsers = users.filter(u => u.companyId === comp._id);
+          const companyUsers = users.filter(u => 
+            (typeof u.companyId === 'object' && u.companyId?._id === comp._id) ||
+            (typeof u.companyId === 'string' && u.companyId === comp._id)
+          );
           if (companyUsers.length === 0) return null;
           return (
             <div key={comp._id} style={{ marginBottom: 32 }}>
@@ -220,7 +230,11 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, companies, selectedCompanyId
                       <td style={{ padding: 8 }}>{u.username}</td>
                       <td style={{ padding: 8 }}>{u.email}</td>
                       <td style={{ padding: 8 }}>{u.role}</td>
-                      <td style={{ padding: 8 }}>{companies.find(c => c._id === u.companyId)?.name || '-'}</td>
+                      <td style={{ padding: 8 }}>
+                        {typeof u.companyId === 'object' 
+                          ? u.companyId?.name 
+                          : (companies.find(c => c._id === u.companyId)?.name || '-')}
+                      </td>
                       <td style={{ padding: 8, textAlign: 'center' }}>
                         {/* TODO: реализовать редактирование/удаление */}
                       </td>

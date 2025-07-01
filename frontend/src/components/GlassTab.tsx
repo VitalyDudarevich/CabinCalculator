@@ -23,7 +23,9 @@ interface GlassTabProps {
 }
 
 const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => {
-  const company = companies.find(c => c._id === selectedCompanyId);
+  // Ищем компанию в списке или создаем фиктивную для админов
+  const company = companies.find(c => c._id === selectedCompanyId) || 
+    (selectedCompanyId ? { _id: selectedCompanyId, name: 'Ваша компания' } : { _id: '', name: '' });
   const [editMode, setEditMode] = useState(false);
   const [addName, setAddName] = useState('');
   const [addPrice, setAddPrice] = useState<number | ''>('');
@@ -39,7 +41,7 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
   const companyName = company?.name || '';
 
   useEffect(() => {
-    if (!company) return setEditList([]);
+    if (!selectedCompanyId) return setEditList([]);
     setError('');
     setLoading(true);
     fetchWithAuth(`${API_URL}/glass?companyId=${company._id}`)
@@ -54,9 +56,9 @@ const GlassTab: React.FC<GlassTabProps> = ({ companies, selectedCompanyId }) => 
         setOriginalList([]);
         setLoading(false);
       });
-  }, [selectedCompanyId, company?._id]);
+  }, [selectedCompanyId, company._id]);
 
-  if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
+  if (!selectedCompanyId) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   const handleAdd = () => {
     if (!addName.trim()) return;

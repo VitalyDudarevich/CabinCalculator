@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { User } from '../types/User';
 import KanbanBoard from '../components/KanbanBoard';
 import CalculatorForm from '../components/CalculatorForm';
@@ -90,13 +90,16 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
     }
   }, [isMobile]);
 
-  // Эффективные ID для админа/пользователя
-  let effectiveCompanyId = selectedCompanyId;
-  if (user && (user.role === 'admin' || user.role === 'user')) {
-    const id = typeof user.companyId === 'string' ? user.companyId : 
-               (user.companyId && typeof user.companyId === 'object' && '_id' in user.companyId ? user.companyId._id : '');
-    effectiveCompanyId = id;
-  }
+  // Эффективные ID для админа/пользователя - используем useMemo для стабильности
+  const effectiveCompanyId = useMemo(() => {
+    if (user && (user.role === 'admin' || user.role === 'user')) {
+      const id = typeof user.companyId === 'string' ? user.companyId : 
+                 (user.companyId && typeof user.companyId === 'object' && '_id' in user.companyId ? user.companyId._id : '');
+      // Если у админа/пользователя нет companyId, используем selectedCompanyId
+      return id || selectedCompanyId;
+    }
+    return selectedCompanyId;
+  }, [user, selectedCompanyId]);
 
   console.log('🔄 ProjectProgressPage RENDER:', {
     effectiveCompanyId,
@@ -125,7 +128,8 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
           fetchWithAuth(`${API_URL}/settings?companyId=${effectiveCompanyId}`),
           fetchWithAuth(`${API_URL}/glass?companyId=${effectiveCompanyId}`),
           fetchWithAuth(`${API_URL}/hardware?companyId=${effectiveCompanyId}`),
-          getStatuses(effectiveCompanyId),
+          // Не загружаем статусы если effectiveCompanyId равен 'all' или пустой
+          (!effectiveCompanyId || effectiveCompanyId === 'all') ? Promise.resolve([]) : getStatuses(effectiveCompanyId),
         ]);
         
         console.log('🔄 ProjectProgressPage: API responses status:', {

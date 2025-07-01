@@ -27,6 +27,8 @@ interface Settings {
 interface SettingsTabProps {
   currencyOptions: string[];
   company: Company | null;
+  companies?: Company[]; // Добавляем список компаний
+  selectedCompanyId?: string; // Добавляем ID выбранной компании
   onAdd?: () => void;
 }
 
@@ -35,6 +37,8 @@ interface SettingsTabProps {
 const SettingsTab: React.FC<SettingsTabProps> = ({
   currencyOptions,
   company,
+  companies = [],
+  selectedCompanyId,
   onAdd,
 }) => {
   const [settings, setSettings] = useState<Settings>({
@@ -56,13 +60,17 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
-  const companyName = company ? company.name : 'Все компании';
+  // Определяем целевую компанию для загрузки настроек
+  const targetCompanyId = company?._id || selectedCompanyId || (companies.length > 0 ? companies[0]._id : null);
+  const targetCompany = company || companies.find(c => c._id === targetCompanyId) || (companies.length > 0 ? companies[0] : null);
+  const companyName = targetCompany ? targetCompany.name : 'Все компании';
 
   useEffect(() => {
-    if (!company?._id) return;
+    if (!targetCompanyId) return;
     setSettingsLoading(true);
     setSettingsError('');
-    fetchWithAuth(`${API_URL}/settings?companyId=${company._id}`)
+    console.log('🔧 SettingsTab: Loading settings for company:', targetCompanyId);
+    fetchWithAuth(`${API_URL}/settings?companyId=${targetCompanyId}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -97,7 +105,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         setSettingsError('Ошибка загрузки настроек');
         setSettingsLoading(false);
       });
-  }, [company]);
+  }, [targetCompanyId, companies, selectedCompanyId]);
 
   // --- Сохранение ---
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -106,7 +114,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     setSettingsError('');
     try {
       const payload = {
-        companyId: company?._id,
+        companyId: targetCompanyId,
         currency: settings.currency,
         usdRate: settings.usdRate === '' ? 0 : Math.round(parseFloat(settings.usdRate) * 10000) / 10000,
         rrRate: settings.rrRate === '' ? 0 : Math.round(parseFloat(settings.rrRate) * 10000) / 10000,
@@ -157,7 +165,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     }
   };
 
-  if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
+  if (!targetCompany) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   return (
     <div className="settings-tab-root" style={{ 

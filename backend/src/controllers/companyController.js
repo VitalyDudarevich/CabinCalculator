@@ -7,10 +7,50 @@ const Template = require('../models/Template');
 
 exports.getAllCompanies = async (req, res) => {
   try {
-    const companies = await Company.find();
-    res.json(companies);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.log('🏢 getAllCompanies called by user:', {
+      id: req.user._id,
+      role: req.user.role,
+      companyId: req.user.companyId,
+      hasCompanyId: !!req.user.companyId,
+    });
+
+    if (req.user.role === 'superadmin') {
+      console.log('✅ Superadmin access - returning all companies');
+      const companies = await Company.find();
+      return res.json(companies);
+    }
+
+    // Для админа: если у него нет companyId, показываем все компании
+    // Если у админа есть companyId, показываем только его компанию
+    if (req.user.role === 'admin') {
+      if (!req.user.companyId) {
+        console.log('✅ Admin without companyId - returning all companies for selection');
+        const companies = await Company.find();
+        return res.json(companies);
+      } else {
+        console.log('✅ Admin with companyId - returning only assigned company');
+        const companies = await Company.find({ _id: req.user.companyId });
+        return res.json(companies);
+      }
+    }
+
+    // Для обычного пользователя - обязательно должен быть companyId
+    if (req.user.role === 'user') {
+      if (!req.user.companyId) {
+        console.log('❌ User has no companyId');
+        return res.status(400).json({ error: 'У пользователя не указана компания' });
+      }
+      console.log('✅ User access - returning assigned company only');
+      const companies = await Company.find({ _id: req.user.companyId });
+      return res.json(companies);
+    }
+
+    // Неизвестная роль
+    console.log('❌ Unknown user role:', req.user.role);
+    return res.status(403).json({ error: 'Недостаточно прав' });
+  } catch (error) {
+    console.error('❌ Error in getAllCompanies:', error);
+    res.status(500).json({ error: 'Ошибка при получении компаний' });
   }
 };
 

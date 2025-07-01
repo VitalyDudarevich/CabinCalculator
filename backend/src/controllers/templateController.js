@@ -5,8 +5,41 @@ const getTemplates = async (req, res) => {
   try {
     const { companyId } = req.query;
 
+    console.log('📄 getTemplates called with:', {
+      companyId,
+      userRole: req.user?.role,
+      userCompanyId: req.user?.companyId,
+    });
+
     if (!companyId) {
       return res.status(400).json({ message: 'Не указан ID компании' });
+    }
+
+    // Проверяем права доступа
+    if (req.user.role === 'superadmin') {
+      // Суперадмин может получить шаблоны любой компании
+    } else if (req.user.role === 'admin' || req.user.role === 'user') {
+      let targetCompanyId;
+
+      if (req.user.companyId) {
+        targetCompanyId =
+          typeof req.user.companyId === 'string'
+            ? req.user.companyId
+            : req.user.companyId._id || req.user.companyId.toString();
+      } else if (req.user.role === 'admin' && companyId) {
+        targetCompanyId = companyId;
+      } else {
+        console.log('❌ Templates: User has no access to any company');
+        return res.status(403).json({ message: 'Недостаточно прав для просмотра шаблонов' });
+      }
+
+      if (companyId !== targetCompanyId) {
+        console.log('❌ Templates: Access denied to company', companyId);
+        return res.status(403).json({ message: 'Нет доступа к шаблонам этой компании' });
+      }
+    } else {
+      console.log('❌ Templates: Unknown user role');
+      return res.status(403).json({ message: 'Недостаточно прав' });
     }
 
     const templates = await Template.find({
@@ -16,7 +49,7 @@ const getTemplates = async (req, res) => {
 
     res.json(templates);
   } catch (error) {
-    console.error('Ошибка получения шаблонов:', error);
+    console.error('❌ Error in getTemplates:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
@@ -233,8 +266,43 @@ const getSystemTemplates = async (req, res) => {
   try {
     const { companyId } = req.query;
 
+    console.log('📄 getSystemTemplates called with:', {
+      companyId,
+      userRole: req.user?.role,
+      userCompanyId: req.user?.companyId,
+    });
+
     if (!companyId) {
       return res.status(400).json({ message: 'Не указан ID компании' });
+    }
+
+    // Проверяем права доступа
+    if (req.user.role === 'superadmin') {
+      // Суперадмин может получить системные шаблоны любой компании
+    } else if (req.user.role === 'admin' || req.user.role === 'user') {
+      let targetCompanyId;
+
+      if (req.user.companyId) {
+        targetCompanyId =
+          typeof req.user.companyId === 'string'
+            ? req.user.companyId
+            : req.user.companyId._id || req.user.companyId.toString();
+      } else if (req.user.role === 'admin' && companyId) {
+        targetCompanyId = companyId;
+      } else {
+        console.log('❌ System Templates: User has no access to any company');
+        return res
+          .status(403)
+          .json({ message: 'Недостаточно прав для просмотра системных шаблонов' });
+      }
+
+      if (companyId !== targetCompanyId) {
+        console.log('❌ System Templates: Access denied to company', companyId);
+        return res.status(403).json({ message: 'Нет доступа к системным шаблонам этой компании' });
+      }
+    } else {
+      console.log('❌ System Templates: Unknown user role');
+      return res.status(403).json({ message: 'Недостаточно прав' });
     }
 
     const systemTemplates = await Template.find({
@@ -245,7 +313,7 @@ const getSystemTemplates = async (req, res) => {
 
     res.json(systemTemplates);
   } catch (error) {
-    console.error('Ошибка получения системных шаблонов:', error);
+    console.error('❌ Error in getSystemTemplates:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };

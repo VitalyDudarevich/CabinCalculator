@@ -1259,7 +1259,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         
         // Загружаем статусы и проекты параллельно
         const [statusesData, projectsData] = await Promise.all([
-          getStatuses(companyId),
+          // Не загружаем статусы если companyId равен 'all' или пустой
+          (!companyId || companyId === 'all') ? Promise.resolve([]) : getStatuses(companyId),
           getProjects({ companyId })
         ]);
         
@@ -1289,7 +1290,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }
     };
     
-    if (companyId) {
+    if (companyId && companyId !== 'all') {
       loadData();
     } else {
       setLoading(false);

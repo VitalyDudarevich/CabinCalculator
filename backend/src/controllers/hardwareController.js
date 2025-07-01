@@ -77,8 +77,22 @@ exports.deleteAllDoorHinges = async (req, res) => {
 // Новый эндпоинт: получить hardware по companyId
 exports.getHardwareByCompany = async (req, res) => {
   try {
-    const companyId = req.user?.companyId || req.query.companyId;
-    if (!companyId) return res.status(400).json({ error: 'companyId обязателен' });
+    const userCompanyId = req.user?.companyId;
+    const queryCompanyId = req.query.companyId;
+    const companyId = queryCompanyId || userCompanyId;
+
+    console.log('🔧 getHardwareByCompany called:', {
+      userRole: req.user?.role,
+      userCompanyId,
+      queryCompanyId,
+      finalCompanyId: companyId,
+      isValidObjectId: companyId ? mongoose.Types.ObjectId.isValid(companyId) : 'N/A',
+    });
+
+    if (!companyId) {
+      console.log('❌ No companyId provided');
+      return res.status(400).json({ error: 'companyId обязателен' });
+    }
 
     let filter = {};
     if (mongoose.Types.ObjectId.isValid(companyId)) {
@@ -86,9 +100,14 @@ exports.getHardwareByCompany = async (req, res) => {
     } else {
       filter.companyId = companyId;
     }
+
+    console.log('🔍 Hardware search filter:', filter);
     const hardware = await Hardware.find(filter);
+    console.log('✅ Hardware found:', hardware.length, 'items');
+
     res.json(hardware);
   } catch (err) {
+    console.error('❌ getHardwareByCompany error:', err);
     res.status(500).json({ error: err.message });
   }
 };

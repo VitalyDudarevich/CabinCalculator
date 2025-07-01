@@ -7,17 +7,92 @@ exports.getStatuses = async (req, res) => {
   try {
     const { companyId } = req.query;
 
+    console.log('🔍 getStatuses called with companyId:', companyId);
+    console.log('👤 User data:', {
+      id: req.user?._id,
+      role: req.user?.role,
+      userCompanyId: req.user?.companyId,
+      userCompanyIdType: typeof req.user?.companyId,
+    });
+
     if (!companyId) {
+      console.log('❌ No companyId provided');
       return res.status(400).json({ error: 'CompanyId is required' });
     }
+
+    // Проверяем валидность ObjectId
+    if (!companyId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log('❌ Invalid companyId format:', companyId);
+      return res.status(400).json({ error: 'Invalid companyId format' });
+    }
+
+    // Проверка доступа к компании
+    if (req.user.role === 'superadmin') {
+      console.log('✅ getStatuses: Superadmin access - allowed for any company');
+    } else if (req.user.role === 'admin' || req.user.role === 'user') {
+      let targetCompanyId;
+
+      if (req.user.companyId) {
+        // У пользователя есть назначенная компания
+        targetCompanyId =
+          typeof req.user.companyId === 'string'
+            ? req.user.companyId
+            : req.user.companyId._id || req.user.companyId.toString();
+      } else if (req.user.role === 'admin' && companyId) {
+        // Админ без назначенной компании может выбрать компанию
+        targetCompanyId = companyId;
+      } else {
+        console.log('❌ getStatuses: User has no access to any company');
+        return res.status(403).json({ error: 'Недостаточно прав для просмотра статусов' });
+      }
+
+      console.log('🔒 getStatuses: Access check:', {
+        requestedCompanyId: companyId,
+        userCompanyId: targetCompanyId,
+        userRole: req.user.role,
+        matches: targetCompanyId === companyId,
+      });
+
+      // Если запрашивается конкретная компания, проверяем права
+      if (companyId && companyId !== targetCompanyId) {
+        console.log('❌ getStatuses: Access denied to requested company');
+        return res.status(403).json({ error: 'Нет доступа к статусам этой компании' });
+      }
+    } else {
+      console.log('❌ getStatuses: Unknown user role');
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    console.log('🔍 Searching for statuses with companyId:', companyId);
 
     const statuses = await Status.find({
       companyId: companyId,
     }).sort({ order: 1 });
 
+    console.log('✅ Found statuses:', statuses.length);
+
+    // Если статусов нет, создаём дефолтные
+    if (statuses.length === 0) {
+      console.log('🔧 No statuses found, creating default statuses for company:', companyId);
+      try {
+        const defaultStatuses = await Status.createDefaultStatusesForCompany(companyId);
+        console.log('✅ Created default statuses:', defaultStatuses.length);
+        return res.json(defaultStatuses);
+      } catch (createError) {
+        console.error('❌ Error creating default statuses:', createError);
+        // Если не удалось создать дефолтные статусы, возвращаем пустой массив
+        return res.json([]);
+      }
+    }
+
     res.json(statuses);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Error in getStatuses:', err);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    });
   }
 };
 
@@ -201,29 +276,104 @@ exports.getStatusStats = async (req, res) => {
   try {
     const { companyId } = req.query;
 
+    console.log('📊 getStatusStats called with companyId:', companyId);
+    console.log('👤 User data:', {
+      id: req.user?._id,
+      role: req.user?.role,
+      userCompanyId: req.user?.companyId,
+      userCompanyIdType: typeof req.user?.companyId,
+    });
+
     if (!companyId) {
+      console.log('❌ StatusStats: No companyId provided');
       return res.status(400).json({ error: 'CompanyId is required' });
     }
 
+    // Проверяем валидность ObjectId
+    if (!companyId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log('❌ StatusStats: Invalid companyId format:', companyId);
+      return res.status(400).json({ error: 'Invalid companyId format' });
+    }
+
+    // Проверка доступа к компании
+    if (req.user.role === 'superadmin') {
+      console.log('✅ StatusStats: Superadmin access - allowed for any company');
+    } else if (req.user.role === 'admin' || req.user.role === 'user') {
+      let targetCompanyId;
+
+      if (req.user.companyId) {
+        // У пользователя есть назначенная компания
+        targetCompanyId =
+          typeof req.user.companyId === 'string'
+            ? req.user.companyId
+            : req.user.companyId._id || req.user.companyId.toString();
+      } else if (req.user.role === 'admin' && companyId) {
+        // Админ без назначенной компании может выбрать компанию
+        targetCompanyId = companyId;
+      } else {
+        console.log('❌ StatusStats: User has no access to any company');
+        return res.status(403).json({ error: 'Недостаточно прав для просмотра статусов' });
+      }
+
+      console.log('🔒 StatusStats: Access check:', {
+        requestedCompanyId: companyId,
+        userCompanyId: targetCompanyId,
+        userRole: req.user.role,
+        matches: targetCompanyId === companyId,
+      });
+
+      // Если запрашивается конкретная компания, проверяем права
+      if (companyId && companyId !== targetCompanyId) {
+        console.log('❌ StatusStats: Access denied to requested company');
+        return res.status(403).json({ error: 'Нет доступа к статистике этой компании' });
+      }
+    } else {
+      console.log('❌ StatusStats: Unknown user role');
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    console.log('🔍 StatusStats: Finding statuses for company:', companyId);
     // Получаем все статусы компании
     const statuses = await Status.find({
       companyId: companyId,
     }).sort({ order: 1 });
 
+    console.log('✅ StatusStats: Found statuses:', statuses.length);
+
     // Получаем статистику по проектам для каждого статуса
+    console.log('🔄 StatusStats: Calculating project counts...');
     const stats = await Promise.all(
       statuses.map(async (status) => {
-        const projectCount = await Project.countDocuments({ statusId: status._id });
-        return {
-          ...status.toObject(),
-          projectCount,
-        };
+        try {
+          console.log(`📈 Counting projects for status ${status.name} (${status._id})`);
+          // Используем более безопасный поиск проектов
+          const projectCount = await Project.countDocuments({
+            $or: [{ statusId: status._id }, { status: status.name, companyId: companyId }],
+          });
+          console.log(`✅ Status ${status.name}: ${projectCount} projects`);
+          return {
+            ...status.toObject(),
+            projectCount,
+          };
+        } catch (statusError) {
+          console.error(`❌ Error counting projects for status ${status.name}:`, statusError);
+          return {
+            ...status.toObject(),
+            projectCount: 0,
+          };
+        }
       }),
     );
 
+    console.log('✅ StatusStats: Completed, returning', stats.length, 'statuses');
     res.json(stats);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ StatusStats: Error in getStatusStats:', err);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    });
   }
 };
 

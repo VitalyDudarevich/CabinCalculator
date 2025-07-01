@@ -45,7 +45,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   setCompanies,
   onLogout,
 }) => {
-  const [section, setSection] = useState('companies');
+  // Дефолтная секция зависит от роли пользователя
+  const getDefaultSection = () => {
+    if (user?.role === 'superadmin') {
+      return 'companies';
+    } else {
+      return 'users'; // Для админов и пользователей
+    }
+  };
+  
+  const [section, setSection] = useState(getDefaultSection());
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [hardwareByCompany, setHardwareByCompany] = useState<Record<string, HardwareItem[]>>({});
@@ -61,10 +70,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
 
-  // --- Мобильный режим: скрываем сайдбар если ширина <600px ---
+  // --- Мобильный режим: скрываем сайдбар если ширина <1000px для работы с DevTools ---
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 600);
+    const check = () => setIsMobile(window.innerWidth < 1000); // Увеличен с 600px до 1000px
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
@@ -74,23 +83,41 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   let effectiveCompanyId = '';
   if (user && (user.role === 'admin' || user.role === 'user')) {
     effectiveCompanyId = typeof user.companyId === 'string' ? user.companyId : (user.companyId && typeof user.companyId === 'object' && '_id' in user.companyId ? user.companyId._id : '');
+    
+    // Если у админа нет companyId, берем первую доступную компанию
+    if (!effectiveCompanyId && companies.length > 0) {
+      effectiveCompanyId = companies[0]._id;
+      console.log('🔧 Admin has no companyId, using first available company:', companies[0]._id, companies[0].name);
+    }
   } else if (user && user.role === 'superadmin' && companies.length > 0) {
-    effectiveCompanyId = selectedCompanyId;
+    // Для суперадмина: если selectedCompanyId = 'all' или пустой, оставляем effectiveCompanyId пустым для загрузки всех пользователей
+    effectiveCompanyId = selectedCompanyId === 'all' ? 'all' : selectedCompanyId;
   }
 
-  console.log('AdminPanel effectiveCompanyId:', { 
+  console.log('🎯 AdminPanel effectiveCompanyId calculation:', { 
     role: user?.role, 
-    effectiveCompanyId, 
-    selectedCompanyId, 
+    originalSelectedCompanyId: selectedCompanyId,
+    calculatedEffectiveCompanyId: effectiveCompanyId, 
     companiesCount: companies.length,
     userCompanyId: user?.companyId,
-    allCompanies: companies.map(c => ({ id: c._id, name: c.name }))
+    allCompanies: companies.map(c => ({ id: c._id, name: c.name })),
+    isLoadingData,
+    isDataLoaded
+  });
+
+  console.log('🔍 ADMIN DEBUG:', {
+    userRole: user?.role,
+    userCompanyId: user?.companyId,
+    companiesAvailable: companies.length,
+    firstCompany: companies[0] ? { id: companies[0]._id, name: companies[0].name } : null,
+    finalEffectiveCompanyId: effectiveCompanyId,
+    willTriggerDataLoad: effectiveCompanyId ? 'YES' : 'NO'
   });
 
   // --- Синхронизация секции с query-параметрами ---
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const sectionParam = params.get('section') || 'companies';
+    const sectionParam = params.get('section') || getDefaultSection();
     if (sectionParam !== section) {
       setSection(sectionParam);
     }
@@ -114,7 +141,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         setSection(key);
         setIsTransitioning(false);
         setDebounceTimer(null);
-        if (key === 'companies') {
+        if (key === getDefaultSection()) {
           navigate('/admin', { replace: true });
         } else {
           navigate(`/admin?section=${key}`, { replace: true });
@@ -137,21 +164,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   // Функция для загрузки всех данных админ-панели
   const loadAllAdminData = async () => {
-    console.log('loadAllAdminData called:', { isLoadingData, isDataLoaded, effectiveCompanyId, companiesCount: companies.length });
-    if (isLoadingData || isDataLoaded) {
-      console.log('Skipping loadAllAdminData - already loading or loaded');
+    console.log('🚀 loadAllAdminData called:', { 
+      isLoadingData, 
+      isDataLoaded, 
+      effectiveCompanyId, 
+      companiesCount: companies.length,
+      userRole: user.role 
+    });
+    if (isLoadingData) {
+      console.log('⏭️ Skipping loadAllAdminData - already loading');
       return;
     }
     
-    console.log('Starting loadAllAdminData...');
+    console.log('🔄 Starting loadAllAdminData...');
     setIsLoadingData(true);
     try {
       // Загружаем пользователей
       let usersUrl = `${API_URL}/users`;
-      // Для superadmin передаем companyId в query, для admin/user сервер использует данные из токена
+      // Для superadmin передаем companyId в query только если нужна конкретная компания
+      // Если effectiveCompanyId = 'all' или пустой, загружаем всех пользователей (не добавляем companyId)
       if (user.role === 'superadmin' && effectiveCompanyId && effectiveCompanyId !== 'all') {
         usersUrl += `?companyId=${effectiveCompanyId}`;
       }
+      // Для admin/user сервер автоматически использует данные из токена
       
       console.log('Loading users:', { usersUrl, effectiveCompanyId, userRole: user.role });
       
@@ -188,16 +223,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           setUsers([]);
         });
 
-      // Загружаем фурнитуру только для нужных компаний
+      // Загружаем фурнитуру только для выбранной компании
       let companiesToLoad: Company[] = [];
       if (user.role === 'superadmin') {
-        // Superadmin - загружаем для всех компаний
-        companiesToLoad = companies;
+        // Superadmin - загружаем только для выбранной компании (если выбрана)
+        if (effectiveCompanyId && effectiveCompanyId !== 'all') {
+          const selectedCompany = companies.find(c => c._id === effectiveCompanyId);
+          if (selectedCompany) {
+            companiesToLoad = [selectedCompany];
+          }
+        }
+        // Если effectiveCompanyId = 'all' или не выбрана, не загружаем hardware
       } else {
-        // Admin/User - загружаем только для своей компании
-        const userCompany = companies.find(c => c._id === effectiveCompanyId);
-        if (userCompany) {
-          companiesToLoad = [userCompany];
+        // Admin/User - загружаем для своей компании (создаем фиктивную компанию)
+        if (effectiveCompanyId) {
+          companiesToLoad = [{ _id: effectiveCompanyId, name: 'Ваша компания' }];
         }
       }
       
@@ -237,20 +277,52 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
+  // Дополнительный useEffect для админов без companyId - ждем загрузки компаний
+  useEffect(() => {
+    if (user?.role === 'admin' && !user.companyId && companies.length > 0 && !isDataLoaded && !isLoadingData) {
+      console.log('🔧 Admin without companyId detected after companies loaded, triggering data load');
+      // Сбрасываем состояние и перезагружаем данные
+      setIsDataLoaded(false);
+      setIsLoadingData(false);
+      loadAllAdminData();
+    }
+  }, [user?.role, user?.companyId, companies.length, isDataLoaded, isLoadingData]);
+
   // Загружаем данные один раз при монтировании или изменении effectiveCompanyId
   useEffect(() => {
     console.log('AdminPanel data loading useEffect:', { effectiveCompanyId, companiesLength: companies.length });
     
-    if (effectiveCompanyId && companies.length > 0) {
-      console.log('Calling loadAllAdminData from useEffect');
+    // Для суперадмина: загружаем данные только когда выбрана конкретная компания И есть компании
+    // Для админа/пользователя: загружаем только когда есть effectiveCompanyId (компании не нужны)
+    const shouldLoadData = user.role === 'superadmin' 
+      ? (effectiveCompanyId && effectiveCompanyId !== 'all' && companies.length > 0)
+      : (effectiveCompanyId);
+    
+    console.log('🔄 shouldLoadData calculation:', {
+      userRole: user.role,
+      effectiveCompanyId,
+      companiesLength: companies.length,
+      isSupeadmin: user.role === 'superadmin',
+      superadminCondition: effectiveCompanyId && effectiveCompanyId !== 'all' && companies.length > 0,
+      adminCondition: effectiveCompanyId && companies.length > 0,
+      finalShouldLoadData: shouldLoadData
+    });
+    
+    if (shouldLoadData) {
+      console.log('✅ Calling loadAllAdminData from useEffect');
       // Сбрасываем состояние загрузки перед новой загрузкой
       setIsDataLoaded(false);
       setIsLoadingData(false);
       loadAllAdminData();
     } else {
-      console.log('Not calling loadAllAdminData:', { hasCompanyId: !!effectiveCompanyId, hasCompanies: companies.length > 0 });
+      console.log('❌ Not calling loadAllAdminData:', { 
+        hasCompanyId: !!effectiveCompanyId, 
+        hasCompanies: companies.length > 0,
+        userRole: user.role,
+        shouldLoadData 
+      });
     }
-  }, [effectiveCompanyId, companies.length]);
+  }, [effectiveCompanyId, companies.length, user.role]);
 
   // Логирование изменений hardwareByCompany для диагностики
   useEffect(() => {
@@ -260,10 +332,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   // Функции для обновления данных при необходимости
   const refreshUsers = async () => {
     let usersUrl = `${API_URL}/users`;
-    // Для superadmin передаем companyId в query, для admin/user сервер использует данные из токена
+    // Для superadmin передаем companyId в query только если нужна конкретная компания
+    // Если effectiveCompanyId = 'all' или пустой, загружаем всех пользователей (не добавляем companyId)
     if (user.role === 'superadmin' && effectiveCompanyId && effectiveCompanyId !== 'all') {
       usersUrl += `?companyId=${effectiveCompanyId}`;
     }
+    // Для admin/user сервер автоматически использует данные из токена
     console.log('Refreshing users:', { usersUrl, effectiveCompanyId, userRole: user.role });
     try {
       const res = await fetchWithAuth(usersUrl, undefined, true);
@@ -410,12 +484,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* Content */}
         <div className="admin-content" style={{ 
           flex: 1, 
-          padding: isMobile ? 0 : 32, 
+          padding: section === 'hardware' ? 0 : (isMobile ? 8 : 20), // Убираем padding для hardware
           background: isMobile ? '#fff' : '#f6f8fa', 
           minHeight: 'calc(100vh - 56px)',
           position: 'relative',
           opacity: isTransitioning ? 0.7 : 1,
-          transition: 'opacity 0.1s ease-in-out'
+          transition: 'opacity 0.1s ease-in-out',
+          maxWidth: '100%', // Добавлено ограничение ширины
+          overflow: 'auto' // Добавлена прокрутка если нужно
         }}>
           {/* Загрузка компаний */}
           {companies == null || isLoadingData ? (
@@ -475,7 +551,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           ) : section === 'hardware' ? (
             <HardwareTab
               companies={companies}
-              selectedCompanyId={selectedCompanyId}
+              selectedCompanyId={effectiveCompanyId}
               user={user}
               onLogout={onLogout}
               activeSubTab={new URLSearchParams(location.search).get('sub') || ''}
@@ -495,7 +571,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           ) : section === 'settings' ? (
             <SettingsTab
               currencyOptions={currencyOptions}
-              company={companies.find(c => c._id === selectedCompanyId) || null}
+              company={companies.find(c => c._id === effectiveCompanyId) || null}
+              companies={companies}
+              selectedCompanyId={effectiveCompanyId}
             />
           ) : null}
         </div>
@@ -524,14 +602,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           transform: translateZ(0);
         }
         
-        @media (max-width: 600px) {
+        @media (max-width: 1000px) {
           .admin-content {
-            padding: 0 !important;
+            padding: 8px !important;
             background: #fff !important;
             color: #333 !important;
-            width: 100vw !important;
+            width: 100% !important;
             min-width: 0 !important;
             min-height: calc(100vh - 56px) !important;
+            max-width: 100% !important;
+            overflow-x: auto !important;
           }
           .admin-content * {
             color: #333 !important;

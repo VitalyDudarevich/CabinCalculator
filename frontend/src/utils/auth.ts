@@ -14,13 +14,31 @@ export function getRefreshToken(): string {
   return localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken') || '';
 }
 
+// Функция для сохранения refresh токена в нужное хранилище
+export function setRefreshToken(refreshToken: string): void {
+  const rememberMe = localStorage.getItem('rememberMe') === 'true';
+  if (rememberMe) {
+    localStorage.setItem('refreshToken', refreshToken);
+    // Очищаем из sessionStorage если там был старый токен
+    sessionStorage.removeItem('refreshToken');
+  } else {
+    sessionStorage.setItem('refreshToken', refreshToken);
+    // Очищаем из localStorage если там был старый токен
+    localStorage.removeItem('refreshToken');
+  }
+}
+
 // Функция для сохранения токена в нужное хранилище
-function setToken(token: string): void {
+export function setToken(token: string): void {
   const rememberMe = localStorage.getItem('rememberMe') === 'true';
   if (rememberMe) {
     localStorage.setItem('token', token);
+    // Очищаем из sessionStorage если там был старый токен
+    sessionStorage.removeItem('token');
   } else {
     sessionStorage.setItem('token', token);
+    // Очищаем из localStorage если там был старый токен
+    localStorage.removeItem('token');
   }
 }
 
@@ -46,6 +64,10 @@ export async function refreshAccessToken() {
     const data = await res.json();
     if (data.accessToken) {
       setToken(data.accessToken);
+      // Если сервер вернул новый refresh токен, сохраняем его тоже
+      if (data.refreshToken) {
+        setRefreshToken(data.refreshToken);
+      }
       return data.accessToken;
     }
 
@@ -119,11 +141,11 @@ export async function logout() {
   } catch (error) {
     console.error('Logout error:', error);
   } finally {
-    // Всегда очищаем токены из обоих хранилищ
+    // Всегда очищаем токены из обоих хранилищ, НО сохраняем rememberMe флаг
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
-    localStorage.removeItem('rememberMe');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('refreshToken');
+    // НЕ удаляем localStorage.removeItem('rememberMe') чтобы пользователь не вводил настройку заново
   }
 }

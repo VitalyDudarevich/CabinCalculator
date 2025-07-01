@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Statuses API</title>
+</head>
+<body>
+    <h1>Тест API Статусов</h1>
+    <button onclick="testAuth()">1. Проверить аутентификацию</button>
+    <button onclick="testStatuses()">2. Загрузить статусы</button>
+    <button onclick="testStats()">3. Загрузить статистику</button>
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;"></div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const companyId = '6861c12979deee9670a32df6';
+        const token = localStorage.getItem('token');
+        
+        function log(message) {
+            document.getElementById('result').innerHTML += '<div>' + message + '</div>';
+        }
+        
+        function clearLog() {
+            document.getElementById('result').innerHTML = '';
+        }
+        
+        async function testAuth() {
+            clearLog();
+            log('🔑 Проверяем токен из localStorage...');
+            log('Token: ' + (token ? 'найден' : 'НЕ НАЙДЕН'));
+            
+            if (!token) {
+                log('❌ Токен не найден в localStorage');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/companies`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                log(`📡 Ответ /companies: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Аутентификация OK. Найдено компаний: ${data.length}`);
+                } else {
+                    log(`❌ Ошибка аутентификации: ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ Ошибка запроса: ${error.message}`);
+            }
+        }
+        
+        async function testStatuses() {
+            clearLog();
+            log('📊 Тестируем загрузку статусов...');
+            
+            if (!token) {
+                log('❌ Токен не найден');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/statuses?companyId=${companyId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                log(`📡 Ответ /statuses: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Статусы загружены: ${data.length} items`);
+                    log(`📋 Первый статус: ${data[0]?.name || 'нет статусов'}`);
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Ошибка загрузки статусов: ${response.status}`);
+                    log(`📄 Текст ошибки: ${errorText}`);
+                }
+            } catch (error) {
+                log(`❌ Ошибка запроса: ${error.message}`);
+            }
+        }
+        
+        async function testStats() {
+            clearLog();
+            log('📈 Тестируем загрузку статистики статусов...');
+            
+            if (!token) {
+                log('❌ Токен не найден');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/statuses/stats?companyId=${companyId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                log(`📡 Ответ /statuses/stats: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Статистика загружена: ${data.length} items`);
+                    data.forEach((status, index) => {
+                        log(`📊 ${index + 1}. ${status.name}: ${status.projectCount || 0} проектов`);
+                    });
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Ошибка загрузки статистики: ${response.status}`);
+                    log(`📄 Текст ошибки: ${errorText}`);
+                }
+            } catch (error) {
+                log(`❌ Ошибка запроса: ${error.message}`);
+            }
+        }
+        
+        // Автоматически проверяем токен при загрузке
+        window.onload = function() {
+            log('🚀 Страница загружена');
+            log('🔍 Компания ID: ' + companyId);
+        };
+    </script>
+</body>
+</html> 

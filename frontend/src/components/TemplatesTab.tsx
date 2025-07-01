@@ -69,7 +69,9 @@ interface TemplatesTabProps {
 }
 
 const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyId }) => {
-  const company = companies.find(c => c._id === selectedCompanyId);
+  // Ищем компанию в списке или создаем фиктивную для админов
+  const company = companies.find(c => c._id === selectedCompanyId) || 
+    (selectedCompanyId ? { _id: selectedCompanyId, name: 'Ваша компания' } : null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
@@ -80,14 +82,14 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
   const companyName = company?.name || '';
 
   useEffect(() => {
-    if (!company) return setTemplates([]);
+    if (!selectedCompanyId) return setTemplates([]);
     loadTemplates();
   }, [selectedCompanyId, company?._id]);
 
 
 
   const loadTemplates = async () => {
-    if (!company) return;
+    if (!company || !selectedCompanyId) return;
     setError('');
     setLoading(true);
     try {
@@ -100,7 +102,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
         .filter((t: { isSystem?: boolean }) => !t.isSystem);
       
       // Загружаем системные шаблоны из базы данных
-      const systemRes = await fetchWithAuth(`${API_URL}/templates/system?companyId=${company._id}`);
+      const systemRes = await fetchWithAuth(`${API_URL}/templates/system?companyId=${company!._id}`);
       const systemTemplates = systemRes.ok ? await systemRes.json() : [];
       
       // Помечаем системные шаблоны флагом isSystem
@@ -130,7 +132,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
       defaultHardware: [],
       defaultServices: [],
       customColorOption: false,
-      companyId: company?._id || ''
+      companyId: selectedCompanyId
     });
     setShowEditor(true);
   };
@@ -211,7 +213,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
     }
   };
 
-  if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
+  if (!selectedCompanyId) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   if (showEditor && editingTemplate) {
     return (
@@ -222,7 +224,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ companies, selectedCompanyI
           setShowEditor(false);
           setEditingTemplate(null);
         }}
-        companyId={company._id}
+        companyId={selectedCompanyId}
       />
     );
   }

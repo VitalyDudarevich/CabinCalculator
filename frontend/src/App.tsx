@@ -44,6 +44,7 @@ export default function App() {
             setToken('');
             localStorage.removeItem('token');
             sessionStorage.removeItem('token');
+            // НЕ удаляем rememberMe - пользователь может попробовать войти снова
           }
         } catch (err) {
           console.error('User load error:', err);
@@ -52,6 +53,7 @@ export default function App() {
           localStorage.removeItem('token');
           sessionStorage.removeItem('token');
           setError('Ошибка загрузки пользователя.');
+          // НЕ удаляем rememberMe - пользователь может попробовать войти снова
         }
       } else {
         setUser(null);
@@ -90,9 +92,9 @@ export default function App() {
           console.error('❌ Auto refresh failed:', error);
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
-          localStorage.removeItem('rememberMe');
           sessionStorage.removeItem('token');
           sessionStorage.removeItem('refreshToken');
+          // НЕ удаляем rememberMe чтобы пользователь не терял настройку
         }
       } else {
         console.log('❌ No tokens found');
@@ -104,7 +106,11 @@ export default function App() {
 
   // Загрузка компаний для админов
   useEffect(() => {
-    console.log('Companies useEffect triggered:', { user: user?.role, selectedCompanyId });
+    console.log('🏢 Companies useEffect triggered:', { 
+      userRole: user?.role, 
+      userCompanyId: user?.companyId,
+      currentSelectedCompanyId: selectedCompanyId 
+    });
     
     if (user?.role === 'superadmin') {
       console.log('Loading companies for superadmin...');
@@ -115,8 +121,10 @@ export default function App() {
           console.log('Companies loaded for superadmin:', data);
           if (Array.isArray(data)) {
             setCompanies(data);
+            // Для суперадмина устанавливаем 'all' по умолчанию если не выбрана компания
             if (data.length > 0 && !selectedCompanyId) {
-              setSelectedCompanyId(data[0]._id);
+              console.log('Setting default selectedCompanyId to "all" for superadmin');
+              setSelectedCompanyId('all');
             }
           } else {
             console.log('❌ Invalid companies data received:', data);
@@ -128,24 +136,23 @@ export default function App() {
           setCompanies([]);
           setError('Ошибка загрузки компаний. Проверьте соединение.');
         });
-    } else if (user?.role === 'admin') {
-      console.log('Loading companies for admin...', { companyId: user.companyId });
-      // Обычный админ видит все компании, но по умолчанию выбрана его компания
+    } else if (user?.role === 'admin' || user?.role === 'user') {
+      console.log('Loading companies for admin/user...', { companyId: user.companyId });
+      // Обычный админ/пользователь видит только свою компанию
       fetchWithAuth(`${API_URL}/companies`)
         .then(res => res.json())
         .then(data => {
-          console.log('Companies loaded for admin:', data);
-          if (Array.isArray(data)) {
+          console.log('Companies loaded for admin/user:', data);
+          if (Array.isArray(data) && data.length > 0) {
             setCompanies(data);
-            // Устанавливаем компанию админа как выбранную
-            if (user.companyId && !selectedCompanyId) {
-              const companyId = typeof user.companyId === 'string' ? user.companyId : user.companyId._id;
-              console.log('Setting selected company ID:', companyId);
-              setSelectedCompanyId(companyId);
-            }
+            // Автоматически устанавливаем компанию пользователя как выбранную
+            const userCompany = data[0]; // Backend возвращает только одну компанию для админов/пользователей
+            console.log('Auto-setting selected company ID:', userCompany._id);
+            setSelectedCompanyId(userCompany._id);
           } else {
             console.log('❌ Invalid companies data received:', data);
             setCompanies([]);
+            setError('У пользователя не указана компания');
           }
         })
         .catch(err => {
@@ -158,19 +165,19 @@ export default function App() {
       setCompanies([]);
       setSelectedCompanyId('');
     }
-  }, [user]); // УБРАЛИ selectedCompanyId из зависимостей
+  }, [user]); // selectedCompanyId намеренно НЕ включен в зависимости
 
   const handleLogout = () => {
     setUser(null);
     setToken('');
     setCompanies([]);
     setSelectedCompanyId('');
-    // Очищаем токены из обоих хранилищ
+    // Очищаем токены из обоих хранилищ, но сохраняем rememberMe
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
-    localStorage.removeItem('rememberMe');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('refreshToken');
+    // НЕ удаляем rememberMe чтобы настройка сохранилась для следующего входа
   };
 
   if (!userLoaded) {

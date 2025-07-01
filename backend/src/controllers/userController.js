@@ -5,26 +5,47 @@ const bcrypt = require('bcryptjs');
 exports.getAllUsers = async (req, res) => {
   try {
     let filter = {};
+    console.log('userController.getAllUsers - starting:', {
+      userRole: req.user.role,
+      userId: req.user._id,
+      userCompanyId: req.user.companyId,
+      queryCompanyId: req.query.companyId,
+    });
+
     if (req.user.role === 'admin') {
       if (!req.user.companyId) {
+        console.log('userController.getAllUsers - admin without companyId');
         return res.status(400).json({ error: 'У администратора не указан companyId' });
       }
       filter.companyId = req.user.companyId;
+      console.log('userController.getAllUsers - admin filter:', filter);
     } else if (req.user.role === 'superadmin') {
       if (req.query.companyId) {
         filter.companyId = req.query.companyId;
+        console.log('userController.getAllUsers - superadmin with companyId filter:', filter);
+      } else {
+        console.log('userController.getAllUsers - superadmin without companyId, loading ALL users');
       }
     } else {
+      console.log('userController.getAllUsers - unauthorized role:', req.user.role);
       return res.status(403).json({ error: 'Нет доступа' });
     }
-    console.log('userController.getAllUsers:', {
-      user: req.user,
-      filter,
-    });
+
+    console.log('userController.getAllUsers - final filter:', filter);
     const users = await User.find(filter).populate('companyId', 'name');
-    console.log('userController.getAllUsers: found users', users);
+    console.log('userController.getAllUsers - found users:', {
+      count: users.length,
+      users: users.map((u) => ({
+        id: u._id,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        companyId: u.companyId,
+      })),
+    });
     res.json(users);
   } catch (err) {
+    console.error('userController.getAllUsers - error:', err);
     res.status(500).json({ error: err.message });
   }
 };

@@ -36,7 +36,9 @@ const COLUMNS = 3;
 const API_URL = BASE_API_URL;
 
 const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId, user, onLogout, onCalculator, activeSubTab, onChangeSubTab, onRefreshHardware }) => {
-  const company = companies.find(c => c._id === selectedCompanyId);
+  // Ищем компанию в списке или создаем фиктивную для админов
+  const company = companies.find(c => c._id === selectedCompanyId) || 
+    (selectedCompanyId ? { _id: selectedCompanyId, name: 'Ваша компания' } : { _id: '', name: '' });
   const [editList, setEditList] = useState<HardwareItem[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -95,11 +97,13 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
     if (onChangeSubTab) onChangeSubTab(tab);
   };
 
-  if (!selectedCompanyId || !company) {
-    if (!companies.length) {
-      return <div style={{ color: '#888', margin: 32 }}>Нет компаний для отображения</div>;
+  // Проверяем selectedCompanyId
+  if (!selectedCompanyId) {
+    if (user?.role === 'superadmin') {
+      return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
+    } else {
+      return <div style={{ color: '#888', margin: 32 }}>Компания не определена</div>;
     }
-    return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
   }
 
   // Получаем секции для колонок
@@ -264,13 +268,15 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
   ];
 
   return (
-    <div style={{ 
-      padding: '0 48px',
+    <div className="hardware-tab-root" style={{ 
+      padding: '0px 0px', 
       minHeight: 600,
-      width: '100%'
+      width: '100%',
+      margin: 0,
+      boxSizing: 'border-box'
     }}>
       {/* Табы и кнопки в одной строке */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 24, borderBottom: '2px solid #e0e7ef' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 24, borderBottom: '2px solid #e0e7ef', padding: '0 20px' }}>
         <div style={{ display: 'flex', gap: 0 }}>
           <button
             onClick={() => handleChangeTab('hardware')}
@@ -411,7 +417,12 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
       </div>
       {/* Содержимое вкладок */}
       <style>{`
-        @media (max-width: 600px) {
+        .hardware-tab-root {
+          padding: 0px !important;
+          margin: 0px !important;
+          box-sizing: border-box !important;
+        }
+        @media (max-width: 1000px) {
           .hardware-columns {
             flex-direction: column !important;
             gap: 8px !important;
@@ -454,7 +465,16 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
           }
         }
       `}</style>
-      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 32, minHeight: 320, marginTop: -2 }}>
+      <div style={{ 
+        maxWidth: 800,
+        margin: '0 auto', 
+        background: '#fff', 
+        borderRadius: 12, 
+        boxShadow: '0 1px 4px #0001', 
+        padding: '24px 24px 24px 20px',
+        minHeight: 320, 
+        marginTop: -2 
+      }}>
         {activeTab === 'hardware' && (
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 16 }}>
             <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, flex: 1 }}>Цены {company.name}</h2>
@@ -463,9 +483,9 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
         {activeTab === 'hardware' && error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
         {activeTab === 'hardware' && success && <div style={{ color: 'green', marginBottom: 12 }}>Сохранено!</div>}
         {activeTab === 'hardware' && (
-          <div className="hardware-columns" style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
+          <div className="hardware-columns" style={{ display: 'flex', gap: 16, alignItems: 'flex-start', justifyContent: 'center' }}>
             {columns.map((sectionList, colIdx) => (
-              <div key={colIdx} className="hardware-column" style={{ background: 'none', minWidth: 260, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 24 }}>
+              <div key={colIdx} className="hardware-column" style={{ background: 'none', minWidth: 200, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 16 }}>
                 {sectionList.map(section => (
                   <div key={section} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative' }}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
@@ -556,7 +576,7 @@ const HardwareTab: React.FC<HardwareTabProps> = ({ companies, selectedCompanyId,
           />
         )}
         {activeTab === 'basecosts' && (
-          <BaseCostsTab company={company} />
+          <BaseCostsTab companies={companies} selectedCompanyId={selectedCompanyId} />
         )}
       </div>
     </div>

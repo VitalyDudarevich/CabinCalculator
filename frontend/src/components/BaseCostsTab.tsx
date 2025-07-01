@@ -22,7 +22,8 @@ interface BaseCostResponse {
 }
 
 interface BaseCostsTabProps {
-  company: Company;
+  companies: Company[];
+  selectedCompanyId: string;
 }
 
 const DEFAULT_BASE_COSTS: BaseCostItem[] = [
@@ -33,7 +34,10 @@ const DEFAULT_BASE_COSTS: BaseCostItem[] = [
   { id: 'partition', name: 'Базовая стоимость перегородки', value: 0 },
 ];
 
-const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
+const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ companies, selectedCompanyId }) => {
+  // Ищем компанию в списке или создаем фиктивную для админов
+  const company = companies.find(c => c._id === selectedCompanyId) || 
+    (selectedCompanyId ? { _id: selectedCompanyId, name: 'Ваша компания' } : { _id: '', name: '' });
   const [baseCosts, setBaseCosts] = useState<BaseCostItem[]>(DEFAULT_BASE_COSTS);
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -85,7 +89,7 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
   };
 
   useEffect(() => {
-    if (!company?._id) return;
+    if (!selectedCompanyId) return;
     setLoading(true);
     setError('');
     fetchWithAuth(`${API_URL}/basecosts?companyId=${company._id}`)
@@ -111,7 +115,7 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
         setError('Ошибка загрузки базовых стоимостей');
         setLoading(false);
       });
-  }, [company]);
+  }, [selectedCompanyId, company._id]);
 
   const handleChangeBaseCost = (idx: number, value: number | string) => {
     setBaseCosts(prev => prev.map((item, i) => i === idx ? { ...item, value: value === '' ? null : Number(value) } : item));
@@ -180,7 +184,7 @@ const BaseCostsTab: React.FC<BaseCostsTabProps> = ({ company }) => {
     setAddBaseValue('');
   };
 
-  if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
+  if (!selectedCompanyId) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   return (
     <div className="base-costs-tab-root" style={{

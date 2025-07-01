@@ -71,6 +71,7 @@ interface Settings {
   glassList?: { color: string; thickness?: string; thickness_mm?: number; price: number; companyId: string }[];
   hardwareList?: { _id?: string; name: string; price: number; companyId?: string }[];
   statusList?: { _id: string; name: string; color: string; order: number }[]; // Добавляем статусы
+  templates?: Template[]; // Добавляем шаблоны
 }
 
 interface CalculatorFormProps {
@@ -352,7 +353,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         uniqueGlasses: draftConfig === 'unique' ? uniqueGlasses : undefined,
         projectServices: selectedServices,
         customColor,
-        selectedTemplate: draftConfig.startsWith('template-') ? selectedTemplate : undefined,
+        selectedTemplate: draftConfig.startsWith('template-') ? (selectedTemplate || undefined) : undefined,
         templateFields: draftConfig.startsWith('template-') ? templateFields : undefined,
         templateGlasses: draftConfig.startsWith('template-') ? templateGlasses : undefined,
       });
@@ -892,62 +893,63 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         console.log('📞 Calling onNewProject with saved project:', savedProject?.name, savedProject?._id);
         if (typeof onNewProject === 'function') onNewProject(savedProject);
         if (savedProject) {
+          const data = savedProject.data as Partial<DraftProjectData>;
           setProjectName(savedProject.name || '');
           setCustomer(savedProject.customer || '');
-          setConfig(savedProject.data?.config === 'straight-opening' || savedProject.data?.config === 'straight-glass' ? 'straight' : (savedProject.data?.config || ''));
-          setDraftConfig(savedProject.data?.config || '');
-          setGlassColor(savedProject.data?.glassColor || '');
-          setGlassThickness(savedProject.data?.glassThickness || '8');
-          setHardwareColor(savedProject.data?.hardwareColor || '');
-          setWidth(savedProject.data?.width || '');
-          setHeight(savedProject.data?.height || '');
-          setLength(savedProject.data?.length || '');
-          setComment(savedProject.data?.comment || '');
-          setDelivery(savedProject.data?.delivery !== undefined ? savedProject.data.delivery : true);
-          setInstallation(savedProject.data?.installation !== undefined ? savedProject.data.installation : true);
-          setDismantling(savedProject.data?.dismantling || false);
-          setProjectHardware(Array.isArray(savedProject.data?.projectHardware) ? savedProject.data.projectHardware : []);
+          setConfig(data?.config === 'straight-opening' || data?.config === 'straight-glass' ? 'straight' : (data?.config || ''));
+          setDraftConfig(data?.config || '');
+          setGlassColor(data?.glassColor || '');
+          setGlassThickness(data?.glassThickness || '8');
+          setHardwareColor(data?.hardwareColor || '');
+          setWidth(data?.width || '');
+          setHeight(data?.height || '');
+          setLength(data?.length || '');
+          setComment(data?.comment || '');
+          setDelivery(data?.delivery !== undefined ? data.delivery : true);
+          setInstallation(data?.installation !== undefined ? data.installation : true);
+          setDismantling(data?.dismantling || false);
+          setProjectHardware(Array.isArray(data?.projectHardware) ? data.projectHardware : []);
           setStatus(savedProject.status || 'Рассчет');
-          setShowGlassSizes(savedProject.data?.showGlassSizes || false);
-          setStationarySize(savedProject.data?.stationarySize || '');
-          setDoorSize(savedProject.data?.doorSize || '');
-          setStationaryWidth(savedProject.data?.stationaryWidth || '');
-          setDoorWidth(savedProject.data?.doorWidth || '');
+          setShowGlassSizes(data?.showGlassSizes || false);
+          setStationarySize(data?.stationarySize || '');
+          setDoorSize(data?.doorSize || '');
+          setStationaryWidth(data?.stationaryWidth || '');
+          setDoorWidth(data?.doorWidth || '');
           setManualPrice(undefined);
-          setExactHeight(savedProject.data?.exactHeight || false);
-          if (savedProject.data?.uniqueGlasses && Array.isArray(savedProject.data.uniqueGlasses)) {
-            setUniqueGlasses(savedProject.data.uniqueGlasses);
+          setExactHeight(data?.exactHeight || false);
+          if (data?.uniqueGlasses && Array.isArray(data.uniqueGlasses)) {
+            setUniqueGlasses(data.uniqueGlasses);
           } else {
             setUniqueGlasses([
               { name: 'Стекло 1', color: 'прозрачный', thickness: GLASS_THICKNESS[0]?.value || '', width: '', height: '' }
             ]);
           }
           setUniqueGlassErrors({});
-          setCustomColor(savedProject.data?.customColor || false);
+          setCustomColor(data?.customColor || false);
           
           // Восстановление полей шаблона
-          if (savedProject.data?.selectedTemplate) {
-            setSelectedTemplate(savedProject.data.selectedTemplate);
+          if (data?.selectedTemplate) {
+            setSelectedTemplate(data.selectedTemplate as Template);
           } else {
             setSelectedTemplate(null);
           }
           
-          if (savedProject.data?.templateFields && typeof savedProject.data.templateFields === 'object') {
-            setTemplateFields(savedProject.data.templateFields);
+          if (data?.templateFields && typeof data.templateFields === 'object') {
+            setTemplateFields(data.templateFields);
           } else {
             setTemplateFields({});
           }
           
           // Восстановление выбранных услуг
-          if (Array.isArray(savedProject.data?.projectServices)) {
-            setSelectedServices(savedProject.data.projectServices);
+          if (Array.isArray(data?.projectServices)) {
+            setSelectedServices(data.projectServices);
           } else {
             setSelectedServices([]);
           }
           
           // Восстановление данных стекол шаблона
-          if (savedProject.data?.templateGlasses && typeof savedProject.data.templateGlasses === 'object') {
-            setTemplateGlasses(savedProject.data.templateGlasses);
+          if (data?.templateGlasses && typeof data.templateGlasses === 'object') {
+            setTemplateGlasses(data.templateGlasses);
           } else {
             setTemplateGlasses({});
           }

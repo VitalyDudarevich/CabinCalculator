@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export interface ModalFormField {
   name: string;
@@ -24,6 +24,8 @@ interface ModalFormProps {
 }
 
 const ModalForm: React.FC<ModalFormProps> = ({ isOpen, title, fields, onSubmit, onCancel, submitText = 'Сохранить', companyNameError }) => {
+  const [showPasswords, setShowPasswords] = useState<{[fieldName: string]: boolean}>({});
+  
   if (!isOpen) return null;
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#0005', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -54,6 +56,57 @@ const ModalForm: React.FC<ModalFormProps> = ({ isOpen, title, fields, onSubmit, 
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+              ) : field.type === 'password' ? (
+                <div style={{ position: 'relative' }}>
+                  <input
+                    name={field.name}
+                    autoComplete="off"
+                    type={showPasswords[field.name] ? 'text' : 'password'}
+                    value={field.value}
+                    onChange={e => field.onChange(e.target.value)}
+                    required={field.required}
+                    placeholder={field.placeholder}
+                    style={{ 
+                      padding: 10, 
+                      paddingRight: 45,
+                      borderRadius: 8, 
+                      border: '1px solid #ccc', 
+                      fontSize: 16,
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, [field.name]: !prev[field.name] }))}
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: 24,
+                      width: 32,
+                      outline: 'none',
+                    }}
+                    tabIndex={-1}
+                    aria-label={showPasswords[field.name] ? 'Скрыть пароль' : 'Показать пароль'}
+                    onMouseDown={e => e.preventDefault()}
+                  >
+                    <img
+                      src={showPasswords[field.name] ? '/eye.png' : '/eye-off.png'}
+                      alt={showPasswords[field.name] ? 'Скрыть пароль' : 'Показать пароль'}
+                      style={{ width: 20, height: 20, outline: 'none', boxShadow: 'none' }}
+                      draggable={false}
+                    />
+                  </button>
+                </div>
               ) : (
                 <input
                   name={field.name}

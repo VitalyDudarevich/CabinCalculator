@@ -45,8 +45,9 @@ const CalculatorPage: React.FC<{
   let effectiveSelectedCompanyId = selectedCompanyId;
   if (user && (user.role === 'admin' || user.role === 'user')) {
     const id = typeof user.companyId === 'string' ? user.companyId : (user.companyId && typeof user.companyId === 'object' && '_id' in user.companyId ? user.companyId._id : '');
-    effectiveCompanyId = id;
-    effectiveSelectedCompanyId = id;
+    // Если у админа/пользователя нет companyId, используем переданные значения
+    effectiveCompanyId = id || companyId;
+    effectiveSelectedCompanyId = id || selectedCompanyId;
   }
 
   console.log('🔄 CalculatorPage RENDER:', {

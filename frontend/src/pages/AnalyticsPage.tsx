@@ -198,7 +198,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ user, selectedCompanyId }
   if (user && (user.role === 'admin' || user.role === 'user')) {
     const id = typeof user.companyId === 'string' ? user.companyId : 
                (user.companyId && typeof user.companyId === 'object' && '_id' in user.companyId ? user.companyId._id : '');
-    effectiveCompanyId = id;
+    // Если у админа/пользователя нет companyId, используем selectedCompanyId
+    effectiveCompanyId = id || selectedCompanyId;
   }
 
   // Загрузка данных

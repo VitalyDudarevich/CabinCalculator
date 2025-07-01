@@ -51,9 +51,14 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
   const [addPrice, setAddPrice] = useState<number | ''>('');
   const [addError, setAddError] = useState('');
 
+  // Определяем компанию для админов
+  const effectiveCompany = company || 
+    (selectedCompanyId ? companies.find(c => c._id === selectedCompanyId) : null) ||
+    (selectedCompanyId ? { _id: selectedCompanyId, name: 'Ваша компания' } : null);
+
   const companyName = selectedCompanyId === 'all'
     ? 'Все компании'
-    : (companies.find(c => c._id === selectedCompanyId)?.name || '');
+    : (effectiveCompany?.name || '');
 
   // Функция для создания услуг по умолчанию
   const createDefaultServices = async (companyId: string) => {
@@ -96,7 +101,7 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
   };
 
   useEffect(() => {
-    const companyId = selectedCompanyId || company?._id;
+    const companyId = selectedCompanyId || effectiveCompany?._id;
     if (!companyId) return setEditList([]);
     setError('');
     setLoading(true);
@@ -125,9 +130,9 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
         setOriginalList([]);
         setLoading(false);
       });
-  }, [selectedCompanyId, company?._id]);
+  }, [selectedCompanyId, effectiveCompany?._id]);
 
-  if (!company) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
+  if (!effectiveCompany) return <div style={{ color: '#888', margin: 32 }}>Выберите компанию</div>;
 
   const handleAdd = () => {
     if (!addName.trim()) return;
@@ -161,7 +166,7 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
         name: s.name,
         price: typeof s.price === 'number' ? s.price : (s.price === '' || s.price == null ? null : Number(s.price))
       }));
-      const res = await fetchWithAuth(`${API_URL}/services?companyId=${company._id}`, {
+      const res = await fetchWithAuth(`${API_URL}/services?companyId=${effectiveCompany._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toSave),

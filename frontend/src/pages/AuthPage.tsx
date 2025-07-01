@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { API_URL } from '../utils/api';
-import { logout } from '../utils/auth';
+import { logout,  setRefreshToken } from '../utils/auth';
 
 interface User {
   _id: string;
@@ -62,21 +62,10 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
         // Сохраняем rememberMe флаг
         localStorage.setItem('rememberMe', String(rememberMe));
         
-        if (rememberMe) {
-          // Если "Запомнить меня" включен - сохраняем в localStorage (постоянное хранение)
-          localStorage.setItem('token', data.accessToken);
-          if (data.refreshToken) {
-            localStorage.setItem('refreshToken', data.refreshToken);
-          }
-        } else {
-          // Если "Запомнить меня" отключен - сохраняем в sessionStorage (удаляется при закрытии браузера)
-          sessionStorage.setItem('token', data.accessToken);
-          if (data.refreshToken) {
-            sessionStorage.setItem('refreshToken', data.refreshToken);
-          }
-          // Очищаем localStorage если там были старые токены
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
+        // Используем централизованные функции для сохранения токенов
+        setToken(data.accessToken);
+        if (data.refreshToken) {
+          setRefreshToken(data.refreshToken);
         }
       } else {
         setMessage(data.error || 'Ошибка входа');
@@ -136,55 +125,20 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
   return (
     <>
       <style>{`
-        .custom-checkbox {
-          position: relative;
-          display: inline-block;
-          width: 16px;
-          height: 16px;
+        .checkbox-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          user-select: none;
         }
         
-        .custom-checkbox input[type="checkbox"] {
-          opacity: 0;
+        .checkbox-wrapper input[type="checkbox"] {
           width: 16px;
           height: 16px;
           margin: 0;
           cursor: pointer;
-        }
-        
-        .custom-checkbox::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 16px;
-          height: 16px;
-          background: #ffffff;
-          border: 1px solid #ccc;
-          border-radius: 3px;
-          pointer-events: none;
-        }
-        
-        .custom-checkbox input[type="checkbox"]:checked ~ .custom-checkbox::before {
-          background: #646cff;
-          border-color: #646cff;
-        }
-        
-        .custom-checkbox::after {
-          content: '';
-          position: absolute;
-          top: 2px;
-          left: 5px;
-          width: 4px;
-          height: 8px;
-          border: solid white;
-          border-width: 0 2px 2px 0;
-          transform: rotate(45deg);
-          opacity: 0;
-          pointer-events: none;
-        }
-        
-        .custom-checkbox input[type="checkbox"]:checked ~ .custom-checkbox::after {
-          opacity: 1;
+          accent-color: #646cff;
         }
       `}</style>
       <div style={{ minHeight: '100vh', minWidth: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f6f8fa' }}>
@@ -272,18 +226,16 @@ export default function AuthPage({ setUser, setToken }: AuthPageProps) {
                 />
               </button>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, cursor: 'pointer', userSelect: 'none' }}>
-              <div className="custom-checkbox">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  disabled={loading}
-                  onChange={e => {
-                    setRememberMe(e.target.checked);
-                    localStorage.setItem('rememberMe', String(e.target.checked));
-                  }}
-                />
-              </div>
+            <label className="checkbox-wrapper" style={{ fontSize: 15 }}>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                disabled={loading}
+                onChange={e => {
+                  setRememberMe(e.target.checked);
+                  localStorage.setItem('rememberMe', String(e.target.checked));
+                }}
+              />
               Запомнить меня
             </label>
             <button

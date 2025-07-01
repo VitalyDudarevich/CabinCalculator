@@ -431,25 +431,38 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
 
   // Загрузка статусов
   const loadStatuses = async () => {
-    if (!selectedCompanyId || selectedCompanyId === 'all') return;
+    console.log('🎯 StatusesTab loadStatuses called:', { 
+      selectedCompanyId, 
+      isAll: selectedCompanyId === 'all',
+      isEmpty: !selectedCompanyId 
+    });
     
+    if (!selectedCompanyId || selectedCompanyId === 'all') {
+      console.log('❌ StatusesTab: не загружаем статусы - компания не выбрана');
+      return;
+    }
+    
+    console.log('✅ StatusesTab: загружаем статусы для компании:', selectedCompanyId);
     setLoading(true);
     try {
       const res = await fetchWithAuth(`${API_URL}/statuses/stats?companyId=${selectedCompanyId}`);
+      console.log('🔄 StatusesTab: ответ от сервера:', res.status, res.ok);
       if (res.ok) {
         const data = await res.json();
+        console.log('✅ StatusesTab: статусы загружены:', data.length, 'items');
         setStatuses(data);
       } else {
-        console.error('Failed to load statuses');
+        console.error('❌ StatusesTab: Failed to load statuses, status:', res.status);
       }
     } catch (error) {
-      console.error('Error loading statuses:', error);
+      console.error('❌ StatusesTab: Error loading statuses:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    console.log('🎯 StatusesTab useEffect triggered:', { selectedCompanyId });
     loadStatuses();
   }, [selectedCompanyId]);
 
@@ -675,6 +688,11 @@ const StatusesTab: React.FC<StatusesTabProps> = ({
       loadStatuses();
     }
   };
+
+  // Проверяем selectedCompanyId
+  if (!selectedCompanyId) {
+    return <div style={{ color: '#888', margin: 32 }}>Выберите компанию для управления статусами</div>;
+  }
 
   if (loading) {
     return <div style={{ padding: 16, textAlign: 'center' }}>Загрузка статусов...</div>;
