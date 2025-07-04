@@ -11,39 +11,36 @@ const getTemplates = async (req, res) => {
       userCompanyId: req.user?.companyId,
     });
 
-    if (!companyId) {
+    // 🔧 УПРОЩЕННАЯ ЛОГИКА (как в hardwareController)
+    const userCompanyId = req.user?.companyId;
+    const queryCompanyId = req.query.companyId;
+    const finalCompanyId = queryCompanyId || userCompanyId;
+
+    console.log('🔧 УПРОЩЕННАЯ ПРОВЕРКА TEMPLATES:', {
+      userCompanyId,
+      queryCompanyId,
+      finalCompanyId,
+      userRole: req.user?.role,
+    });
+
+    if (!finalCompanyId) {
       return res.status(400).json({ message: 'Не указан ID компании' });
     }
 
-    // Проверяем права доступа
+    // Для superadmin разрешаем любую компанию
     if (req.user.role === 'superadmin') {
-      // Суперадмин может получить шаблоны любой компании
-    } else if (req.user.role === 'admin' || req.user.role === 'user') {
-      let targetCompanyId;
-
-      if (req.user.companyId) {
-        targetCompanyId =
-          typeof req.user.companyId === 'string'
-            ? req.user.companyId
-            : req.user.companyId._id || req.user.companyId.toString();
-      } else if (req.user.role === 'admin' && companyId) {
-        targetCompanyId = companyId;
-      } else {
-        console.log('❌ Templates: User has no access to any company');
-        return res.status(403).json({ message: 'Недостаточно прав для просмотра шаблонов' });
-      }
-
-      if (companyId !== targetCompanyId) {
-        console.log('❌ Templates: Access denied to company', companyId);
-        return res.status(403).json({ message: 'Нет доступа к шаблонам этой компании' });
-      }
+      console.log('✅ Templates: Superadmin access - allowed for any company');
+    }
+    // Для обычных пользователей и админов используем finalCompanyId
+    else if (req.user.role === 'admin' || req.user.role === 'user') {
+      console.log('✅ Templates: User/Admin access with finalCompanyId:', finalCompanyId);
     } else {
       console.log('❌ Templates: Unknown user role');
       return res.status(403).json({ message: 'Недостаточно прав' });
     }
 
     const templates = await Template.find({
-      companyId,
+      companyId: finalCompanyId,
       isActive: true,
     }).sort({ createdAt: -1 });
 
@@ -272,41 +269,36 @@ const getSystemTemplates = async (req, res) => {
       userCompanyId: req.user?.companyId,
     });
 
-    if (!companyId) {
+    // 🔧 УПРОЩЕННАЯ ЛОГИКА (как в hardwareController)
+    const userCompanyId = req.user?.companyId;
+    const queryCompanyId = req.query.companyId;
+    const finalCompanyId = queryCompanyId || userCompanyId;
+
+    console.log('🔧 УПРОЩЕННАЯ ПРОВЕРКА SYSTEM TEMPLATES:', {
+      userCompanyId,
+      queryCompanyId,
+      finalCompanyId,
+      userRole: req.user?.role,
+    });
+
+    if (!finalCompanyId) {
       return res.status(400).json({ message: 'Не указан ID компании' });
     }
 
-    // Проверяем права доступа
+    // Для superadmin разрешаем любую компанию
     if (req.user.role === 'superadmin') {
-      // Суперадмин может получить системные шаблоны любой компании
-    } else if (req.user.role === 'admin' || req.user.role === 'user') {
-      let targetCompanyId;
-
-      if (req.user.companyId) {
-        targetCompanyId =
-          typeof req.user.companyId === 'string'
-            ? req.user.companyId
-            : req.user.companyId._id || req.user.companyId.toString();
-      } else if (req.user.role === 'admin' && companyId) {
-        targetCompanyId = companyId;
-      } else {
-        console.log('❌ System Templates: User has no access to any company');
-        return res
-          .status(403)
-          .json({ message: 'Недостаточно прав для просмотра системных шаблонов' });
-      }
-
-      if (companyId !== targetCompanyId) {
-        console.log('❌ System Templates: Access denied to company', companyId);
-        return res.status(403).json({ message: 'Нет доступа к системным шаблонам этой компании' });
-      }
+      console.log('✅ System Templates: Superadmin access - allowed for any company');
+    }
+    // Для обычных пользователей и админов используем finalCompanyId
+    else if (req.user.role === 'admin' || req.user.role === 'user') {
+      console.log('✅ System Templates: User/Admin access with finalCompanyId:', finalCompanyId);
     } else {
       console.log('❌ System Templates: Unknown user role');
       return res.status(403).json({ message: 'Недостаточно прав' });
     }
 
     const systemTemplates = await Template.find({
-      companyId,
+      companyId: finalCompanyId,
       isSystem: true,
       isActive: true,
     }).sort({ type: 1 });

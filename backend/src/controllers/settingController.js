@@ -11,11 +11,24 @@ exports.getAllSettings = async (req, res) => {
       hasCompanyId: !!req.user?.companyId,
     });
 
+    // 🔧 УПРОЩЕННАЯ ЛОГИКА (как в hardwareController)
+    const userCompanyId = req.user?.companyId;
+    const queryCompanyId = req.query.companyId;
+    const finalCompanyId = queryCompanyId || userCompanyId;
+
+    console.log('🔧 УПРОЩЕННАЯ ПРОВЕРКА SETTINGS:', {
+      userCompanyId,
+      queryCompanyId,
+      finalCompanyId,
+      userRole: req.user?.role,
+    });
+
     // Проверяем права доступа
     if (req.user.role === 'superadmin') {
+      console.log('✅ Settings: Superadmin access - allowed for any company');
       // Суперадмин может получить настройки любой компании
-      if (companyId) {
-        const setting = await Setting.findOne({ companyId });
+      if (finalCompanyId) {
+        const setting = await Setting.findOne({ companyId: finalCompanyId });
         return res.json(setting ? [setting] : []);
       } else {
         const settings = await Setting.find();
@@ -25,33 +38,15 @@ exports.getAllSettings = async (req, res) => {
 
     // Для админов и пользователей
     if (req.user.role === 'admin' || req.user.role === 'user') {
-      let targetCompanyId;
+      console.log('✅ Settings: User/Admin access with finalCompanyId:', finalCompanyId);
 
-      if (req.user.companyId) {
-        // У пользователя есть назначенная компания
-        targetCompanyId =
-          typeof req.user.companyId === 'string'
-            ? req.user.companyId
-            : req.user.companyId._id || req.user.companyId.toString();
-      } else if (req.user.role === 'admin' && companyId) {
-        // Админ без назначенной компании может выбрать компанию
-        targetCompanyId = companyId;
-      } else {
-        console.log('❌ Settings: User has no access to any company');
+      if (!finalCompanyId) {
+        console.log('❌ Settings: No companyId available');
         return res.status(403).json({ error: 'Недостаточно прав для просмотра настроек' });
       }
 
-      // Если запрашивается конкретная компания, проверяем права
-      if (companyId && companyId !== targetCompanyId) {
-        console.log('❌ Settings: Access denied to requested company', {
-          requested: companyId,
-          allowed: targetCompanyId,
-        });
-        return res.status(403).json({ error: 'Нет доступа к настройкам этой компании' });
-      }
-
-      console.log('✅ Settings: Loading settings for company:', targetCompanyId);
-      const setting = await Setting.findOne({ companyId: targetCompanyId });
+      console.log('✅ Settings: Loading settings for company:', finalCompanyId);
+      const setting = await Setting.findOne({ companyId: finalCompanyId });
       return res.json(setting ? [setting] : []);
     }
 

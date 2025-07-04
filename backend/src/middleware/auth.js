@@ -26,6 +26,7 @@ exports.authenticate = async (req, res, next) => {
       id: user._id,
       role: user.role,
       companyId: user.companyId?._id || user.companyId,
+      email: user.email,
     });
 
     req.user = user;
