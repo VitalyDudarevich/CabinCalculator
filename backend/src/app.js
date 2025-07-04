@@ -51,6 +51,12 @@ console.log('🌐 Allowed origins:', allowedOrigins);
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Добавляем диагностическое логирование для продакшена
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🔍 CORS Debug - Origin:', origin);
+        console.log('🔍 CORS Debug - Allowed Origins:', allowedOrigins);
+      }
+
       // Разрешаем requests без origin (например, мобильные приложения)
       if (!origin) return callback(null, true);
 

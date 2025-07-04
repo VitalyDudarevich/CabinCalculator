@@ -15,67 +15,71 @@ exports.getStatuses = async (req, res) => {
       userCompanyIdType: typeof req.user?.companyId,
     });
 
-    if (!companyId) {
-      console.log('❌ No companyId provided');
+    // 🚨 ДИАГНОСТИЧЕСКОЕ ЛОГИРОВАНИЕ ДЛЯ ПРОДА
+    console.log(
+      '🔍 ДИАГНОСТИКА - Полные данные пользователя:',
+      JSON.stringify(
+        {
+          userId: req.user?._id,
+          userRole: req.user?.role,
+          userCompanyId: req.user?.companyId,
+          userCompanyIdRaw: req.user?.companyId,
+          requestedCompanyId: companyId,
+          isProductionEnv: process.env.NODE_ENV === 'production',
+        },
+        null,
+        2,
+      ),
+    );
+
+    // 🔧 ВРЕМЕННОЕ УПРОЩЕНИЕ ЛОГИКИ (как в hardwareController)
+    const userCompanyId = req.user?.companyId;
+    const queryCompanyId = req.query.companyId;
+    const finalCompanyId = queryCompanyId || userCompanyId;
+
+    console.log('🔧 УПРОЩЕННАЯ ПРОВЕРКА:', {
+      userCompanyId,
+      queryCompanyId,
+      finalCompanyId,
+      userRole: req.user?.role,
+    });
+
+    if (!finalCompanyId) {
+      console.log('❌ No companyId available');
       return res.status(400).json({ error: 'CompanyId is required' });
     }
 
     // Проверяем валидность ObjectId
-    if (!companyId.match(/^[0-9a-fA-F]{24}$/)) {
-      console.log('❌ Invalid companyId format:', companyId);
+    if (!finalCompanyId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log('❌ Invalid companyId format:', finalCompanyId);
       return res.status(400).json({ error: 'Invalid companyId format' });
     }
 
-    // Проверка доступа к компании
+    // Для superadmin разрешаем любую компанию
     if (req.user.role === 'superadmin') {
       console.log('✅ getStatuses: Superadmin access - allowed for any company');
-    } else if (req.user.role === 'admin' || req.user.role === 'user') {
-      let targetCompanyId;
-
-      if (req.user.companyId) {
-        // У пользователя есть назначенная компания
-        targetCompanyId =
-          typeof req.user.companyId === 'string'
-            ? req.user.companyId
-            : req.user.companyId._id || req.user.companyId.toString();
-      } else if (req.user.role === 'admin' && companyId) {
-        // Админ без назначенной компании может выбрать компанию
-        targetCompanyId = companyId;
-      } else {
-        console.log('❌ getStatuses: User has no access to any company');
-        return res.status(403).json({ error: 'Недостаточно прав для просмотра статусов' });
-      }
-
-      console.log('🔒 getStatuses: Access check:', {
-        requestedCompanyId: companyId,
-        userCompanyId: targetCompanyId,
-        userRole: req.user.role,
-        matches: targetCompanyId === companyId,
-      });
-
-      // Если запрашивается конкретная компания, проверяем права
-      if (companyId && companyId !== targetCompanyId) {
-        console.log('❌ getStatuses: Access denied to requested company');
-        return res.status(403).json({ error: 'Нет доступа к статусам этой компании' });
-      }
+    }
+    // Для обычных пользователей и админов используем finalCompanyId
+    else if (req.user.role === 'admin' || req.user.role === 'user') {
+      console.log('✅ getStatuses: User/Admin access with finalCompanyId:', finalCompanyId);
     } else {
       console.log('❌ getStatuses: Unknown user role');
       return res.status(403).json({ error: 'Недостаточно прав' });
     }
 
-    console.log('🔍 Searching for statuses with companyId:', companyId);
+    console.log('🔍 Searching for statuses with companyId:', finalCompanyId);
 
     const statuses = await Status.find({
-      companyId: companyId,
+      companyId: finalCompanyId,
     }).sort({ order: 1 });
 
     console.log('✅ Found statuses:', statuses.length);
 
     // Если статусов нет, создаём дефолтные
     if (statuses.length === 0) {
-      console.log('🔧 No statuses found, creating default statuses for company:', companyId);
+      console.log('🔧 No statuses found, creating default statuses for company:', finalCompanyId);
       try {
-        const defaultStatuses = await Status.createDefaultStatusesForCompany(companyId);
+        const defaultStatuses = await Status.createDefaultStatusesForCompany(finalCompanyId);
         console.log('✅ Created default statuses:', defaultStatuses.length);
         return res.json(defaultStatuses);
       } catch (createError) {
