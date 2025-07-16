@@ -124,10 +124,11 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
       try {
         console.log('🔄 ProjectProgressPage: Making API calls...');
         
-        const [settingsRes, glassRes, hardwareRes, statusesData] = await Promise.all([
+        const [settingsRes, glassRes, hardwareRes, baseCostsRes, statusesData] = await Promise.all([
           fetchWithAuth(`${API_URL}/settings?companyId=${effectiveCompanyId}`),
           fetchWithAuth(`${API_URL}/glass?companyId=${effectiveCompanyId}`),
           fetchWithAuth(`${API_URL}/hardware?companyId=${effectiveCompanyId}`),
+          fetchWithAuth(`${API_URL}/basecosts?companyId=${effectiveCompanyId}`),
           // Не загружаем статусы если effectiveCompanyId равен 'all' или пустой
           (!effectiveCompanyId || effectiveCompanyId === 'all') ? Promise.resolve([]) : getStatuses(effectiveCompanyId),
         ]);
@@ -135,26 +136,41 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
         console.log('🔄 ProjectProgressPage: API responses status:', {
           settings: settingsRes.status,
           glass: glassRes.status,
-          hardware: hardwareRes.status
+          hardware: hardwareRes.status,
+          baseCosts: baseCostsRes.status
         });
         
-        const [settingsData, glassList, hardwareList] = await Promise.all([
+        const [settingsData, glassList, hardwareList, baseCostsData] = await Promise.all([
           settingsRes.json(),
           glassRes.json(),
           hardwareRes.json(),
+          baseCostsRes.json(),
         ]);
         
         console.log('🔄 ProjectProgressPage: Raw API data received:');
         console.log('  📊 settingsData:', settingsData);
         console.log('  🪟 glassList:', glassList);
         console.log('  🔧 hardwareList:', hardwareList);
+        console.log('  💰 baseCostsData:', baseCostsData);
         console.log('  📊 statusesData:', statusesData);
+        
+        // Конвертируем базовые стоимости в нужный формат
+        let baseCosts: { id: string; name: string; value: number }[] = [];
+        if (Array.isArray(baseCostsData) && baseCostsData.length > 0) {
+          baseCosts = baseCostsData.map((item: { _id: string; name: string; value: number }) => ({
+            id: item._id,
+            name: item.name,
+            value: item.value || 0
+          }));
+          console.log('💰 ProjectProgressPage: Converted baseCosts:', baseCosts);
+        }
         
         if (Array.isArray(settingsData) && settingsData.length > 0) {
           const combinedSettings: Settings = {
             ...settingsData[0],
             glassList,
             hardwareList,
+            baseCosts,
             statusList: statusesData || [], // Добавляем статусы в settings
           };
           console.log('✅ ProjectProgressPage: Combined settings created:', combinedSettings);
@@ -168,7 +184,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             rrRate: '1.0',
             showUSD: true,
             showRR: false,
-            baseCosts: [],
+            baseCosts,
             baseIsPercent: false,
             basePercentValue: 0,
             customColorSurcharge: 0,

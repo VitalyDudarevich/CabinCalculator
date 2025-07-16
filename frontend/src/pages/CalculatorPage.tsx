@@ -96,31 +96,36 @@ const CalculatorPage: React.FC<{
         const settingsUrl = `${API_URL}/settings?companyId=${effectiveSelectedCompanyId}`;
         const glassUrl = `${API_URL}/glass?companyId=${effectiveSelectedCompanyId}`;
         const hardwareUrl = `${API_URL}/hardware?companyId=${effectiveSelectedCompanyId}`;
+        const baseCostsUrl = `${API_URL}/basecosts?companyId=${effectiveSelectedCompanyId}`;
         
-        console.log('🔄 API URLs:', { settingsUrl, glassUrl, hardwareUrl });
+        console.log('🔄 API URLs:', { settingsUrl, glassUrl, hardwareUrl, baseCostsUrl });
         
-        const [settingsRes, glassRes, hardwareRes] = await Promise.all([
+        const [settingsRes, glassRes, hardwareRes, baseCostsRes] = await Promise.all([
           fetchWithAuth(settingsUrl),
           fetchWithAuth(glassUrl),
           fetchWithAuth(hardwareUrl),
+          fetchWithAuth(baseCostsUrl),
         ]);
         
         console.log('🔄 API responses status:', {
           settings: settingsRes.status,
           glass: glassRes.status,
-          hardware: hardwareRes.status
+          hardware: hardwareRes.status,
+          baseCosts: baseCostsRes.status
         });
         
-        const [settingsData, glassList, hardwareList] = await Promise.all([
+        const [settingsData, glassList, hardwareList, baseCostsData] = await Promise.all([
           settingsRes.json(),
           glassRes.json(),
           hardwareRes.json(),
+          baseCostsRes.json(),
         ]);
         
         console.log('🔄 Raw API data received:');
         console.log('  📊 settingsData:', settingsData);
         console.log('  🪟 glassList:', glassList);
         console.log('  🔧 hardwareList:', hardwareList);
+        console.log('  💰 baseCostsData:', baseCostsData);
         
         // Проверяем структуру данных
         if (Array.isArray(glassList) && glassList.length > 0) {
@@ -137,11 +142,23 @@ const CalculatorPage: React.FC<{
           console.log('❌ Hardware list is empty or not array');
         }
         
+        // Конвертируем базовые стоимости в нужный формат
+        let baseCosts: { id: string; name: string; value: number }[] = [];
+        if (Array.isArray(baseCostsData) && baseCostsData.length > 0) {
+          baseCosts = baseCostsData.map((item: { _id: string; name: string; value: number }) => ({
+            id: item._id,
+            name: item.name,
+            value: item.value || 0
+          }));
+          console.log('💰 Converted baseCosts:', baseCosts);
+        }
+
         if (Array.isArray(settingsData) && settingsData.length > 0) {
           const combinedSettings: Settings = {
             ...settingsData[0],
             glassList,
             hardwareList,
+            baseCosts,
           };
           
           console.log('✅ Combined settings created:', combinedSettings);
@@ -158,7 +175,7 @@ const CalculatorPage: React.FC<{
             rrRate: '1.0',
             showUSD: true,
             showRR: false,
-            baseCosts: [],
+            baseCosts,
             baseIsPercent: false,
             basePercentValue: 0,
             customColorSurcharge: 0,

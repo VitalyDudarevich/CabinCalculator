@@ -1298,7 +1298,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               <div style={{ marginTop: 12, marginBottom: 8 }}>
                 {projectHardware.map((hw, idx) => (
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
-                    <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
+                    <span style={{ flex: 1, minWidth: 0, color: '#333' }}>{hw.name}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                       <QuantityControl
                         value={hw.quantity}
@@ -1528,7 +1528,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               <div style={{ marginTop: 12, marginBottom: 8 }}>
                 {projectHardware.map((hw, idx) => (
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
-                    <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
+                    <span style={{ flex: 1, minWidth: 0, color: '#333' }}>{hw.name}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                       <QuantityControl
                         value={hw.quantity}
@@ -1708,7 +1708,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               <div style={{ marginTop: 12, marginBottom: 8 }}>
                 {projectHardware.map((hw, idx) => (
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
-                    <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
+                    <span style={{ flex: 1, minWidth: 0, color: '#333' }}>{hw.name}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                       <QuantityControl
                         value={hw.quantity}
@@ -1899,7 +1899,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             <div style={{ marginTop: 12, marginBottom: 8 }}>
               {projectHardware.map((hw, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
-                  <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
+                  <span style={{ flex: 1, minWidth: 0, color: '#333' }}>{hw.name}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                     <QuantityControl
                       value={hw.quantity}
@@ -2385,7 +2385,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               <div style={{ marginTop: 12, marginBottom: 8 }}>
                 {projectHardware.map((hw, idx) => (
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
-                    <span style={{ flex: 1, minWidth: 0 }}>{hw.name}</span>
+                    <span style={{ flex: 1, minWidth: 0, color: '#333' }}>{hw.name}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                       <QuantityControl
                         value={hw.quantity}
@@ -2456,7 +2456,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         <div style={{ marginTop: 12, marginBottom: 8 }}>
           {selectedServices.map((service, idx) => (
             <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', marginBottom: 6, height: 43 }}>
-              <span style={{ flex: 1, minWidth: 0 }}>{service.name}</span>
+              <span style={{ flex: 1, minWidth: 0, color: '#333' }}>{service.name}</span>
               <button
                 onClick={() => setSelectedServices(list => list.filter((_, i) => i !== idx))}
                 style={{
@@ -2683,6 +2683,32 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       {saveStatus === 'success' && <div style={{ color: 'green', marginBottom: 8 }}>Проект успешно сохранён!</div>}
       {saveStatus === 'error' && <div style={{ color: 'red', marginBottom: 8 }}>Ошибка при сохранении проекта</div>}
       {errors.company && <div style={{ color: 'red', fontSize: 13, marginTop: 8 }}>{errors.company}</div>}
+      
+      <style>{`
+        /* Принудительно устанавливаем черный цвет текста на мобильных устройствах */
+        @media (max-width: 768px) {
+          .calculator-form span,
+          .calculator-form div,
+          .calculator-form label {
+            color: #333 !important;
+          }
+          
+          /* Специально для элементов фурнитуры и услуг */
+          .calculator-form [style*="flex: 1"] {
+            color: #333 !important;
+          }
+        }
+        
+        /* Обеспечиваем черный цвет для всех текстовых элементов в Safari */
+        @supports (-webkit-appearance: none) {
+          .calculator-form span,
+          .calculator-form div,
+          .calculator-form label {
+            color: #333 !important;
+            -webkit-text-fill-color: #333 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

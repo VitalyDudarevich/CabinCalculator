@@ -533,9 +533,24 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
     // 5. Базовая стоимость - режим зависит от настроек
     const baseCostMode = settings.baseCostMode || 'fixed';
     
+    console.log('💰 ДИАГНОСТИКА БАЗОВОЙ СТОИМОСТИ:', {
+      baseCostMode,
+      config: draft.config,
+      hasBaseCosts: !!settings.baseCosts,
+      baseCostsLength: settings.baseCosts?.length,
+      baseCosts: settings.baseCosts,
+      baseCostPercentage: settings.baseCostPercentage
+    });
+    
     if (baseCostMode === 'fixed') {
       // Режим фиксированной базовой стоимости (как раньше)
       let baseCost = settings.baseCosts?.find(b => b.id === draft.config);
+      console.log('🔍 Поиск базовой стоимости по ID:', { 
+        config: draft.config, 
+        foundById: !!baseCost,
+        baseCost: baseCost 
+      });
+      
       if (!baseCost && settings.baseCosts) {
         // Попробовать найти по name, если id не совпадает
         baseCost = settings.baseCosts.find(b =>
@@ -548,8 +563,15 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             (draft.config === 'partition' && normalizeName(b.name).includes('перегородк'))
           )
         );
+        console.log('🔍 Поиск базовой стоимости по name:', { 
+          foundByName: !!baseCost,
+          baseCost: baseCost,
+          normalizedNames: settings.baseCosts.map(b => ({ original: b.name, normalized: normalizeName(b.name) }))
+        });
       }
+      
       if (baseCost) {
+        console.log('✅ Базовая стоимость найдена и добавлена:', baseCost);
         positions.push({
           label: 'Базовая стоимость',
           qty: '',
@@ -557,6 +579,8 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           total: baseCost.value,
         });
         total += baseCost.value;
+      } else {
+        console.log('❌ Базовая стоимость НЕ найдена для config:', draft.config);
       }
     } else if (baseCostMode === 'percentage') {
       // Режим процента от стоимости стекла и фурнитуры
