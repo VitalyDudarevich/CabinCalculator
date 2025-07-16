@@ -1033,7 +1033,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   // Показываем индикатор загрузки если данные еще не загружены
   if (isLoadingData) {
     return (
-      <div className="calculator-form-root" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
+      <div className="calculator-form-root" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px #0001', padding: 24, width: '100%', maxWidth: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         <div style={{ textAlign: 'center', padding: '40px 0', color: '#666' }}>
           <div>Загрузка данных...</div>
         </div>
@@ -1042,7 +1042,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   }
 
   return (
-    <div className="calculator-form-root" style={{ padding: 24, width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
+    <div className="calculator-form-root" style={{ padding: 24, width: '100%', maxWidth: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
       <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 16, color: '#000' }}>
         {selectedProject ? `Редактирование ${selectedProject.name || ''}` : 'Новый проект'}
       </h2>
@@ -1102,7 +1102,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           </>
         )}
         {/* Название проекта */}
-        <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
+        <div className="form-group">
           <input
             type="text"
             id="project-name"
@@ -1116,13 +1116,13 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               setErrors(rest);
             }}
             required
-            style={{ width: '100%', paddingRight: 12, background: changedFields.has('name') ? '#fffbe6' : undefined }}
+            style={{ background: changedFields.has('name') ? '#fffbe6' : undefined }}
           />
           <label htmlFor="project-name" style={{ left: 12 }}>Название проекта *</label>
           {errors.projectName && <div style={{ color: 'red', fontSize: 13 }}>{errors.projectName}</div>}
                   </div>
         {/* Заказчик */}
-        <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
+        <div className="form-group">
           <input
             type="text"
             id="customer"
@@ -1135,13 +1135,13 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
               delete rest.customer;
               setErrors(rest);
             }}
-            style={{ width: '100%', paddingRight: 12, background: changedFields.has('customer') ? '#fffbe6' : undefined }}
+            style={{ background: changedFields.has('customer') ? '#fffbe6' : undefined }}
           />
           <label htmlFor="customer" style={{ left: 12 }}>Заказчик</label>
           {errors.customer && <div style={{ color: 'red', fontSize: 13 }}>{errors.customer}</div>}
         </div>
         {/* Конфигурация */}
-        <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
+        <div className="form-group">
           <select
             id="config"
             className={config ? 'filled' : ''}
@@ -2485,14 +2485,16 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         </div>
       )}
       {/* Комментарий */}
-      <div className="form-group" style={{ width: '100%', marginLeft: 0, marginRight: 0 }}>
+      <div className="form-group">
         <textarea
           id="comment"
-          placeholder="Комментарий"
+          placeholder=" "
           value={comment}
           onChange={e => setComment(e.target.value)}
-          style={{ width: '105%', minHeight: 60, resize: 'vertical', borderRadius: 8, border: '1px solid #ccc', padding: 8, fontSize: 15, marginTop: 8 }}
+          className={comment ? 'filled' : ''}
+          style={{ minHeight: 60, resize: 'vertical' }}
         />
+        <label htmlFor="comment" style={{ left: 12 }}>Комментарий</label>
       </div>
 
       {/* Кнопки сохранения и отмены */}
@@ -2571,7 +2573,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
       <style>{`
         .calculator-form-root {
           width: 100%;
-          max-width: 480px;
+          max-width: 100%;
           margin: 0 auto;
           box-sizing: border-box;
         }
@@ -2583,13 +2585,13 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           max-width: 100%;
           box-sizing: border-box;
         }
-        @media (max-width: 768px) {
+                @media (max-width: 768px) {
           .calculator-form-root {
-            width: 100vw !important;
-            max-width: 100vw !important;
+            width: 100% !important;
+            max-width: 100% !important;
             margin: 0 !important;
             position: relative !important;
-            padding: 16px !important;
+            padding: 8px !important;
             min-height: auto !important;
             height: auto !important;
             box-sizing: border-box !important;
@@ -2600,13 +2602,47 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
             margin-top: 16px !important;
             margin-bottom: 0 !important;
           }
-          .form-group {
-            max-width: none !important;
+          
+          .form-group input,
+          .form-group select,
+          .form-group textarea {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            padding: 12px 8px 6px 8px !important;
+            font-size: 16px !important;
+          }
+          .form-group textarea {
+            padding: 12px 8px !important;
+            border-radius: 8px !important;
+            border: 1px solid #ccc !important;
           }
         }
-        .form-group { position: relative; margin: 12px 0; width: 100%; max-width: 480px; }
+        .form-group { position: relative; margin: 12px 0; width: 100%; max-width: 100%; }
         @media (max-width: 768px) {
-          .form-group { max-width: none !important; }
+          .form-group { 
+            max-width: none !important; 
+            margin: 8px 0 !important;
+            width: calc(100% - 16px) !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .calculator-form-root {
+            padding: 4px !important;
+          }
+          .form-group {
+            margin: 6px 0 !important;
+            width: calc(100% - 8px) !important;
+          }
+          .form-group input,
+          .form-group select,
+          .form-group textarea {
+            padding: 10px 6px 4px 6px !important;
+            font-size: 16px !important;
+          }
+          .form-group textarea {
+            padding: 10px 6px !important;
+          }
         }
         .form-group input,
         .form-group select,
@@ -2620,6 +2656,11 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
           background: #fff;
           transition: border-color 0.2s;
           color: #222 !important;
+        }
+        .form-group textarea {
+          padding: 16px 12px;
+          min-height: 60px;
+          resize: vertical;
         }
         .form-group select {
           appearance: none;
@@ -2649,7 +2690,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
         .form-group input:focus + label,
         .form-group input:not(:placeholder-shown) + label,
         .form-group textarea.filled + label,
-        .form-group textarea:focus + label {
+        .form-group textarea:focus + label,
+        .form-group textarea:not(:placeholder-shown) + label {
           top: -10px;
           left: 8px;
           font-size: 12px;
@@ -2713,4 +2755,4 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ companyId, user, select
   );
 };
 
-export default CalculatorForm; 
+export default CalculatorForm;

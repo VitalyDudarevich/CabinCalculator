@@ -636,6 +636,7 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
       color: '#000',
       overflowX: 'hidden',
       maxWidth: '100%',
+      width: '100%',
       boxSizing: 'border-box'
     }}>
       <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 16, color: '#000' }}>Детали расчёта</h2>
@@ -986,17 +987,29 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           {positions && positions.length > 0 && (
             <div style={{ margin: '6px 0 0 0', color: '#000' }}>
               <b style={{ color: '#000' }}>Разбивка стоимости:</b>
-              <ul style={{ margin: '6px 0 0 0', paddingLeft: 0, listStyle: 'none' }}>
+              <ul style={{ margin: '6px 0 0 0', paddingLeft: 0, paddingRight: 0, listStyle: 'none', width: '100%', boxSizing: 'border-box' }}>
                 {positions.map((pos, idx) => (
                   <li key={idx} style={{ 
                     display: 'flex', 
                     justifyContent: 'space-between', 
-                    alignItems: 'center', 
+                    alignItems: 'flex-start', 
                     padding: '2px 0',
-                    color: '#000'
+                    color: '#000',
+                    gap: '8px'
                   }}>
-                    <span style={{ color: '#000' }}>{pos.label}</span>
-                    <span><b style={{ color: '#000' }}>{pos.total} GEL</b></span>
+                                         <span style={{ 
+                       color: '#000', 
+                       flex: '1',
+                       wordWrap: 'break-word',
+                       overflowWrap: 'break-word',
+                       paddingRight: '8px'
+                     }}>{pos.label}</span>
+                     <span style={{ 
+                       flexShrink: '0',
+                       minWidth: '90px',
+                       textAlign: 'right',
+                       whiteSpace: 'nowrap'
+                     }}><b style={{ color: '#000' }}>{pos.total} GEL</b></span>
                   </li>
                 ))}
               </ul>
@@ -1235,9 +1248,9 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
           .calculation-details-container {
             display: block !important;
             visibility: visible !important;
-            width: 100vw !important;
-            max-width: 100vw !important;
-            padding: 16px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 16px 12px !important;
             margin: 0 !important;
             border-radius: 0 !important;
             background: #fff !important;
@@ -1250,6 +1263,96 @@ const CalculationDetails: React.FC<CalculationDetailsProps> = ({ draft, companyI
             left: 0 !important;
             right: 0 !important;
             border-top: 1px solid #eee !important;
+          }
+          
+          /* Стили для списка разбивки стоимости на мобильных */
+          .calculation-details-container ul {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            margin: 6px 0 0 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          
+          .calculation-details-container li {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: flex-start !important;
+            padding: 4px 0 !important;
+            font-size: 14px !important;
+            line-height: 1.3 !important;
+            gap: 8px !important;
+          }
+          
+          .calculation-details-container li span:first-child {
+            flex: 1 !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            hyphens: auto !important;
+            font-size: 14px !important;
+            padding-right: 8px !important;
+          }
+          
+          .calculation-details-container li span:last-child {
+            flex-shrink: 0 !important;
+            min-width: 90px !important;
+            text-align: right !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            white-space: nowrap !important;
+          }
+        
+        @media (max-width: 480px) {
+          .calculation-details-container {
+            padding: 12px 8px !important;
+          }
+          
+          .calculation-details-container li {
+            font-size: 13px !important;
+            padding: 3px 0 !important;
+            gap: 6px !important;
+          }
+          
+          .calculation-details-container li span:first-child {
+            font-size: 13px !important;
+            padding-right: 6px !important;
+          }
+          
+          .calculation-details-container li span:last-child {
+            min-width: 85px !important;
+            font-size: 13px !important;
+            white-space: nowrap !important;
+          }
+          
+          .calculation-details-container h2 {
+            font-size: 18px !important;
+            margin-bottom: 12px !important;
+          }
+          
+          .calculation-details-container > div {
+            font-size: 14px !important;
+          }
+        }
+        
+        @media (max-width: 380px) {
+          .calculation-details-container {
+            padding: 8px 4px !important;
+          }
+          
+          .calculation-details-container li {
+            font-size: 12px !important;
+            gap: 4px !important;
+          }
+          
+          .calculation-details-container li span:first-child {
+            font-size: 12px !important;
+            padding-right: 4px !important;
+          }
+          
+          .calculation-details-container li span:last-child {
+            min-width: 80px !important;
+            font-size: 12px !important;
+            white-space: nowrap !important;
           }
         }
       `}</style>

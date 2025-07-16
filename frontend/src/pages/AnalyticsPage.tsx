@@ -337,15 +337,34 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ user, selectedCompanyId }
   };
 
   return (
-    <div style={{ 
-      position: 'fixed',
-      top: 56,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: '#f5f5f5',
-      overflow: 'auto'
-    }}>
+    <>
+      <style>
+        {`
+          @media (max-width: 768px) {
+            input[type="date"], 
+            input[type="text"], 
+            select {
+              background: #fff !important;
+              color: #333 !important;
+              -webkit-text-fill-color: #333 !important;
+            }
+            
+            select option {
+              background: #fff !important;
+              color: #333 !important;
+            }
+          }
+        `}
+      </style>
+      <div style={{ 
+        position: 'fixed',
+        top: 56,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: '#f5f5f5',
+        overflow: 'auto'
+      }}>
       {/* Заголовок и фильтры */}
       <div style={{
         background: '#fff',
@@ -383,7 +402,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ user, selectedCompanyId }
                 padding: '8px 12px',
                 borderRadius: 6,
                 border: '1px solid #ccc',
-                fontSize: 14
+                fontSize: 14,
+                background: '#fff',
+                color: '#333'
               }}
             />
             <span style={{ color: '#666' }}>—</span>
@@ -395,7 +416,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ user, selectedCompanyId }
                 padding: '8px 12px',
                 borderRadius: 6,
                 border: '1px solid #ccc',
-                fontSize: 14
+                fontSize: 14,
+                background: '#fff',
+                color: '#333'
               }}
             />
             <select
@@ -406,7 +429,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ user, selectedCompanyId }
                 borderRadius: 6,
                 border: '1px solid #ccc',
                 fontSize: 14,
-                minWidth: '150px'
+                minWidth: '150px',
+                background: '#fff',
+                color: '#333'
               }}
             >
               <option value="">Все конфигурации</option>
@@ -429,7 +454,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ user, selectedCompanyId }
                   borderRadius: 6,
                   border: '1px solid #ccc',
                   fontSize: 14,
-                  minWidth: '200px'
+                  minWidth: '200px',
+                  background: '#fff',
+                  color: '#333'
                 }}
               />
             )}
@@ -1449,6 +1476,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ user, selectedCompanyId }
         )}
       </div>
     </div>
+    </>
   );
 };
 

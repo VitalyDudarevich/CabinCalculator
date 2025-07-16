@@ -267,8 +267,27 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
     setDraftProjectData({});
   };
   return (
-    // Основной контейнер страницы с учетом фиксированного Header'а
-    <div style={{ 
+    <>
+      <style>
+        {`
+          @media (max-width: 768px) {
+            input[type="date"], 
+            input[type="text"], 
+            select {
+              background: #fff !important;
+              color: #333 !important;
+              -webkit-text-fill-color: #333 !important;
+            }
+            
+            select option {
+              background: #fff !important;
+              color: #333 !important;
+            }
+          }
+        `}
+      </style>
+      {/* Основной контейнер страницы с учетом фиксированного Header'а */}
+      <div style={{ 
       // Позиционирование с учетом фиксированного header'а высотой 56px
       position: isMobile ? 'relative' : 'fixed',
       top: isMobile ? 0 : 56,
@@ -407,7 +426,9 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                 minWidth: '120px',
                 height: '36px',
                 flex: 'none',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                background: '#fff',
+                color: '#333'
               }}
             >
               <option value="all">Все даты</option>
@@ -432,7 +453,9 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                     height: '36px',
                     flex: 'none',
                     width: '140px',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    background: '#fff',
+                    color: '#333'
                   }}
                 />
                 <span style={{ color: '#666', lineHeight: '36px' }}>—</span>
@@ -448,7 +471,9 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                     height: '36px',
                     flex: 'none',
                     width: '140px',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    background: '#fff',
+                    color: '#333'
                   }}
                 />
               </>
@@ -502,7 +527,9 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                   border: '1px solid #ccc',
                   fontSize: 14,
                   height: '36px',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  background: '#fff',
+                  color: '#333'
                 }}
               />
             </div>
@@ -539,7 +566,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
       {isEditModalOpen && (
         <div style={{
           position: 'fixed',
-          top: 56,
+          top: isMobile ? 0 : 56,
           left: 0,
           right: 0,
           bottom: 0,
@@ -555,7 +582,7 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
             background: '#ffffff',
             borderRadius: isMobile ? 0 : 12,
             width: isMobile ? '100vw' : '95vw',
-            height: isMobile ? 'calc(100vh - 56px)' : 'calc(95vh - 56px)',
+            height: isMobile ? '100vh' : 'calc(95vh - 56px)',
             position: 'relative',
             display: 'flex',
             overflow: 'hidden'
@@ -611,17 +638,49 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
               flexDirection: isMobile ? 'column' : 'row',
               width: '100%',
               height: '100%',
-              gap: isMobile ? 8 : 16,
-              padding: isMobile ? '64px 0 0 0' : '64px 16px 16px 16px'
+              gap: isMobile ? 0 : 16,
+              padding: isMobile ? '64px 0 20px 0' : '64px 16px 16px 16px',
+              overflow: isMobile ? 'auto' : 'hidden'
             }}>
-              {/* Левая колонка - Детали расчета */}
+              {/* Первый блок (левая колонка на десктопе) - Форма калькулятора */}
+              <div style={{
+                flex: isMobile ? 'none' : '0 0 480px',
+                width: isMobile ? '100%' : 'auto',
+                height: isMobile ? 'auto' : '100%',
+                minHeight: isMobile ? '500px' : 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                order: isMobile ? 1 : 2
+              }}>
+                <div style={{
+                  flex: 1,
+                  overflow: 'auto',
+                  paddingBottom: isMobile ? '30px' : '80px',
+                  padding: isMobile ? '20px 20px 30px 20px' : '0 0 80px 24px'
+                }}>
+                  <CalculatorForm
+                    companyId={effectiveCompanyId}
+                    user={user}
+                    selectedCompanyId={effectiveCompanyId}
+                    settings={settings}
+                    isLoadingData={isLoadingData}
+                    onChangeDraft={setDraftProjectData}
+                    selectedProject={selectedProject || undefined}
+                    onNewProject={handleProjectUpdate}
+                    totalPrice={totalPrice}
+                  />
+                </div>
+              </div>
+              
+              {/* Второй блок (правая колонка на десктопе) - Детали расчета */}
               <div style={{
                 flex: isMobile ? 'none' : 1,
                 height: isMobile ? 'auto' : '100%',
                 minHeight: isMobile ? '300px' : 'auto',
                 overflow: 'auto',
-                paddingBottom: isMobile ? '80px' : '60px',
-                paddingLeft: isMobile ? '20px' : '24px'
+                padding: isMobile ? '20px 20px 50px 20px' : '0 0 60px 24px',
+                order: isMobile ? 2 : 1
               }}>
                 <CalculationDetails
                   draft={draftProjectData}
@@ -641,41 +700,12 @@ const ProjectProgressPage: React.FC<ProjectProgressPageProps> = ({
                   isEditing={selectedProject !== null}
                 />
               </div>
-              
-              {/* Правая колонка - Форма калькулятора */}
-              <div style={{
-                flex: isMobile ? 'none' : '0 0 480px',
-                width: isMobile ? '100%' : 'auto',
-                height: isMobile ? 'auto' : '100%',
-                minHeight: isMobile ? '500px' : 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  flex: 1,
-                  overflow: 'auto',
-                  paddingBottom: isMobile ? '20px' : '80px',
-                  paddingLeft: isMobile ? '20px' : '24px'
-                }}>
-                  <CalculatorForm
-                    companyId={effectiveCompanyId}
-                    user={user}
-                    selectedCompanyId={effectiveCompanyId}
-                    settings={settings}
-                    isLoadingData={isLoadingData}
-                    onChangeDraft={setDraftProjectData}
-                    selectedProject={selectedProject || undefined}
-                    onNewProject={handleProjectUpdate}
-                    totalPrice={totalPrice}
-                  />
-                </div>
-              </div>
             </div>
           </div>
         </div>
       )}
     </div>
+    </>
   );
 };
 
