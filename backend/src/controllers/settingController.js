@@ -83,21 +83,28 @@ exports.createSetting = async (req, res) => {
     if (req.user.role === 'superadmin') {
       // Суперадмин может создавать настройки для любой компании
     } else if (req.user.role === 'admin' || req.user.role === 'user') {
-      let targetCompanyId;
+      let userCompanyId;
 
+      // Корректно извлекаем companyId пользователя
       if (req.user.companyId) {
-        targetCompanyId =
-          typeof req.user.companyId === 'string'
-            ? req.user.companyId
-            : req.user.companyId._id || req.user.companyId.toString();
-      } else if (req.user.role === 'admin' && companyId) {
-        targetCompanyId = companyId;
-      } else {
+        userCompanyId =
+          typeof req.user.companyId === 'object'
+            ? req.user.companyId._id?.toString() || req.user.companyId.toString()
+            : req.user.companyId.toString();
+      }
+
+      if (!userCompanyId) {
         console.log('❌ Settings create: User has no access to any company');
         return res.status(403).json({ error: 'Недостаточно прав для создания настроек' });
       }
 
-      if (companyId !== targetCompanyId) {
+      console.log('🔍 Company ID comparison for create:', {
+        userCompanyId,
+        requestedCompanyId: companyId,
+        match: companyId === userCompanyId,
+      });
+
+      if (companyId !== userCompanyId) {
         console.log('❌ Settings create: Access denied to company', companyId);
         return res.status(403).json({ error: 'Нет доступа к настройкам этой компании' });
       }
@@ -156,22 +163,32 @@ exports.updateSetting = async (req, res) => {
     if (req.user.role === 'superadmin') {
       // Суперадмин может обновлять настройки любой компании
     } else if (req.user.role === 'admin' || req.user.role === 'user') {
-      let targetCompanyId;
+      let userCompanyId;
 
+      // Корректно извлекаем companyId пользователя
       if (req.user.companyId) {
-        targetCompanyId =
-          typeof req.user.companyId === 'string'
-            ? req.user.companyId
-            : req.user.companyId._id || req.user.companyId.toString();
-      } else if (req.user.role === 'admin' && existingSetting.companyId) {
-        targetCompanyId = existingSetting.companyId.toString();
-      } else {
+        userCompanyId =
+          typeof req.user.companyId === 'object'
+            ? req.user.companyId._id?.toString() || req.user.companyId.toString()
+            : req.user.companyId.toString();
+      }
+
+      if (!userCompanyId) {
         console.log('❌ Settings update: User has no access to any company');
         return res.status(403).json({ error: 'Недостаточно прав для обновления настроек' });
       }
 
-      if (existingSetting.companyId.toString() !== targetCompanyId) {
-        console.log('❌ Settings update: Access denied to company', existingSetting.companyId);
+      // Корректно извлекаем companyId настройки
+      const settingCompanyId = existingSetting.companyId.toString();
+
+      console.log('🔍 Company ID comparison:', {
+        userCompanyId,
+        settingCompanyId,
+        match: userCompanyId === settingCompanyId,
+      });
+
+      if (settingCompanyId !== userCompanyId) {
+        console.log('❌ Settings update: Access denied to company', settingCompanyId);
         return res.status(403).json({ error: 'Нет доступа к настройкам этой компании' });
       }
     } else {
